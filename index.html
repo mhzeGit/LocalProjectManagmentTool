@@ -611,6 +611,7 @@ document.addEventListener('click', function(e) {
 // ── Drag & Drop ────────────────────────────────────────────────────────────
 let _dragActive = false
 let _dragCardHeight = 0
+let _dragTimer = null
 
 function initDragDrop() {
   const board = document.getElementById('boardArea')
@@ -624,17 +625,10 @@ function initDragDrop() {
       _dragCardHeight = card.offsetHeight
       e.dataTransfer.effectAllowed = 'move'
       e.dataTransfer.setData('text/x-card', card.dataset.cardId)
-      var w = card.offsetWidth, h = card.offsetHeight
-      var img = new Image()
-      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-      e.dataTransfer.setDragImage(img, 0, 0)
-      var clone = card.cloneNode(true)
-      clone.style.cssText = 'position:fixed;top:0;left:0;width:' + w + 'px;height:' + h + 'px;background:#26263a;border-radius:6px;padding:12px 14px;border:1px solid #32324a;box-shadow:0 1px 3px rgba(0,0,0,.3);font:inherit;color:#e8e8f0;pointer-events:none;z-index:9999;'
-      document.body.appendChild(clone)
-      e.dataTransfer.setDragImage(clone, Math.round(w/2), 20)
-      requestAnimationFrame(function() { document.body.removeChild(clone) })
-      card.classList.add('dragging')
-      requestAnimationFrame(function() { card.classList.add('dragging-collapsed') })
+      _dragTimer = setTimeout(function() {
+        card.classList.add('dragging')
+        requestAnimationFrame(function() { card.classList.add('dragging-collapsed') })
+      }, 0)
       return
     }
     const col = e.target.closest('.board-column:not(.add-column)')
@@ -649,6 +643,7 @@ function initDragDrop() {
   })
 
   board.addEventListener('dragend', function() {
+    if (_dragTimer) { clearTimeout(_dragTimer); _dragTimer = null }
     _dragActive = false
     _dragCardHeight = 0
     board.querySelectorAll('.dragging, .drag-over').forEach(function(el) { el.classList.remove('dragging', 'drag-over') })
@@ -694,7 +689,6 @@ function initDragDrop() {
 
   board.addEventListener('drop', function(e) {
     e.preventDefault()
-    board.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
     board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
 
     var colEl = e.target.closest('.board-column:not(.add-column)')
