@@ -41,7 +41,8 @@
     .breadcrumb { font-size: 13px; color: #999; }
     .breadcrumb span { margin: 0 4px; }
 
-    .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; }
+    .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; cursor: default; user-select: none; }
+    .board-area.grabbing { cursor: grabbing; }
     .board-columns { display: flex; gap: 16px; align-items: flex-start; min-height: 300px; }
     .board-column { background: #1e1e2e; border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid #2a2a40; }
     .board-column.add-column { min-width: 280px; max-width: 320px; height: 6vh; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #2a2a40; background: transparent; }
@@ -546,7 +547,38 @@ function closeAllColumnMenus() {
 
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.col-menu-btn')) closeAllColumnMenus()
-})
+});
+
+// ── RMB Drag Scroll ───────────────────────────────────────────────────────
+(function() {
+  const board = document.getElementById('boardArea')
+  let dragging = false, startX = 0, scrollLeft = 0
+
+  board.addEventListener('mousedown', function(e) {
+    if (e.button !== 2) return
+    dragging = true
+    startX = e.pageX - board.offsetLeft
+    scrollLeft = board.scrollLeft
+    board.classList.add('grabbing')
+    e.preventDefault()
+  })
+
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return
+    e.preventDefault()
+    const x = e.pageX - board.offsetLeft
+    const walk = x - startX
+    board.scrollLeft = scrollLeft - walk
+  })
+
+  document.addEventListener('mouseup', function() {
+    if (!dragging) return
+    dragging = false
+    board.classList.remove('grabbing')
+  })
+
+  board.addEventListener('contextmenu', function(e) { e.preventDefault() })
+})()
 
 // ── Init ──────────────────────────────────────────────────────────────────
 render()
