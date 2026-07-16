@@ -71,6 +71,10 @@
     .card:hover .card-actions { display: flex; }
     .card-actions button { font-size: 11px; color: #f44; }
     .card-actions button:hover { text-decoration: underline; }
+    .card.dragging { opacity: 0.35; }
+    .column-cards.drag-over { background: rgba(79, 70, 229, 0.12); border-radius: 6px; min-height: 40px; }
+    .board-column.drag-over { border-color: #4f46e5; }
+    .board-column.dragging { opacity: 0.35; }
 
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 14px; }
     .empty-state p { margin-top: 8px; }
@@ -210,6 +214,7 @@ function render() {
   }
   sidebar.innerHTML = html
   renderBoard()
+  initDragDrop()
 }
 
 // ── Selection ─────────────────────────────────────────────────────────────
@@ -262,7 +267,7 @@ function renderBoard() {
 
   let html = '<div class="board-columns">'
   for (let col of b.columns) {
-      html += '<div class="board-column">'
+      html += '<div class="board-column" draggable="true" data-column-id="' + col.id + '">'
       html += '<div class="column-header">'
       html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
       html += '  <div style="position:relative;">'
@@ -272,9 +277,9 @@ function renderBoard() {
       html += '    </div>'
       html += '  </div>'
       html += '</div>'
-      html += '<div class="column-cards">'
+      html += '<div class="column-cards" data-col-id="' + col.id + '">'
       for (let c of col.cards) {
-        html += '<div class="card" onclick="openCardDetail(\'' + c.id + '\')">'
+        html += '<div class="card" draggable="true" data-card-id="' + c.id + '">'
         html += '  <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
         if (c.description) html += '  <div class="card-desc">' + escapeHtml(c.description) + '</div>'
         html += '</div>'
@@ -602,6 +607,133 @@ document.addEventListener('click', function(e) {
 
   board.addEventListener('contextmenu', function(e) { e.preventDefault() })
 })()
+
+// ── Drag & Drop ────────────────────────────────────────────────────────────
+let _dragActive = false
+let _dragCardHeight = 0
+
+function initDragDrop() {
+  const board = document.getElementById('boardArea')
+  if (board._dragInited) return
+  board._dragInited = true
+
+  board.addEventListener('dragstart', function(e) {
+    const card = e.target.closest('.card')
+    if (card && card.closest('.board-column')) {
+      _dragActive = true
+      _dragCardHeight = card.offsetHeight
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/x-card', card.dataset.cardId)
+      var w = card.offsetWidth
+      var clone = card.cloneNode(true)
+      clone.style.cssText = 'position:fixed;top:0;left:0;width:' + w + 'px;background:#26263a;border-radius:6px;padding:12px 14px;border:1px solid #4f46e5;box-shadow:0 4px 20px rgba(0,0,0,.5);font:inherit;color:#e8e8f0;pointer-events:none;z-index:9999;'
+      card.style.opacity = '0.35'
+      document.body.appendChild(clone)
+      e.dataTransfer.setDragImage(clone, Math.round(w/2), 20)
+      requestAnimationFrame(function() { document.body.removeChild(clone) })
+      return
+    }
+    const col = e.target.closest('.board-column:not(.add-column)')
+    if (col && !e.target.closest('.column-header button') && !e.target.closest('.card') && !e.target.closest('.column-footer') && !e.target.closest('.col-menu')) {
+      _dragActive = true
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/x-column', col.dataset.columnId)
+      col.classList.add('dragging')
+      return
+    }
+    e.preventDefault()
+  })
+
+  board.addEventListener('dragend', function() {
+    _dragActive = false
+    _dragCardHeight = 0
+    board.querySelectorAll('.dragging, .drag-over').forEach(function(el) { el.classList.remove('dragging', 'drag-over') })
+    board.querySelectorAll('.column-cards').forEach(function(el) { el.style.minHeight = '' })
+    board.querySelectorAll('.card').forEach(function(el) { el.style.opacity = '' })
+  })
+
+  board.addEventListener('dragenter', function(e) { e.preventDefault() })
+
+  board.addEventListener('dragover', function(e) {
+    e.preventDefault()
+    if (!e.dataTransfer.types) return
+    if (e.dataTransfer.types.includes('text/x-card')) {
+      var colEl = e.target.closest('.board-column:not(.add-column)')
+      if (colEl) {
+        var zone = colEl.querySelector('.column-cards')
+        zone.classList.add('drag-over')
+        if (_dragCardHeight) zone.style.minHeight = _dragCardHeight + 'px'
+        return
+      }
+    }
+    if (e.dataTransfer.types.includes('text/x-column')) {
+      const col = e.target.closest('.board-column:not(.add-column)')
+      if (col) { col.classList.add('drag-over') }
+    }
+  })
+
+  board.addEventListener('dragleave', function(e) {
+    if (e.dataTransfer.types && e.dataTransfer.types.includes('text/x-card')) {
+      var colEl = e.target.closest('.board-column:not(.add-column)')
+      if (!colEl) return
+      if (e.relatedTarget && colEl.contains(e.relatedTarget)) return
+      var cardsZone = colEl.querySelector('.column-cards')
+      if (cardsZone) { cardsZone.classList.remove('drag-over'); cardsZone.style.minHeight = '' }
+      return
+    }
+    const zone = e.target.closest('.board-column:not(.add-column)')
+    if (!zone) return
+    if (e.relatedTarget && zone.contains(e.relatedTarget)) return
+    zone.classList.remove('drag-over')
+  })
+
+  board.addEventListener('drop', function(e) {
+    e.preventDefault()
+    board.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
+    board.querySelectorAll('.column-cards').forEach(function(el) { el.style.minHeight = '' })
+
+    const cardId = e.dataTransfer.getData('text/x-card')
+    if (cardId) {
+      var colEl = e.target.closest('.board-column:not(.add-column)')
+      if (!colEl) return
+      var targetZone = colEl.querySelector('.column-cards')
+      if (!targetZone) return
+      const targetColId = targetZone.dataset.colId
+      const targetCol = findColumn(targetColId)
+      const sourceCol = findCardColumn(cardId)
+      if (!sourceCol || !targetCol || sourceCol.id === targetCol.id) return
+      const card = findCard(cardId)
+      if (!card) return
+      const idx = sourceCol.cards.findIndex(function(c) { return c.id === cardId })
+      if (idx !== -1) sourceCol.cards.splice(idx, 1)
+      targetCol.cards.push(card)
+      render()
+      return
+    }
+
+    const columnId = e.dataTransfer.getData('text/x-column')
+    if (columnId) {
+      const targetColEl = e.target.closest('.board-column:not(.add-column)')
+      if (!targetColEl) return
+      const b = findBoard(state.selectedBoardId)
+      if (!b) return
+      const fromIdx = b.columns.findIndex(function(c) { return c.id === columnId })
+      const toIdx = b.columns.findIndex(function(c) { return c.id === targetColEl.dataset.columnId })
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+      var moved = b.columns.splice(fromIdx, 1)[0]
+      b.columns.splice(toIdx, 0, moved)
+      render()
+    }
+  })
+
+  board.addEventListener('click', function(e) {
+    if (_dragActive) { _dragActive = false; return }
+    var card = e.target.closest('.card')
+    if (card && card.dataset.cardId) {
+      openCardDetail(card.dataset.cardId)
+    }
+  })
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────
 render()
