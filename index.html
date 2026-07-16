@@ -54,7 +54,7 @@
     .col-menu-item:hover { background: #2a2a40; }
     .col-menu-item.danger { color: #f44; }
     .col-menu-item.danger:hover { background: rgba(255,68,68,.1); }
-    .column-cards { flex: 1; padding: 0 8px 4px; min-height: 60px; }
+    .column-cards { flex: 1; padding: 0 8px 4px; min-height: 0; }
     .column-footer { padding: 4px 8px 8px; }
     .btn-add-card { display: flex; align-items: center; gap: 4px; width: 100%; padding: 6px 8px; border-radius: 6px; color: #888; font-size: 13px; }
     .btn-add-card:hover { background: #2a2a3d; color: #ddd; }
@@ -268,9 +268,6 @@ function renderBoard() {
       html += '  </div>'
       html += '</div>'
       html += '<div class="column-cards">'
-      if (col.cards.length === 0) {
-        html += '<div class="empty-col">No cards</div>'
-      }
       for (let c of col.cards) {
         html += '<div class="card" onclick="openCardDetail(\'' + c.id + '\')">'
         html += '  <div class="card-title">' + escapeHtml(c.title) + '</div>'
