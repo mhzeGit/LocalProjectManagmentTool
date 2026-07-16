@@ -44,10 +44,20 @@
     .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; }
     .board-columns { display: flex; gap: 16px; align-items: flex-start; min-height: 300px; }
     .board-column { background: #1e1e2e; border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid #2a2a40; }
-    .column-header { padding: 12px 16px; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: #e0e0e8; }
-    .column-header .btn-del { opacity: .4; }
-    .column-header .btn-del:hover { opacity: 1; }
-    .column-cards { flex: 1; padding: 4px 8px 8px; min-height: 60px; }
+    .board-column.add-column { min-width: 280px; max-width: 320px; height: 6vh; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #2a2a40; background: transparent; }
+    .column-header { padding: 12px 16px 8px; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: #e0e0e8; position: relative; }
+    .col-menu-btn { background: none; color: #888; font-size: 16px; padding: 2px 6px; border-radius: 4px; letter-spacing: 1px; }
+    .col-menu-btn:hover { background: #2a2a3d; color: #fff; }
+    .col-menu { display: none; position: absolute; top: 100%; right: 8px; background: #24243a; border: 1px solid #3a3a55; border-radius: 6px; min-width: 140px; box-shadow: 0 4px 16px rgba(0,0,0,.4); z-index: 10; }
+    .col-menu.open { display: block; }
+    .col-menu-item { display: block; width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; color: #ddd; }
+    .col-menu-item:hover { background: #2a2a40; }
+    .col-menu-item.danger { color: #f44; }
+    .col-menu-item.danger:hover { background: rgba(255,68,68,.1); }
+    .column-cards { flex: 1; padding: 0 8px 4px; min-height: 60px; }
+    .column-footer { padding: 4px 8px 8px; }
+    .btn-add-card { display: flex; align-items: center; gap: 4px; width: 100%; padding: 6px 8px; border-radius: 6px; color: #888; font-size: 13px; }
+    .btn-add-card:hover { background: #2a2a3d; color: #ddd; }
     .card { background: #26263a; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; border: 1px solid #32324a; }
     .card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.4); border-color: #4f46e5; }
     .card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #e8e8f0; }
@@ -247,26 +257,33 @@ function renderBoard() {
 
   let html = '<div class="board-columns">'
   for (let col of b.columns) {
-    html += '<div class="board-column">'
-    html += '<div class="column-header">'
-    html += '  <span>' + col.name + '</span>'
-    html += '  <button class="btn-del" onclick="deleteColumn(\'' + col.id + '\')">✕</button>'
-    html += '  <button class="btn-add" onclick="openModal(\'card\',\'' + col.id + '\')">+ Card</button>'
-    html += '</div>'
-    html += '<div class="column-cards">'
-    if (col.cards.length === 0) {
-      html += '<div class="empty-col">No cards</div>'
-    }
-    for (let c of col.cards) {
-      html += '<div class="card" onclick="openCardDetail(\'' + c.id + '\')">'
-      html += '  <div class="card-title">' + escapeHtml(c.title) + '</div>'
-      if (c.description) html += '  <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      html += '<div class="board-column">'
+      html += '<div class="column-header">'
+      html += '  <span>' + col.name + '</span>'
+      html += '  <div style="position:relative;">'
+      html += '    <button class="col-menu-btn" onclick="event.stopPropagation();toggleColumnMenu(\'' + col.id + '\')">⋮</button>'
+      html += '    <div class="col-menu" id="colMenu-' + col.id + '">'
+      html += '      <button class="col-menu-item danger" onclick="event.stopPropagation();deleteColumn(\'' + col.id + '\')">Delete</button>'
+      html += '    </div>'
+      html += '  </div>'
       html += '</div>'
-    }
-    html += '</div></div>'
+      html += '<div class="column-cards">'
+      if (col.cards.length === 0) {
+        html += '<div class="empty-col">No cards</div>'
+      }
+      for (let c of col.cards) {
+        html += '<div class="card" onclick="openCardDetail(\'' + c.id + '\')">'
+        html += '  <div class="card-title">' + escapeHtml(c.title) + '</div>'
+        if (c.description) html += '  <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+        html += '</div>'
+      }
+      html += '</div>'
+      html += '<div class="column-footer">'
+      html += '  <button class="btn-add-card" onclick="openModal(\'card\',\'' + col.id + '\')">+ Add a card</button>'
+      html += '</div></div>'
   }
-  html += '<div class="board-column" style="min-width:60px;max-width:60px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px dashed #2a2a40;" onclick="openModal(\'column\',\'' + b.id + '\')">'
-  html += '  <span style="font-size:22px;color:#4f46e5;">+</span>'
+  html += '<div class="board-column add-column" onclick="openModal(\'column\',\'' + b.id + '\')">'
+  html += '  <span style="color:#888;font-size:13px;">+ Add Another Column</span>'
   html += '</div>'
   html += '</div>'
   area.innerHTML = html
@@ -453,6 +470,23 @@ function deleteCard(cardId) {
   const idx = col.cards.findIndex(c => c.id === cardId)
   if (idx !== -1) { col.cards.splice(idx, 1); closeModal(); render() }
 }
+
+// ── Column Menu ────────────────────────────────────────────────────────────
+function toggleColumnMenu(id) {
+  const menu = document.getElementById('colMenu-' + id)
+  if (!menu) return
+  const isOpen = menu.classList.contains('open')
+  closeAllColumnMenus()
+  if (!isOpen) menu.classList.add('open')
+}
+
+function closeAllColumnMenus() {
+  document.querySelectorAll('.col-menu').forEach(m => m.classList.remove('open'))
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.col-menu-btn')) closeAllColumnMenus()
+})
 
 // ── Init ──────────────────────────────────────────────────────────────────
 render()
