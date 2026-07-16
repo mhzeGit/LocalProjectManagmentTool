@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban Project Management</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; background: #111118; color: #d0d0d8; }
+    button { cursor: pointer; border: none; background: none; font-size: inherit; }
+    input, textarea { font-family: inherit; font-size: inherit; }
+
+    /* Sidebar */
+    .sidebar { width: 260px; min-width: 260px; background: #1e1e2f; color: #ccc; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #2a2a40; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-header h1 { font-size: 16px; color: #fff; }
+    .btn-add { background: #4f46e5; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; }
+    .btn-add:hover { background: #6366f1; }
+    .btn-del { background: none; color: #f44; font-size: 12px; padding: 2px 6px; border-radius: 3px; margin-left: auto; opacity: 0; transition: opacity .15s; }
+    .nav-item:hover .btn-del, .nav-child:hover .btn-del { opacity: 1; }
+    .btn-del:hover { background: rgba(255,68,68,.15); }
+    .sidebar-section { flex: 1; overflow-y: auto; }
+    .section-title { padding: 12px 16px 4px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .nav-item { display: flex; align-items: center; gap: 4px; padding: 8px 16px; cursor: pointer; border-left: 3px solid transparent; font-size: 14px; }
+    .nav-item:hover { background: #2a2a40; color: #fff; }
+    .nav-item.active { background: #2a2a40; color: #fff; border-left-color: #4f46e5; }
+    .nav-item .arrow { font-size: 10px; color: #666; transition: transform .15s; }
+    .nav-item .arrow.open { transform: rotate(90deg); }
+    .nav-children { display: none; }
+    .nav-children.open { display: block; }
+    .nav-child { display: flex; align-items: center; gap: 4px; padding: 6px 16px 6px 36px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; }
+    .nav-child:hover, .nav-child.active { background: #2a2a40; color: #fff; }
+    .nav-child.active { border-left-color: #4f46e5; }
+    .nav-child .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-add { padding: 6px 16px 6px 36px; color: #4f46e5; cursor: pointer; font-size: 13px; }
+    .nav-add:hover { background: #2a2a40; }
+
+    /* Main */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { padding: 16px 24px; background: #1a1a26; border-bottom: 1px solid #2a2a3d; display: flex; align-items: center; gap: 12px; min-height: 56px; }
+    .breadcrumb { font-size: 13px; color: #999; }
+    .breadcrumb span { margin: 0 4px; }
+
+    .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; }
+    .board-columns { display: flex; gap: 16px; align-items: flex-start; min-height: 300px; }
+    .board-column { background: #1e1e2e; border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid #2a2a40; }
+    .column-header { padding: 12px 16px; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: #e0e0e8; }
+    .column-header .btn-del { opacity: .4; }
+    .column-header .btn-del:hover { opacity: 1; }
+    .column-cards { flex: 1; padding: 4px 8px 8px; min-height: 60px; }
+    .card { background: #26263a; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; border: 1px solid #32324a; }
+    .card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.4); border-color: #4f46e5; }
+    .card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #e8e8f0; }
+    .card-desc { font-size: 12px; color: #999; }
+    .card-actions { display: none; gap: 4px; margin-top: 8px; }
+    .card:hover .card-actions { display: flex; }
+    .card-actions button { font-size: 11px; color: #f44; }
+    .card-actions button:hover { text-decoration: underline; }
+
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 14px; }
+    .empty-state p { margin-top: 8px; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); align-items: center; justify-content: center; z-index: 100; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #1a1a2a; border-radius: 10px; width: 420px; max-width: 90vw; padding: 24px; box-shadow: 0 8px 30px rgba(0,0,0,.5); border: 1px solid #2a2a40; }
+    .modal h3 { font-size: 16px; margin-bottom: 16px; color: #e0e0f0; }
+    .modal label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: #b0b0c0; }
+    .modal input, .modal textarea { width: 100%; padding: 8px 10px; border: 1px solid #33334a; border-radius: 6px; margin-bottom: 12px; outline: none; background: #12121e; color: #d0d0e0; }
+    .modal input:focus, .modal textarea:focus { border-color: #4f46e5; }
+    .modal input::placeholder, .modal textarea::placeholder { color: #555; }
+    .modal textarea { resize: vertical; min-height: 60px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 13px; }
+    .btn-cancel { background: #2a2a3d; color: #ccc; }
+    .btn-cancel:hover { background: #3a3a50; }
+    .btn-confirm { background: #4f46e5; color: #fff; }
+    .btn-confirm:hover { background: #6366f1; }
+    .btn-danger { background: #ef4444; color: #fff; margin-right: auto; }
+    .btn-danger:hover { background: #f87171; }
+
+    .empty-col { text-align: center; color: #555; padding: 20px 0; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Kanban Board</h1>
+    <button class="btn-add" onclick="openModal('workspace')">+ Workspace</button>
+  </div>
+  <div class="sidebar-section" id="sidebarContent"></div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <span class="breadcrumb" id="breadcrumb"></span>
+  </div>
+  <div class="board-area" id="boardArea">
+    <div class="empty-state">
+      <p>Select or create a workspace to get started</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────
+let data = {
+  workspaces: [
+    {
+      id: 'w1', name: 'Template Workspace',
+      projects: [
+        {
+          id: 'p1', name: 'Template Project',
+          boards: [
+            {
+              id: 'b1', name: 'Kanban Board',
+              columns: [
+                { id: 'col1', name: 'To Do', cards: [] },
+                { id: 'col2', name: 'Doing', cards: [] },
+                { id: 'col3', name: 'Done', cards: [] },
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+let uid = 100
+function genId() { return 'id' + (++uid) }
+
+// ── State ─────────────────────────────────────────────────────────────────
+let state = {
+  selectedWorkspaceId: 'w1',
+  selectedProjectId: 'p1',
+  selectedBoardId: 'b1',
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function findWorkspace(id) { return data.workspaces.find(w => w.id === id) }
+function findProject(id) { for (let w of data.workspaces) { let p = w.projects.find(pj => pj.id === id); if (p) return p } return null }
+function findBoard(id) { for (let w of data.workspaces) { for (let p of w.projects) { let b = p.boards.find(bd => bd.id === id); if (b) return b } } return null }
+function findColumn(id) { for (let w of data.workspaces) { for (let p of w.projects) { for (let b of p.boards) { let c = b.columns.find(cl => cl.id === id); if (c) return c } } } return null }
+function findCard(id) { for (let w of data.workspaces) { for (let p of w.projects) { for (let b of p.boards) { for (let c of b.columns) { let cd = c.cards.find(crd => crd.id === id); if (cd) return cd } } } } return null }
+function findCardColumn(cardId) { for (let w of data.workspaces) { for (let p of w.projects) { for (let b of p.boards) { for (let c of b.columns) { if (c.cards.find(crd => crd.id === cardId)) return c } } } } return null }
+
+// ── Render Sidebar ────────────────────────────────────────────────────────
+function render() {
+  const sidebar = document.getElementById('sidebarContent')
+  let html = '<div class="section-title">Workspaces</div>'
+  for (let w of data.workspaces) {
+    const isOpen = state.selectedWorkspaceId === w.id
+    html += `<div class="nav-item ${isOpen ? 'active' : ''}" onclick="selectWorkspace('${w.id}')">
+      <span class="arrow ${isOpen ? 'open' : ''}">▶</span>
+      <span>${w.name}</span>
+      <button class="btn-del" onclick="event.stopPropagation();deleteWorkspace('${w.id}')">✕</button>
+    </div>`
+    if (isOpen) {
+      html += '<div class="nav-children open">'
+      for (let p of w.projects) {
+        const isProjectOpen = state.selectedProjectId === p.id
+        html += `<div class="nav-item ${isProjectOpen ? 'active' : ''}" style="padding-left:32px;font-size:13px;" onclick="selectProject('${p.id}')">
+          <span class="arrow ${isProjectOpen ? 'open' : ''}">▶</span>
+          <span>${p.name}</span>
+          <button class="btn-del" onclick="event.stopPropagation();deleteProject('${p.id}')">✕</button>
+        </div>`
+        if (isProjectOpen) {
+          html += '<div class="nav-children open">'
+          for (let b of p.boards) {
+            const isBoardActive = state.selectedBoardId === b.id
+            html += `<div class="nav-child ${isBoardActive ? 'active' : ''}" onclick="selectBoard('${b.id}')">
+              <span class="name">${b.name}</span>
+              <button class="btn-del" onclick="event.stopPropagation();deleteBoard('${b.id}')">✕</button>
+            </div>`
+          }
+          html += `<div class="nav-add" onclick="openModal('board','${p.id}')">+ Add board</div>`
+          html += '</div>'
+        }
+      }
+      html += `<div class="nav-add" onclick="openModal('project','${w.id}')">+ Add project</div>`
+      html += '</div>'
+    }
+  }
+  sidebar.innerHTML = html
+  renderBoard()
+}
+
+// ── Selection ─────────────────────────────────────────────────────────────
+function selectWorkspace(id) {
+  if (state.selectedWorkspaceId === id) { state.selectedWorkspaceId = null; state.selectedProjectId = null; state.selectedBoardId = null }
+  else {
+    state.selectedWorkspaceId = id
+    const w = findWorkspace(id)
+    state.selectedProjectId = w && w.projects.length > 0 ? w.projects[0].id : null
+    const p = findProject(state.selectedProjectId)
+    state.selectedBoardId = p && p.boards.length > 0 ? p.boards[0].id : null
+  }
+  render()
+}
+
+function selectProject(id) {
+  if (state.selectedProjectId === id) { state.selectedProjectId = null; state.selectedBoardId = null }
+  else {
+    state.selectedProjectId = id
+    const p = findProject(id)
+    state.selectedBoardId = p && p.boards.length > 0 ? p.boards[0].id : null
+  }
+  render()
+}
+
+function selectBoard(id) {
+  state.selectedBoardId = id
+  render()
+}
+
+// ── Render Board ──────────────────────────────────────────────────────────
+function renderBoard() {
+  const area = document.getElementById('boardArea')
+  const breadcrumb = document.getElementById('breadcrumb')
+
+  let b = state.selectedBoardId ? findBoard(state.selectedBoardId) : null
+  let p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
+  let w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
+
+  let bc = ''
+  if (w) bc += w.name
+  if (p) bc += ' <span>›</span> ' + p.name
+  if (b) bc += ' <span>›</span> ' + b.name
+  breadcrumb.innerHTML = bc || 'Select a board'
+
+  if (!b) {
+    area.innerHTML = '<div class="empty-state"><p>' + (w ? 'Select a board from the sidebar' : 'Select or create a workspace to get started') + '</p></div>'
+    return
+  }
+
+  let html = '<div class="board-columns">'
+  for (let col of b.columns) {
+    html += '<div class="board-column">'
+    html += '<div class="column-header">'
+    html += '  <span>' + col.name + '</span>'
+    html += '  <button class="btn-del" onclick="deleteColumn(\'' + col.id + '\')">✕</button>'
+    html += '  <button class="btn-add" onclick="openModal(\'card\',\'' + col.id + '\')">+ Card</button>'
+    html += '</div>'
+    html += '<div class="column-cards">'
+    if (col.cards.length === 0) {
+      html += '<div class="empty-col">No cards</div>'
+    }
+    for (let c of col.cards) {
+      html += '<div class="card" onclick="openCardDetail(\'' + c.id + '\')">'
+      html += '  <div class="card-title">' + escapeHtml(c.title) + '</div>'
+      if (c.description) html += '  <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      html += '</div>'
+    }
+    html += '</div></div>'
+  }
+  html += '<div class="board-column" style="min-width:60px;max-width:60px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px dashed #2a2a40;" onclick="openModal(\'column\',\'' + b.id + '\')">'
+  html += '  <span style="font-size:22px;color:#4f46e5;">+</span>'
+  html += '</div>'
+  html += '</div>'
+  area.innerHTML = html
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div')
+  d.textContent = s
+  return d.innerHTML
+}
+
+// ── Modal System ──────────────────────────────────────────────────────────
+function openModal(type, parentId) {
+  const overlay = document.getElementById('modal')
+  const title = document.getElementById('modalTitle')
+  const body = document.getElementById('modalBody')
+  overlay.classList.add('open')
+
+  if (type === 'workspace') {
+    title.textContent = 'Create Workspace'
+    body.innerHTML = '<label>Workspace Name</label><input id="modalInput" placeholder="e.g. My Workspace" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createWorkspace()">Create</button></div>'
+  } else if (type === 'project') {
+    title.textContent = 'Create Project'
+    body.innerHTML = '<label>Project Name</label><input id="modalInput" placeholder="e.g. My Project" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createProject(\'' + parentId + '\')">Create</button></div>'
+  } else if (type === 'board') {
+    title.textContent = 'Create Board'
+    body.innerHTML = '<label>Board Name</label><input id="modalInput" placeholder="e.g. Kanban Board" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createBoard(\'' + parentId + '\')">Create</button></div>'
+  } else if (type === 'column') {
+    title.textContent = 'Add Column'
+    body.innerHTML = '<label>Column Name</label><input id="modalInput" placeholder="e.g. In Review" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createColumn(\'' + parentId + '\')">Add</button></div>'
+  } else if (type === 'card') {
+    title.textContent = 'Create Card'
+    body.innerHTML = '<label>Title</label><input id="modalInput" placeholder="Card title" autofocus><label style="margin-top:8px;">Description</label><textarea id="modalTextarea" placeholder="Optional description"></textarea><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createCard(\'' + parentId + '\')">Create</button></div>'
+  }
+}
+
+function openCardDetail(cardId) {
+  const c = findCard(cardId)
+  if (!c) return
+  const overlay = document.getElementById('modal')
+  document.getElementById('modalTitle').textContent = c.title
+  document.getElementById('modalBody').innerHTML = '<label>Title</label><input id="modalInput" value="' + escapeHtml(c.title) + '"><label style="margin-top:8px;">Description</label><textarea id="modalTextarea" style="min-height:100px;">' + escapeHtml(c.description || '') + '</textarea><div class="modal-actions"><button class="btn-danger" onclick="deleteCard(\'' + cardId + '\')">Delete</button><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="saveCard(\'' + cardId + '\')">Save</button></div>'
+  overlay.classList.add('open')
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open')
+}
+
+// ── CRUD: Workspace ──────────────────────────────────────────────────────
+function createWorkspace() {
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  data.workspaces.push({ id: genId(), name, projects: [] })
+  closeModal()
+  state.selectedWorkspaceId = data.workspaces[data.workspaces.length - 1].id
+  state.selectedProjectId = null
+  state.selectedBoardId = null
+  render()
+}
+
+function deleteWorkspace(id) {
+  if (!confirm('Delete this workspace and everything inside?')) return
+  const idx = data.workspaces.findIndex(w => w.id === id)
+  if (idx === -1) return
+  data.workspaces.splice(idx, 1)
+  if (state.selectedWorkspaceId === id) {
+    state.selectedWorkspaceId = data.workspaces.length > 0 ? data.workspaces[0].id : null
+    state.selectedProjectId = null
+    state.selectedBoardId = null
+  }
+  render()
+}
+
+// ── CRUD: Project ─────────────────────────────────────────────────────────
+function createProject(workspaceId) {
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  const w = findWorkspace(workspaceId)
+  if (!w) return
+  w.projects.push({ id: genId(), name, boards: [] })
+  closeModal()
+  state.selectedProjectId = w.projects[w.projects.length - 1].id
+  state.selectedBoardId = null
+  render()
+}
+
+function deleteProject(id) {
+  if (!confirm('Delete this project and everything inside?')) return
+  for (let w of data.workspaces) {
+    const idx = w.projects.findIndex(p => p.id === id)
+    if (idx !== -1) {
+      w.projects.splice(idx, 1)
+      if (state.selectedProjectId === id) {
+        state.selectedProjectId = w.projects.length > 0 ? w.projects[0].id : null
+        state.selectedBoardId = null
+      }
+      render()
+      return
+    }
+  }
+}
+
+// ── CRUD: Board ───────────────────────────────────────────────────────────
+function createBoard(projectId) {
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  const p = findProject(projectId)
+  if (!p) return
+  p.boards.push({ id: genId(), name, columns: [] })
+  closeModal()
+  state.selectedBoardId = p.boards[p.boards.length - 1].id
+  render()
+}
+
+function deleteBoard(id) {
+  if (!confirm('Delete this board and all its columns and cards?')) return
+  for (let w of data.workspaces) {
+    for (let p of w.projects) {
+      const idx = p.boards.findIndex(b => b.id === id)
+      if (idx !== -1) {
+        p.boards.splice(idx, 1)
+        if (state.selectedBoardId === id) {
+          state.selectedBoardId = p.boards.length > 0 ? p.boards[0].id : null
+        }
+        render()
+        return
+      }
+    }
+  }
+}
+
+// ── CRUD: Column ──────────────────────────────────────────────────────────
+function createColumn(boardId) {
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  const b = findBoard(boardId)
+  if (!b) return
+  b.columns.push({ id: genId(), name, cards: [] })
+  closeModal()
+  render()
+}
+
+function deleteColumn(id) {
+  if (!confirm('Delete this column and all its cards?')) return
+  for (let w of data.workspaces) {
+    for (let p of w.projects) {
+      for (let b of p.boards) {
+        const idx = b.columns.findIndex(c => c.id === id)
+        if (idx !== -1) { b.columns.splice(idx, 1); render(); return }
+      }
+    }
+  }
+}
+
+// ── CRUD: Card ────────────────────────────────────────────────────────────
+function createCard(columnId) {
+  const title = document.getElementById('modalInput').value.trim()
+  const desc = document.getElementById('modalTextarea').value.trim()
+  if (!title) return
+  const col = findColumn(columnId)
+  if (!col) return
+  col.cards.push({ id: genId(), title, description: desc })
+  closeModal()
+  render()
+}
+
+function saveCard(cardId) {
+  const c = findCard(cardId)
+  if (!c) return
+  const title = document.getElementById('modalInput').value.trim()
+  const desc = document.getElementById('modalTextarea').value.trim()
+  if (!title) return
+  c.title = title
+  c.description = desc
+  closeModal()
+  render()
+}
+
+function deleteCard(cardId) {
+  if (!confirm('Delete this card?')) return
+  const col = findCardColumn(cardId)
+  if (!col) return
+  const idx = col.cards.findIndex(c => c.id === cardId)
+  if (idx !== -1) { col.cards.splice(idx, 1); closeModal(); render() }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+render()
+</script>
+</body>
+</html>
