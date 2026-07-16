@@ -41,8 +41,12 @@
     .breadcrumb { font-size: 13px; color: #999; }
     .breadcrumb span { margin: 0 4px; }
 
-    .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; cursor: default; user-select: none; }
+    .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; cursor: default; user-select: none; scrollbar-color: #3a3a55 #1a1a2a; scrollbar-width: thin; }
     .board-area.grabbing { cursor: grabbing; }
+    .board-area::-webkit-scrollbar { height: 8px; }
+    .board-area::-webkit-scrollbar-track { background: #1a1a2a; }
+    .board-area::-webkit-scrollbar-thumb { background: #3a3a55; border-radius: 4px; }
+    .board-area::-webkit-scrollbar-thumb:hover { background: #4f46e5; }
     .board-columns { display: flex; gap: 16px; align-items: flex-start; min-height: 300px; }
     .board-column { background: #1e1e2e; border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid #2a2a40; }
     .board-column.add-column { min-width: 280px; max-width: 320px; height: 6vh; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #2a2a40; background: transparent; }
@@ -330,6 +334,25 @@ function openCardDetail(cardId) {
 function closeModal() {
   document.getElementById('modal').classList.remove('open')
 }
+
+// ── Modal Keyboard Nav ────────────────────────────────────────────────────
+document.getElementById('modal').addEventListener('keydown', function(e) {
+  if (!this.classList.contains('open')) return
+  if (e.key === 'Escape') { closeModal(); e.preventDefault(); return }
+  if (e.key === 'Enter') {
+    const target = e.target
+    if (target.tagName === 'TEXTAREA') return
+    const confirmBtn = this.querySelector('.btn-confirm')
+    if (confirmBtn) { e.preventDefault(); confirmBtn.click() }
+  }
+  if (e.key === 'Tab') {
+    const buttons = Array.from(this.querySelectorAll('.modal-actions button:not([disabled])'))
+    if (buttons.length < 2) return
+    const first = buttons[0], last = buttons[buttons.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }
+})
 
 // ── CRUD: Workspace ──────────────────────────────────────────────────────
 function createWorkspace() {
