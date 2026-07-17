@@ -175,7 +175,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: #1e1e2e;
+  background: #2a2a40;
 }
 
 .tl-row:hover .tl-row-label {
@@ -183,7 +183,7 @@
 }
 
 .tl-row:hover .tl-row-label::after {
-  background: #2a2a3d;
+  background: #2a2a40;
 }
 
 .tl-row-label {
