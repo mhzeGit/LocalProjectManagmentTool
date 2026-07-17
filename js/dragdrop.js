@@ -9,11 +9,10 @@ let _dragOffsetX = 0
 let _dragOffsetY = 0
 let _renderFn = null
 
-let _colGhostEl = null
-let _colOffsetX = 0
-let _colOffsetY = 0
-let _colIndicatorEl = null
-let _colInsertPos = null
+let _colOriginalIdx = -1
+let _colCurrentPosKey = null
+let _colFlipTimer = null
+let _colDraggedId = null
 
 export function initDragDrop(renderFn) {
   _renderFn = renderFn
@@ -49,52 +48,110 @@ export function initDragDrop(renderFn) {
     if (col && !e.target.closest('.column-header button') && !e.target.closest('.card') && !e.target.closest('.column-footer') && !e.target.closest('.col-menu')) {
       _dragActive = true
       e.dataTransfer.effectAllowed = 'move'
+      const img = new Image()
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      e.dataTransfer.setDragImage(img, 0, 0)
       e.dataTransfer.setData('text/x-column', col.dataset.columnId)
-      const rect = col.getBoundingClientRect()
-      _colOffsetX = e.clientX - rect.left
-      _colOffsetY = e.clientY - rect.top
-      _colGhostEl = col.cloneNode(true)
-      _colGhostEl.style.cssText = 'position:fixed;opacity:0.92;transform:rotate(0.5deg) scale(1.01);width:' + col.offsetWidth + 'px;border-radius:8px;background:#1e1e2e;border:2px solid #4f46e5;box-shadow:0 12px 40px rgba(0,0,0,0.45);pointer-events:none;z-index:99999;overflow:hidden;'
-      _colGhostEl.style.left = (e.clientX - _colOffsetX) + 'px'
-      _colGhostEl.style.top = (e.clientY - _colOffsetY) + 'px'
-      document.body.appendChild(_colGhostEl)
-      col.classList.add('dragging')
+      _colDraggedId = col.dataset.columnId
+      const container = board.querySelector('.board-columns')
+      if (container) {
+        const allCols = container.querySelectorAll('.board-column:not(.add-column)')
+        _colOriginalIdx = Array.from(allCols).indexOf(col)
+      }
       return
     }
     e.preventDefault()
   })
 
+  function clearFlipTransforms(container) {
+    if (!container) container = document.getElementById('boardArea')
+    container.querySelectorAll('.board-column').forEach(function(el) {
+      el.style.transition = ''
+      el.style.transform = ''
+    })
+  }
+
   function cleanupDrag() {
     if (_dragTimer) { clearTimeout(_dragTimer); _dragTimer = null }
+    if (_colFlipTimer) { clearTimeout(_colFlipTimer); _colFlipTimer = null }
     _dragActive = false
     _dragCardHeight = 0
     if (_dragGhostEl) { _dragGhostEl.remove(); _dragGhostEl = null }
-    if (_colGhostEl) { _colGhostEl.remove(); _colGhostEl = null }
-    if (_colIndicatorEl) { _colIndicatorEl.remove(); _colIndicatorEl = null }
-    _colInsertPos = null
+    _colOriginalIdx = -1
+    _colCurrentPosKey = null
+    _colDraggedId = null
     const b = document.getElementById('boardArea')
     if (b) {
+      clearFlipTransforms(b)
       b.querySelectorAll('.dragging, .drag-over').forEach(function(el) { el.classList.remove('dragging', 'drag-over') })
       b.querySelectorAll('.dragging-collapsed').forEach(function(el) { el.classList.remove('dragging-collapsed') })
       b.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
-      b.querySelectorAll('.col-drop-indicator').forEach(function(el) { el.remove() })
     }
   }
   document.addEventListener('dragend', cleanupDrag)
-  document.addEventListener('mouseup', function() { if (_dragGhostEl || _colGhostEl) cleanupDrag() })
+  document.addEventListener('mouseup', function() { if (_dragGhostEl) cleanupDrag() })
 
   board.addEventListener('dragenter', function(e) {
     if (e.target.closest('.board-column:not(.add-column), .column-cards')) e.preventDefault()
   })
 
+  function flipColumn(container, draggedCol, insertBeforeNode, columnId) {
+    if (_colFlipTimer) { clearTimeout(_colFlipTimer); _colFlipTimer = null }
+
+    clearFlipTransforms(container)
+
+    const allCols = container.querySelectorAll('.board-column:not(.add-column)')
+    const oldPositions = Array.from(allCols).map(function(el) {
+      return { el: el, rect: el.getBoundingClientRect() }
+    })
+
+    container.insertBefore(draggedCol, insertBeforeNode)
+
+    const newCols = container.querySelectorAll('.board-column:not(.add-column)')
+    const newPositions = Array.from(newCols).map(function(el) {
+      return { el: el, rect: el.getBoundingClientRect() }
+    })
+
+    newPositions.forEach(function(newItem) {
+      const oldItem = oldPositions.find(function(o) { return o.el === newItem.el })
+      if (oldItem) {
+        const dx = oldItem.rect.left - newItem.rect.left
+        if (dx !== 0) {
+          newItem.el.style.transition = 'none'
+          newItem.el.style.transform = 'translate(' + dx + 'px, 0)'
+        }
+      }
+    })
+
+    container.offsetHeight
+
+    newPositions.forEach(function(newItem) {
+      if (newItem.el.style.transform) {
+        newItem.el.style.transition = 'transform 0.18s cubic-bezier(0.25, 0.8, 0.25, 1)'
+        newItem.el.style.transform = 'translate(0, 0)'
+      }
+    })
+
+    _colFlipTimer = setTimeout(function() {
+      clearFlipTransforms(container)
+      _colFlipTimer = null
+    }, 220)
+
+    const b = findBoard(state.selectedBoardId)
+    if (b) {
+      const newIdx = Array.from(newCols).findIndex(function(el) { return el.dataset.columnId === columnId })
+      if (_colOriginalIdx !== -1 && newIdx !== -1 && newIdx !== _colOriginalIdx) {
+        const moved = b.columns.splice(_colOriginalIdx, 1)[0]
+        b.columns.splice(newIdx, 0, moved)
+        _colOriginalIdx = newIdx
+      }
+    }
+  }
+
   board.addEventListener('dragover', function(e) {
     if (_dragGhostEl) {
       _dragGhostEl.style.left = (e.clientX - _dragOffsetX) + 'px'
       _dragGhostEl.style.top = (e.clientY - _dragOffsetY) + 'px'
-    }
-    if (_colGhostEl) {
-      _colGhostEl.style.left = (e.clientX - _colOffsetX) + 'px'
-      _colGhostEl.style.top = (e.clientY - _colOffsetY) + 'px'
     }
     if (!e.target.closest('.board-column:not(.add-column), .column-cards')) return
     e.preventDefault()
@@ -113,8 +170,13 @@ export function initDragDrop(renderFn) {
       }
     }
     if (e.dataTransfer.types.includes('text/x-column')) {
+      if (!_colDraggedId) return
+
       const container = board.querySelector('.board-columns')
       if (!container) return
+
+      const draggedCol = container.querySelector('.board-column[data-column-id="' + _colDraggedId + '"]')
+      if (!draggedCol) return
 
       const cols = container.querySelectorAll('.board-column:not(.add-column)')
       let targetCol = null
@@ -141,24 +203,18 @@ export function initDragDrop(renderFn) {
         }
       }
 
-      const posKey = targetCol ? targetCol.dataset.columnId + '-' + insertSide : null
-      if (posKey === _colInsertPos) return
+      if (!targetCol) return
 
-      if (_colIndicatorEl) { _colIndicatorEl.remove(); _colIndicatorEl = null }
+      const posKey = targetCol.dataset.columnId + '-' + insertSide
+      if (posKey === _colCurrentPosKey) return
 
-      if (targetCol) {
-        const indicator = document.createElement('div')
-        indicator.className = 'col-drop-indicator'
-        if (insertSide === 'left') {
-          container.insertBefore(indicator, targetCol)
-        } else {
-          container.insertBefore(indicator, targetCol.nextSibling)
-        }
-        _colIndicatorEl = indicator
-        _colInsertPos = posKey
-      } else {
-        _colInsertPos = null
-      }
+      const insertBeforeNode = insertSide === 'left' ? targetCol : targetCol.nextSibling
+
+      if (draggedCol.nextSibling === insertBeforeNode || draggedCol === insertBeforeNode) return
+
+      _colCurrentPosKey = posKey
+
+      flipColumn(container, draggedCol, insertBeforeNode, _colDraggedId)
     }
   })
 
@@ -174,7 +230,6 @@ export function initDragDrop(renderFn) {
   board.addEventListener('drop', function(e) {
     e.preventDefault()
     if (_dragGhostEl) { _dragGhostEl.remove(); _dragGhostEl = null }
-    if (_colGhostEl) { _colGhostEl.remove(); _colGhostEl = null }
     board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
 
     const cardId = e.dataTransfer.getData('text/x-card')
@@ -202,66 +257,25 @@ export function initDragDrop(renderFn) {
 
     const columnId = e.dataTransfer.getData('text/x-column')
     if (columnId) {
+      if (_colFlipTimer) { clearTimeout(_colFlipTimer); _colFlipTimer = null }
       const container = board.querySelector('.board-columns')
       if (!container) return
-      const draggedCol = container.querySelector('.board-column[data-column-id="' + columnId + '"]')
-      if (!draggedCol) return
 
-      if (_colIndicatorEl) {
-        const indicator = _colIndicatorEl
-        _colIndicatorEl = null
-        _colInsertPos = null
+      clearFlipTransforms(container)
 
-        if (indicator.previousElementSibling === draggedCol || indicator.nextElementSibling === draggedCol) return
-
-        const allCols = container.querySelectorAll('.board-column:not(.add-column)')
-        const oldPositions = Array.from(allCols).map(function(el) {
-          return { el: el, rect: el.getBoundingClientRect() }
-        })
-
-        container.insertBefore(draggedCol, indicator)
-        indicator.remove()
-
-        const newCols = container.querySelectorAll('.board-column:not(.add-column)')
-        const newPositions = Array.from(newCols).map(function(el) {
-          return { el: el, rect: el.getBoundingClientRect() }
-        })
-
-        newPositions.forEach(function(newItem) {
-          const oldItem = oldPositions.find(function(o) { return o.el === newItem.el })
-          if (oldItem) {
-            const dx = oldItem.rect.left - newItem.rect.left
-            const dy = oldItem.rect.top - newItem.rect.top
-            if (dx !== 0 || dy !== 0) {
-              newItem.el.style.transition = 'none'
-              newItem.el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)'
-            }
-          }
-        })
-
-        container.offsetHeight
-
-        newPositions.forEach(function(newItem) {
-          newItem.el.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)'
-          newItem.el.style.transform = 'translate(0, 0)'
-        })
-
-        setTimeout(function() {
-          newPositions.forEach(function(item) {
-            item.el.style.transition = ''
-            item.el.style.transform = ''
-          })
-        }, 400)
-
-        const b = findBoard(state.selectedBoardId)
-        if (!b) return
-        const oldIdx = b.columns.findIndex(function(c) { return c.id === columnId })
-        const newIdx = Array.from(newCols).findIndex(function(el) { return el.dataset.columnId === columnId })
-        if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
-          const moved = b.columns.splice(oldIdx, 1)[0]
-          b.columns.splice(newIdx, 0, moved)
-        }
+      const newCols = container.querySelectorAll('.board-column:not(.add-column)')
+      const b = findBoard(state.selectedBoardId)
+      if (!b) return
+      const newIdx = Array.from(newCols).findIndex(function(el) { return el.dataset.columnId === columnId })
+      const oldIdx = b.columns.findIndex(function(c) { return c.id === columnId })
+      if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
+        const moved = b.columns.splice(oldIdx, 1)[0]
+        b.columns.splice(newIdx, 0, moved)
       }
+
+      _colOriginalIdx = -1
+      _colCurrentPosKey = null
+      _colDraggedId = null
     }
   })
 
