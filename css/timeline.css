@@ -165,6 +165,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: text;
+}
+
+.tl-row-name:hover {
+  color: #e8e8f0;
 }
 
 .tl-row-count {

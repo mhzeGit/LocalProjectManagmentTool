@@ -203,7 +203,7 @@ export function renderTimeline() {
     const trackHeight = Math.max(52, trackPadV * 2 + numLanes * laneBarH + (numLanes - 1) * laneGap)
 
     html += '<div class="tl-row">'
-    html += '  <div class="tl-row-label" style="min-height:' + trackHeight + 'px">'
+    html += '  <div class="tl-row-label" data-col-id="' + col.id + '" style="min-height:' + trackHeight + 'px">'
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
     html += '  </div>'
@@ -345,6 +345,33 @@ function initTimelineDrag() {
     if (ucard && ucard.dataset.cardId) openCardDetail(ucard.dataset.cardId)
   })
 
+  area.addEventListener('dblclick', function(e) {
+    const rowLabel = e.target.closest('.tl-row-label')
+    if (!rowLabel) return
+    const colId = rowLabel.dataset.colId
+    const col = findColumn(colId)
+    if (!col) return
+    const nameSpan = rowLabel.querySelector('.tl-row-name')
+    if (!nameSpan) return
+    const input = document.createElement('input')
+    input.value = col.name
+    input.className = 'tl-row-rename-input'
+    input.style.cssText = 'background:#12121e;border:1px solid #4f46e5;border-radius:4px;color:#e0e0e8;font-size:14px;font-weight:600;padding:2px 6px;width:100%;outline:none;'
+    nameSpan.replaceWith(input)
+    input.focus()
+    input.select()
+    function finish() {
+      const val = input.value.trim()
+      if (val) { col.name = val; renderTimeline() }
+      else renderTimeline()
+    }
+    input.addEventListener('blur', finish)
+    input.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
+      if (ev.key === 'Escape') { ev.preventDefault(); renderTimeline() }
+    })
+  })
+
   area.addEventListener('dragleave', function(e) {
     const track = e.target.closest('.tl-track')
     if (track && !track.contains(e.relatedTarget)) track.classList.remove('drag-over')
@@ -363,6 +390,22 @@ function initTimelineDrag() {
   })
 
   area.addEventListener('contextmenu', function(e) {
+    const rowLabel = e.target.closest('.tl-row-label')
+    if (rowLabel) {
+      e.preventDefault()
+      document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+      const menu = document.createElement('div')
+      menu.className = 'tl-ctx-menu'
+      menu.style.left = e.clientX + 'px'
+      menu.style.top = e.clientY + 'px'
+      menu.dataset.colId = rowLabel.dataset.colId
+      menu.dataset.source = 'rowLabel'
+      menu.innerHTML = '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive Row</button>'
+      menu.addEventListener('mouseleave', function() { menu.remove() })
+      document.body.appendChild(menu)
+      return
+    }
+
     const track = e.target.closest('.tl-track')
     if (!track) return
     e.preventDefault()
@@ -378,18 +421,17 @@ function initTimelineDrag() {
     menu.style.top = e.clientY + 'px'
     menu.dataset.colId = track.dataset.colId
     menu.dataset.dayPx = newPx
-    let html = ''
+    let html = '<button class="tl-ctx-item" data-action="add">Add Card</button>'
+    if (_clipboardCard) {
+      html += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
+    }
     if (bar) {
       menu.dataset.cardId = bar.dataset.cardId
+      html += '<div class="tl-ctx-divider"></div>'
       html += '<button class="tl-ctx-item" data-action="copy">Copy</button>'
       html += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
       html += '<div class="tl-ctx-divider"></div>'
       html += '<button class="tl-ctx-item tl-ctx-danger" data-action="delete">Delete</button>'
-    } else {
-      html += '<button class="tl-ctx-item" data-action="add">Add Card</button>'
-      if (_clipboardCard) {
-        html += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
-      }
     }
     menu.innerHTML = html
     menu.addEventListener('mouseleave', function() { menu.remove() })
@@ -479,9 +521,9 @@ document.addEventListener('click', function(e) {
       const col = findColumn(menu.dataset.colId)
       const newPx = parseInt(menu.dataset.dayPx, 10)
       if (action === 'add' && col) {
-        const date = pixelToDate(newPx)
-        const endDate = new Date(date)
-        endDate.setDate(endDate.getDate() + 1)
+        const existing = menu.dataset.cardId ? findCard(menu.dataset.cardId) : null
+        const date = existing ? parseDate(existing.startDate) || parseDate(existing.endDate) || new Date() : pixelToDate(newPx)
+        const endDate = existing ? parseDate(existing.endDate) || parseDate(existing.startDate) || new Date(date.getTime() + 86400000) : new Date(date.getTime() + 86400000)
         const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: 'medium', tags: [], members: [], checklists: [] }
         col.cards.push(card)
         renderTimeline()
@@ -521,6 +563,17 @@ document.addEventListener('click', function(e) {
           if (srcCol) {
             const idx = srcCol.cards.indexOf(card)
             if (idx !== -1) srcCol.cards.splice(idx, 1)
+            renderTimeline()
+          }
+        }
+      } else if (action === 'archive') {
+        const b = findBoard(state.selectedBoardId)
+        if (b) {
+          const colIdx = b.columns.findIndex(function(c) { return c.id === menu.dataset.colId })
+          if (colIdx !== -1) {
+            const archived = b.columns.splice(colIdx, 1)[0]
+            if (!b.archivedColumns) b.archivedColumns = []
+            b.archivedColumns.push(archived)
             renderTimeline()
           }
         }
@@ -619,15 +672,6 @@ document.addEventListener('mousemove', function(e) {
 
     const card = findCard(_moving.cardId)
     if (card) {
-      const s = parseDate(card.startDate) || parseDate(card.endDate)
-      const e = parseDate(card.endDate) || parseDate(card.startDate)
-      const duration = daysBetween(s, e)
-      const newStart = pixelToDate(newLeft)
-      card.startDate = formatDate(newStart)
-      const newEnd = new Date(newStart)
-      newEnd.setDate(newEnd.getDate() + duration)
-      card.endDate = formatDate(newEnd)
-
       if (_moving.targetColId && _moving.targetColId !== _moving.sourceColId) {
         const sourceCol = findCardColumn(card.id)
         if (sourceCol) {
