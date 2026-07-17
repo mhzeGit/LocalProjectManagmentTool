@@ -166,13 +166,48 @@ export function renderTimeline() {
     const colDated = datedItems.filter(x => x.columnId === col.id)
     if (colDated.length > 0) hasDated = true
 
+    const sortedItems = [...colDated].sort(function(a, b) {
+      const aS = parseDate(a.card.startDate) || parseDate(a.card.endDate)
+      const bS = parseDate(b.card.startDate) || parseDate(b.card.endDate)
+      return aS - bS
+    })
+    const lanes = []
+    const laneMap = {}
+    for (const item of sortedItems) {
+      const c = item.card
+      const s = parseDate(c.startDate)
+      const e = parseDate(c.endDate)
+      if (!s && !e) continue
+      const start = s || e
+      const end = e || s
+      let assigned = false
+      for (let i = 0; i < lanes.length; i++) {
+        if (lanes[i] < start) {
+          lanes[i] = end
+          laneMap[c.id] = i
+          assigned = true
+          break
+        }
+      }
+      if (!assigned) {
+        lanes.push(end)
+        laneMap[c.id] = lanes.length - 1
+      }
+    }
+    const numLanes = Math.max(lanes.length, 1)
+
+    const laneBarH = 28
+    const laneGap = 4
+    const trackPadV = numLanes > 1 ? 6 : Math.floor((52 - laneBarH) / 2)
+    const trackHeight = Math.max(52, trackPadV * 2 + numLanes * laneBarH + (numLanes - 1) * laneGap)
+
     html += '<div class="tl-row">'
-    html += '  <div class="tl-row-label">'
+    html += '  <div class="tl-row-label" style="min-height:' + trackHeight + 'px">'
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
     html += '  </div>'
     const gridStops = 'transparent 0px, transparent ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + DAY_WIDTH + 'px'
-    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px;background-image:repeating-linear-gradient(90deg,' + gridStops + ')">'
+    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px;height:' + trackHeight + 'px;background-image:repeating-linear-gradient(90deg,' + gridStops + ')">'
 
     for (const m of monthBoundaries) {
       html += '    <div class="tl-month-marker-body" style="left:' + m.left + 'px"></div>'
@@ -191,11 +226,18 @@ export function renderTimeline() {
       if (barLeft + barWidth > totalWidth) barWidth = totalWidth - barLeft
       if (barWidth <= DAY_WIDTH * 0.5) continue
 
+      const lane = laneMap[c.id] ?? 0
+      const barTop = trackPadV + lane * (laneBarH + laneGap)
+
       const color = PRIORITY_COLORS[c.priority] || PRIORITY_COLORS.medium
       const completed = c.completed ? ' tl-bar-done' : ''
       const barLabel = c.title.length > 25 ? c.title.slice(0, 24) + '\u2026' : c.title
 
-      html += '    <div class="tl-bar' + completed + '" data-card-id="' + c.id + '" style="left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color + '" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
+      let barStyle = 'left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color
+      if (numLanes > 1) {
+        barStyle += ';top:' + barTop + 'px;height:' + laneBarH + 'px;transform:none'
+      }
+      html += '    <div class="tl-bar' + completed + '" data-card-id="' + c.id + '" style="' + barStyle + '" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
       html += '      <div class="tl-bar-resize tl-bar-resize-l" data-resize="start"></div>'
       if (barWidth > 28) {
         html += '      <span class="tl-bar-title">' + escapeHtml(barLabel) + '</span>'
