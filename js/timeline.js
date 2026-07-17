@@ -43,7 +43,7 @@ function formatShortDate(str) {
 }
 
 function pixelToDate(px) {
-  const dayOffset = Math.floor(px / DAY_WIDTH)
+  const dayOffset = Math.round(px / DAY_WIDTH)
   const d = new Date(_tlMinDate)
   d.setDate(d.getDate() + dayOffset)
   return d
@@ -307,7 +307,7 @@ function initTimelineDrag() {
 
   area.addEventListener('dragstart', function(e) {
     const ucard = e.target.closest('.tl-ucard')
-    if (!ucard) { e.preventDefault(); return }
+    if (!ucard) return
     _dragCardId = ucard.dataset.cardId
     _dragActiveType = 'ucard'
     e.dataTransfer.setData('text/x-tl-ucard', ucard.dataset.cardId)
@@ -707,7 +707,9 @@ document.addEventListener('mouseup', function() {
             if (endD < startD) card.endDate = card.startDate
           }
         } else {
-          card.endDate = formatDate(pixelToDate(newLeft + newWidth - 1))
+          const endDate = pixelToDate(newLeft + newWidth)
+          endDate.setDate(endDate.getDate() - 1)
+          card.endDate = formatDate(endDate)
           if (card.startDate) {
             const startD = parseDate(card.startDate)
             const endD = parseDate(card.endDate)
