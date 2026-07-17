@@ -1,0 +1,51 @@
+.tl-row:hover,
+.tl-row-hover {
+  background: #1a1a26;
+}
+
+.tl-row-label {
+  flex: 0 0 200px;
+  position: sticky;
+  left: 0;
+  z-index: 22;
+  background: #1e1e2e;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-right: 1px solid #2a2a40;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+
+
+
+.tl-row-label::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #2a2a40;
+}
+
+.tl-row:hover .tl-row-label,
+.tl-row-hover .tl-row-label {
+  background: #2a2a3d;
+}
+
+.tl-row:hover .tl-row-label::after {
+  background: #2a2a40;
+}
+
+.tl-row-label {
+  cursor: grab;
+}
+
+.tl-row-label:active {
+  cursor: grabbing;
+}
+
+.tl-row-dragging {

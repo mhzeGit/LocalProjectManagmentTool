@@ -162,11 +162,6 @@
   background: #14141e;
 }
 
-.tl-row:hover,
-.tl-row-hover {
-  background: #1a1a26;
-}
-
 .tl-row-label {
   flex: 0 0 200px;
   position: sticky;
@@ -180,10 +175,8 @@
   border-right: 1px solid #2a2a40;
   min-height: 48px;
   box-sizing: border-box;
+  cursor: grab;
 }
-
-
-
 
 .tl-row-label::after {
   content: '';
@@ -195,17 +188,14 @@
   background: #2a2a40;
 }
 
-.tl-row:hover .tl-row-label,
+.tl-row-label:hover,
 .tl-row-hover .tl-row-label {
   background: #2a2a3d;
 }
 
-.tl-row:hover .tl-row-label::after {
+.tl-row-label:hover::after,
+.tl-row-hover .tl-row-label::after {
   background: #2a2a40;
-}
-
-.tl-row-label {
-  cursor: grab;
 }
 
 .tl-row-label:active {
