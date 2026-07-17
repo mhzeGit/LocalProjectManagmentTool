@@ -1,8 +1,7 @@
 .timeline {
-  height: 100%;
   overflow-x: auto;
-  overflow-y: auto;
-  padding-bottom: 24px;
+  overflow-y: hidden;
+  flex-shrink: 0;
 }
 
 .tl-header {
@@ -238,7 +237,7 @@
 }
 
 .tl-bar:active { cursor: grabbing; }
-.tl-bar.dragging { opacity: 0.35; }
+.tl-bar.moving { transition: none; z-index: 10; opacity: 0.75; }
 .tl-bar.resizing { transition: none; z-index: 10; }
 
 .tl-bar-done { opacity: 0.55; }
@@ -282,56 +281,46 @@
 .tl-bar-resize:hover { background: rgba(255, 255, 255, 0.18); }
 .tl-bar-resize:active { background: rgba(255, 255, 255, 0.3); }
 
-.tl-row-undated {
-  border-bottom: none;
-}
-
-.tl-row-undated .tl-row-label {
-  background: #151528;
-  border-bottom: 1px solid #1e1e32;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  min-height: 36px;
-}
-
-.tl-row-undated:hover .tl-row-label {
-  background: #191930;
-}
-
-.tl-row-undated .tl-track {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  box-sizing: border-box;
-  height: 40px;
-  min-height: 40px;
-  flex-wrap: wrap;
-  overflow: hidden;
-}
-
-.tl-row-undated .tl-track.drag-over {
-  background: rgba(79, 70, 229, 0.06);
-}
-
-.tl-row-undated .tl-track.drag-over::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border: 1.5px dashed #4f46e5;
-  border-radius: 5px;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.tl-label-undated {
-  gap: 6px;
-}
-
-.tl-undated-icon {
-  font-size: 14px;
-  color: #555;
+.tl-us {
   flex-shrink: 0;
+  border-top: 1px solid #2a2a40;
+  background: #141428;
+  padding: 8px 24px;
+}
+
+.tl-us-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 4px 0;
+}
+
+.tl-us-label {
+  flex: 0 0 200px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #777;
+  padding: 4px 16px 0 0;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tl-us-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-height: 32px;
+  align-items: center;
+}
+
+.tl-us-cards .tl-ucard {
+  cursor: grab;
+}
+
+.tl-us-cards .tl-ucard:hover {
+  border-color: #4f46e5;
 }
 
 .tl-ucard {

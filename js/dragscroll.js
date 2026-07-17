@@ -1,31 +1,38 @@
-function scrollEl() {
+let _panning = false
+let _panX = 0, _panY = 0, _panLX = 0, _panLY = 0
+
+function hEl() {
   return document.querySelector('.timeline') || document.getElementById('boardArea')
+}
+
+function vEl() {
+  return document.getElementById('boardArea')
 }
 
 document.addEventListener('mousedown', function(e) {
   if (e.button !== 2) return
   const board = document.getElementById('boardArea')
   if (!board || !board.contains(e.target)) return
-  const el = scrollEl()
-  el._panX = e.clientX
-  el._panY = e.clientY
-  el._panLX = el.scrollLeft
-  el._panLY = el.scrollTop
-  el._panning = true
+  const h = hEl()
+  _panX = e.clientX
+  _panY = e.clientY
+  _panLX = h.scrollLeft
+  _panLY = board.scrollTop
+  _panning = true
   e.preventDefault()
 })
 
 document.addEventListener('mousemove', function(e) {
-  const el = scrollEl()
-  if (!el._panning) return
+  if (!_panning) return
   e.preventDefault()
-  el.scrollLeft = el._panLX - (e.clientX - el._panX)
-  el.scrollTop = el._panLY - (e.clientY - el._panY)
+  const h = hEl()
+  const v = vEl()
+  h.scrollLeft = _panLX - (e.clientX - _panX)
+  v.scrollTop = _panLY - (e.clientY - _panY)
 })
 
 document.addEventListener('mouseup', function() {
-  const el = scrollEl()
-  el._panning = false
+  _panning = false
 })
 
 document.addEventListener('contextmenu', function(e) {
