@@ -10,7 +10,7 @@ const PRIORITY_COLORS = {
   high: '#f59e0b',
   urgent: '#ef4444'
 }
-let DAY_WIDTH = 36
+let DAY_WIDTH = 108
 
 let _tlMinDate = null
 let _tlTotalWidth = 0
