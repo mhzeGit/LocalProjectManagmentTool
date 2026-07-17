@@ -335,6 +335,19 @@
   text-overflow: ellipsis;
 }
 
+.tl-bar-preview {
+  position: absolute;
+  top: 50%;
+  height: 32px;
+  transform: translateY(-50%);
+  border-radius: 6px;
+  background: rgba(79, 70, 229, 0.13);
+  border: 2px dashed #4f46e5;
+  pointer-events: none;
+  z-index: 9;
+  box-sizing: border-box;
+}
+
 .tl-empty-msg {
   padding: 40px 20px;
   text-align: center;

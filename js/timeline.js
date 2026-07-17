@@ -15,6 +15,9 @@ const DAY_WIDTH = 36
 let _tlMinDate = null
 let _tlTotalWidth = 0
 let _resizing = null
+let _dragStartX = 0
+let _dragStartY = 0
+let _dragCardId = null
 
 function daysBetween(a, b) {
   const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
@@ -227,6 +230,9 @@ function initTimelineDrag() {
     }
     const bar = e.target.closest('.tl-bar')
     if (bar) {
+      _dragStartX = e.clientX
+      _dragStartY = e.clientY
+      _dragCardId = bar.dataset.cardId
       e.dataTransfer.setData('text/x-tl-card', bar.dataset.cardId)
       e.dataTransfer.effectAllowed = 'move'
       bar.classList.add('dragging')
@@ -234,6 +240,9 @@ function initTimelineDrag() {
     }
     const ucard = e.target.closest('.tl-ucard')
     if (ucard) {
+      _dragStartX = e.clientX
+      _dragStartY = e.clientY
+      _dragCardId = ucard.dataset.cardId
       e.dataTransfer.setData('text/x-tl-ucard', ucard.dataset.cardId)
       e.dataTransfer.effectAllowed = 'move'
       ucard.classList.add('dragging')
@@ -241,20 +250,30 @@ function initTimelineDrag() {
   })
 
   area.addEventListener('dragend', function(e) {
+    removeDragPreview()
     area.querySelectorAll('.dragging, .drag-over').forEach(function(el) {
       el.classList.remove('dragging', 'drag-over')
     })
+    _dragCardId = null
   })
 
   area.addEventListener('dragover', function(e) {
     const track = e.target.closest('.tl-track')
-    if (track && (e.dataTransfer.types.includes('text/x-tl-card') || e.dataTransfer.types.includes('text/x-tl-ucard'))) {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
-      area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
-        if (el !== track) el.classList.remove('drag-over')
-      })
-      track.classList.add('drag-over')
+    if (!track) return
+    const hasCard = e.dataTransfer.types.includes('text/x-tl-card')
+    const hasUcard = e.dataTransfer.types.includes('text/x-tl-ucard')
+    if (!hasCard && !hasUcard) return
+
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+
+    area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
+      if (el !== track) el.classList.remove('drag-over')
+    })
+    track.classList.add('drag-over')
+
+    if (_dragCardId) {
+      showDragPreview(track, e)
     }
   })
 
@@ -280,7 +299,9 @@ function initTimelineDrag() {
 
   area.addEventListener('drop', function(e) {
     e.preventDefault()
+    removeDragPreview()
     area.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
+    _dragCardId = null
 
     const track = e.target.closest('.tl-track')
     if (!track) return
@@ -398,36 +419,78 @@ document.addEventListener('mouseup', function(e) {
   document.body.style.userSelect = ''
 })
 
+function showDragPreview(track, e) {
+  removeDragPreview()
+  if (!_dragCardId) return
+  const card = findCard(_dragCardId)
+  if (!card) return
+
+  const cardStart = parseDate(card.startDate)
+  const cardEnd = parseDate(card.endDate)
+  if (!cardStart && !cardEnd) return
+  const start = cardStart || cardEnd
+  const end = cardEnd || cardStart
+  let previewWidth = (daysBetween(start, end) + 1) * DAY_WIDTH
+
+  const trackRect = track.getBoundingClientRect()
+  const x = e.clientX - trackRect.left
+  let newLeft = snapPx(x)
+  newLeft = clamp(newLeft, 0, _tlTotalWidth - previewWidth)
+
+  const preview = document.createElement('div')
+  preview.className = 'tl-bar-preview'
+  preview.style.left = newLeft + 'px'
+  preview.style.width = previewWidth + 'px'
+  track.appendChild(preview)
+}
+
+function removeDragPreview() {
+  document.querySelectorAll('.tl-bar-preview').forEach(function(el) { el.remove() })
+}
+
 function handleDatedCardDrop(cardId, targetColId, e, track) {
   const card = findCard(cardId)
   if (!card) return
   const sourceCol = findCardColumn(cardId)
 
-  if (sourceCol && sourceCol.id !== targetColId) {
-    const idx = sourceCol.cards.indexOf(card)
-    if (idx !== -1) sourceCol.cards.splice(idx, 1)
-    const targetCol = findColumn(targetColId)
-    if (targetCol) targetCol.cards.push(card)
-  }
+  const dx = Math.abs(e.clientX - _dragStartX)
+  const dy = Math.abs(e.clientY - _dragStartY)
+  const isVertical = dy > dx && sourceCol && sourceCol.id !== targetColId
 
-  const trackRect = track.getBoundingClientRect()
-  const x = e.clientX - trackRect.left
-  let newStartPx = snapPx(x)
-  newStartPx = clamp(newStartPx, 0, _tlTotalWidth - DAY_WIDTH)
-  const newStart = pixelToDate(newStartPx)
+  if (isVertical) {
+    if (sourceCol && sourceCol.id !== targetColId) {
+      const idx = sourceCol.cards.indexOf(card)
+      if (idx !== -1) sourceCol.cards.splice(idx, 1)
+      const targetCol = findColumn(targetColId)
+      if (targetCol) targetCol.cards.push(card)
+    }
+  } else {
+    if (sourceCol && sourceCol.id !== targetColId) {
+      const idx = sourceCol.cards.indexOf(card)
+      if (idx !== -1) sourceCol.cards.splice(idx, 1)
+      const targetCol = findColumn(targetColId)
+      if (targetCol) targetCol.cards.push(card)
+    }
 
-  if (card.startDate && card.endDate) {
-    const oldStart = parseDate(card.startDate)
-    const oldEnd = parseDate(card.endDate)
-    const duration = daysBetween(oldStart, oldEnd)
-    card.startDate = formatDate(newStart)
-    const newEnd = new Date(newStart)
-    newEnd.setDate(newEnd.getDate() + duration)
-    card.endDate = formatDate(newEnd)
-  } else if (card.startDate) {
-    card.startDate = formatDate(newStart)
-  } else if (card.endDate) {
-    card.endDate = formatDate(newStart)
+    const trackRect = track.getBoundingClientRect()
+    const x = e.clientX - trackRect.left
+    let newStartPx = snapPx(x)
+    newStartPx = clamp(newStartPx, 0, _tlTotalWidth - DAY_WIDTH)
+    const newStart = pixelToDate(newStartPx)
+
+    if (card.startDate && card.endDate) {
+      const oldStart = parseDate(card.startDate)
+      const oldEnd = parseDate(card.endDate)
+      const duration = daysBetween(oldStart, oldEnd)
+      card.startDate = formatDate(newStart)
+      const newEnd = new Date(newStart)
+      newEnd.setDate(newEnd.getDate() + duration)
+      card.endDate = formatDate(newEnd)
+    } else if (card.startDate) {
+      card.startDate = formatDate(newStart)
+    } else if (card.endDate) {
+      card.endDate = formatDate(newStart)
+    }
   }
 
   renderTimeline()
