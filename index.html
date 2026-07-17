@@ -613,6 +613,8 @@ let _dragActive = false
 let _dragCardHeight = 0
 let _dragTimer = null
 let _dragGhostEl = null
+let _dragOffsetX = 0
+let _dragOffsetY = 0
 
 function initDragDrop() {
   const board = document.getElementById('boardArea')
@@ -629,10 +631,13 @@ function initDragDrop() {
       var img = new Image()
       img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
       e.dataTransfer.setDragImage(img, 0, 0)
+      var rect = card.getBoundingClientRect()
+      _dragOffsetX = e.clientX - rect.left
+      _dragOffsetY = e.clientY - rect.top
       _dragGhostEl = card.cloneNode(true)
       _dragGhostEl.style.cssText = 'position:fixed;opacity:0.85;transform:rotate(3deg) scale(1.02);width:' + card.offsetWidth + 'px;border-radius:6px;background:#26263a;border:1px solid #4f46e5;padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,0.5);pointer-events:none;z-index:99999;'
-      _dragGhostEl.style.left = e.clientX + 'px'
-      _dragGhostEl.style.top = e.clientY + 'px'
+      _dragGhostEl.style.left = (e.clientX - _dragOffsetX) + 'px'
+      _dragGhostEl.style.top = (e.clientY - _dragOffsetY) + 'px'
       document.body.appendChild(_dragGhostEl)
       _dragTimer = setTimeout(function() {
         card.classList.add('dragging')
@@ -672,8 +677,8 @@ function initDragDrop() {
 
   board.addEventListener('dragover', function(e) {
     if (_dragGhostEl) {
-      _dragGhostEl.style.left = e.clientX + 'px'
-      _dragGhostEl.style.top = e.clientY + 'px'
+      _dragGhostEl.style.left = (e.clientX - _dragOffsetX) + 'px'
+      _dragGhostEl.style.top = (e.clientY - _dragOffsetY) + 'px'
     }
     if (!e.target.closest('.board-column:not(.add-column), .column-cards')) return
     e.preventDefault()
