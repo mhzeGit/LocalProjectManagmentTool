@@ -261,6 +261,8 @@ export function renderTimeline() {
     html += '<div class="tl-empty-msg">Add dates to cards to see them on the timeline</div>'
   }
 
+  html += '<div class="tl-label-add" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</div>'
+
   html += '</div></div>'
 
   html += '<div class="tl-us">'

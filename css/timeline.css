@@ -399,3 +399,24 @@
   color: #555;
   font-size: 13px;
 }
+
+.tl-label-add {
+  position: sticky;
+  left: 0;
+  z-index: 15;
+  width: 200px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+  cursor: pointer;
+  box-sizing: border-box;
+  background: #1a1a2e;
+  border-right: 1px solid #2a2a40;
+  transition: background 0.1s, color 0.1s;
+}
+
+.tl-label-add:hover {
+  color: #a78bfa;
+  background: rgba(79, 70, 229, 0.04);
+}
