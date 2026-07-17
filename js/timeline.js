@@ -105,13 +105,17 @@ export function renderTimeline() {
     mCursor.setMonth(mCursor.getMonth() + 1)
   }
 
-  const weekMarkers = []
-  const wCursor = new Date(_tlMinDate)
-  wCursor.setDate(wCursor.getDate() - wCursor.getDay())
-  while (wCursor <= absMaxDate) {
-    const left = daysBetween(_tlMinDate, wCursor) * DAY_WIDTH
-    if (left > 0 && left < totalWidth) weekMarkers.push({ left })
-    wCursor.setDate(wCursor.getDate() + 7)
+  const dayMarkers = []
+  const monthBoundaries = []
+  for (let i = 1; i < totalDays; i++) {
+    const d = new Date(_tlMinDate.getTime() + i * 86400000)
+    const isMonthStart = d.getDate() === 1
+    const left = i * DAY_WIDTH
+    if (isMonthStart) {
+      monthBoundaries.push({ left })
+    } else {
+      dayMarkers.push({ left })
+    }
   }
 
   const todayLeft = daysBetween(_tlMinDate, now) * DAY_WIDTH
@@ -127,8 +131,17 @@ export function renderTimeline() {
   for (const m of months) {
     html += '    <div class="tl-month" style="left:' + m.left + 'px;width:' + m.width + 'px">' + escapeHtml(m.name) + '</div>'
   }
-  for (const w of weekMarkers) {
-    html += '    <div class="tl-week-marker" style="left:' + w.left + 'px"></div>'
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(_tlMinDate.getTime() + i * 86400000)
+    const left = i * DAY_WIDTH
+    const firstCls = i === 0 ? ' tl-day-label-first' : ''
+    html += '    <div class="tl-day-label' + firstCls + '" style="left:' + left + 'px">' + d.getDate() + '</div>'
+  }
+  for (const d of dayMarkers) {
+    html += '    <div class="tl-day-marker" style="left:' + d.left + 'px"></div>'
+  }
+  for (const m of monthBoundaries) {
+    html += '    <div class="tl-month-marker" style="left:' + m.left + 'px"></div>'
   }
   if (showToday) {
     html += '    <div class="tl-today-line" style="left:' + todayLeft + 'px"></div>'
@@ -149,7 +162,11 @@ export function renderTimeline() {
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
     html += '  </div>'
-    html += '  <div class="tl-track" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
+    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
+
+    for (const m of monthBoundaries) {
+      html += '    <div class="tl-month-marker-body" style="left:' + m.left + 'px"></div>'
+    }
 
     for (const item of colDated) {
       const c = item.card
@@ -194,7 +211,10 @@ export function renderTimeline() {
       html += '    <span class="tl-row-name">Unscheduled</span>'
       html += '    <span class="tl-row-count">' + colUndated.length + '</span>'
       html += '  </div>'
-      html += '  <div class="tl-track" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
+      html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
+      for (const m of monthBoundaries) {
+        html += '    <div class="tl-month-marker-body" style="left:' + m.left + 'px"></div>'
+      }
       for (const item of colUndated) {
         const c = item.card
         const completed = c.completed ? ' tl-ucard-done' : ''
