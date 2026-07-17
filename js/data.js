@@ -24,6 +24,8 @@ export const data = {
 let uid = 100
 export function genId() { return 'id' + (++uid) }
 
+export const PREDEFINED_MEMBERS = ['Alice', 'Bob', 'Charlie']
+
 export const state = {
   selectedWorkspaceId: 'w1',
   selectedProjectId: 'p1',

@@ -107,12 +107,13 @@ export function deleteColumn(id) {
 }
 
 export function createCard(columnId) {
-  const title = document.getElementById('modalInput').value.trim()
-  const desc = document.getElementById('modalTextarea').value.trim()
-  if (!title) return
   const col = findColumn(columnId)
   if (!col) return
-  col.cards.push({ id: genId(), title, description: desc, completed: false, startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] })
+  const cardData = collectCardForm()
+  if (!cardData.title) return
+  cardData.id = genId()
+  cardData.completed = false
+  col.cards.push(cardData)
   closeModal()
   render()
 }
@@ -120,13 +121,50 @@ export function createCard(columnId) {
 export function saveCard(cardId) {
   const c = findCard(cardId)
   if (!c) return
-  const title = document.getElementById('modalInput').value.trim()
-  const desc = document.getElementById('modalTextarea').value.trim()
-  if (!title) return
-  c.title = title
-  c.description = desc
+  const data = collectCardForm()
+  if (!data.title) return
+  c.title = data.title
+  c.description = data.description
+  c.startDate = data.startDate
+  c.endDate = data.endDate
+  c.priority = data.priority
+  c.tags = data.tags
+  c.members = data.members
+  c.checklists = data.checklists
   closeModal()
   render()
+}
+
+function collectCardForm() {
+  const title = (document.getElementById('cd-title')?.value || '').trim()
+  const description = document.getElementById('cd-desc')?.value?.trim() || ''
+  const startDate = document.getElementById('cd-start')?.value || null
+  const endDate = document.getElementById('cd-end')?.value || null
+  const priority = document.getElementById('cd-priority')?.value || 'medium'
+
+  const tags = []
+  document.querySelectorAll('#cd-tags .cd-chip[data-type="tag"]').forEach(el => {
+    const text = el.childNodes[0]?.nodeValue?.trim()
+    if (text) tags.push(text)
+  })
+
+  const members = []
+  document.querySelectorAll('#cd-members .cd-chip[data-type="member"]').forEach(el => {
+    const text = el.childNodes[0]?.nodeValue?.trim()
+    if (text) members.push(text)
+  })
+
+  const checklists = []
+  document.querySelectorAll('#cd-checklist .cd-checklist-item').forEach(el => {
+    const textEl = el.querySelector('.cd-cl-text')
+    const cb = el.querySelector('input[type="checkbox"]')
+    if (textEl && cb) {
+      const text = textEl.textContent.trim()
+      if (text) checklists.push({ text, completed: cb.checked })
+    }
+  })
+
+  return { title, description, startDate, endDate, priority, tags, members, checklists }
 }
 
 export function deleteCard(cardId) {
