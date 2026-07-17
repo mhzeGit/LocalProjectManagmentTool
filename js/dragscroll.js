@@ -1,27 +1,34 @@
-const board = document.getElementById('boardArea')
-let dragging = false, startX = 0, scrollLeft = 0
+function scrollEl() {
+  return document.querySelector('.timeline') || document.getElementById('boardArea')
+}
 
-board.addEventListener('mousedown', function(e) {
+document.addEventListener('mousedown', function(e) {
   if (e.button !== 2) return
-  dragging = true
-  startX = e.pageX - board.offsetLeft
-  scrollLeft = board.scrollLeft
-  board.classList.add('grabbing')
+  const board = document.getElementById('boardArea')
+  if (!board || !board.contains(e.target)) return
+  const el = scrollEl()
+  el._panX = e.clientX
+  el._panY = e.clientY
+  el._panLX = el.scrollLeft
+  el._panLY = el.scrollTop
+  el._panning = true
   e.preventDefault()
 })
 
 document.addEventListener('mousemove', function(e) {
-  if (!dragging) return
+  const el = scrollEl()
+  if (!el._panning) return
   e.preventDefault()
-  const x = e.pageX - board.offsetLeft
-  const walk = x - startX
-  board.scrollLeft = scrollLeft - walk
+  el.scrollLeft = el._panLX - (e.clientX - el._panX)
+  el.scrollTop = el._panLY - (e.clientY - el._panY)
 })
 
 document.addEventListener('mouseup', function() {
-  if (!dragging) return
-  dragging = false
-  board.classList.remove('grabbing')
+  const el = scrollEl()
+  el._panning = false
 })
 
-board.addEventListener('contextmenu', function(e) { e.preventDefault() })
+document.addEventListener('contextmenu', function(e) {
+  const board = document.getElementById('boardArea')
+  if (board && board.contains(e.target)) e.preventDefault()
+})

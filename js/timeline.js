@@ -10,7 +10,7 @@ const PRIORITY_COLORS = {
   high: '#f59e0b',
   urgent: '#ef4444'
 }
-const DAY_WIDTH = 36
+let DAY_WIDTH = 36
 
 let _tlMinDate = null
 let _tlTotalWidth = 0
@@ -236,6 +236,7 @@ export function renderTimeline() {
 
   area.innerHTML = html
   initTimelineDrag()
+  initTimelineZoom()
 }
 
 function initTimelineDrag() {
@@ -366,6 +367,31 @@ function initTimelineDrag() {
     document.body.style.cursor = 'ew-resize'
     document.body.style.userSelect = 'none'
   })
+}
+
+function initTimelineZoom() {
+  const area = document.getElementById('boardArea')
+  if (area._tlZoomDone) return
+  area._tlZoomDone = true
+
+  area.addEventListener('wheel', function(e) {
+    if (state.selectedView !== 'timeline') return
+    e.preventDefault()
+
+    const oldWidth = DAY_WIDTH
+    const delta = e.deltaY > 0 ? -3 : 3
+    DAY_WIDTH = Math.max(16, Math.min(80, oldWidth + delta))
+    if (DAY_WIDTH === oldWidth) return
+
+    const areaRect = area.getBoundingClientRect()
+    const focalXRaw = e.clientX - areaRect.left + area.scrollLeft - 200
+    const focalDay = focalXRaw / oldWidth
+
+    renderTimeline()
+
+    const newFocalX = focalDay * DAY_WIDTH
+    area.scrollLeft = newFocalX + 200 - (e.clientX - areaRect.left)
+  }, { passive: false })
 }
 
 document.addEventListener('mousemove', function(e) {
