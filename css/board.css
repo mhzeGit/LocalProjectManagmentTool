@@ -31,8 +31,8 @@
 .card.completed .card-title { text-decoration: line-through; color: #888; }
 .card-check { flex-shrink: 0; padding: 2px 0; cursor: pointer; }
 .card-check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #555; display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s; }
-.card-check:hover .card-check-circle { border-color: #4f46e5; }
-.card-check.checked .card-check-circle { background: #4f46e5; border-color: #4f46e5; }
+.card-check:hover .card-check-circle { border-color: #22c55e; }
+.card-check.checked .card-check-circle { background: #22c55e; border-color: #22c55e; }
 .card-check-check { width: 10px; height: 10px; color: #fff; display: none; }
 .card-check.checked .card-check-check { display: block; }
 .card-body { flex: 1; min-width: 0; }
