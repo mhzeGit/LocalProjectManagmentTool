@@ -112,7 +112,7 @@ export function createCard(columnId) {
   if (!title) return
   const col = findColumn(columnId)
   if (!col) return
-  col.cards.push({ id: genId(), title, description: desc })
+  col.cards.push({ id: genId(), title, description: desc, completed: false })
   closeModal()
   render()
 }
@@ -137,10 +137,17 @@ export function deleteCard(cardId) {
   if (idx !== -1) { col.cards.splice(idx, 1); closeModal(); render() }
 }
 
+export function toggleCardCompleted(cardId) {
+  const c = findCard(cardId)
+  if (!c) return
+  c.completed = !c.completed
+  render()
+}
+
 export function addCardDirect(columnId) {
   const col = findColumn(columnId)
   if (!col) return
-  const card = { id: genId(), title: 'New Card', description: '' }
+  const card = { id: genId(), title: 'New Card', description: '', completed: false }
   col.cards.push(card)
   render()
   requestAnimationFrame(() => {

@@ -39,7 +39,15 @@ export function closeModal() {
 }
 
 export function setupModalKeyboard() {
-  document.getElementById('modal').addEventListener('keydown', function(e) {
+  const overlay = document.getElementById('modal')
+  overlay.addEventListener('click', function(e) {
+    if (e.target !== this) return
+    if (!this.classList.contains('open')) return
+    const confirmBtn = this.querySelector('.btn-confirm')
+    if (confirmBtn) { confirmBtn.click() }
+    else { closeModal() }
+  })
+  overlay.addEventListener('keydown', function(e) {
     if (!this.classList.contains('open')) return
     if (e.key === 'Escape') { closeModal(); e.preventDefault(); return }
     if (e.key === 'Enter') {

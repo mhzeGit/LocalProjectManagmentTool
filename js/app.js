@@ -9,7 +9,7 @@ import {
   createProject, deleteProject,
   createBoard, deleteBoard,
   deleteColumn,
-  createCard, saveCard, deleteCard,
+  createCard, saveCard, deleteCard, toggleCardCompleted,
   addCardDirect, addColumnDirect
 } from './store.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
@@ -36,6 +36,7 @@ Object.assign(window, {
   createCard,
   saveCard,
   deleteCard,
+  toggleCardCompleted,
   addCardDirect,
   addColumnDirect,
   startRenameColumn,

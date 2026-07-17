@@ -9,6 +9,12 @@ let _dragOffsetX = 0
 let _dragOffsetY = 0
 let _renderFn = null
 
+let _colGhostEl = null
+let _colOffsetX = 0
+let _colOffsetY = 0
+let _colIndicatorEl = null
+let _colInsertPos = null
+
 export function initDragDrop(renderFn) {
   _renderFn = renderFn
   const board = document.getElementById('boardArea')
@@ -44,6 +50,14 @@ export function initDragDrop(renderFn) {
       _dragActive = true
       e.dataTransfer.effectAllowed = 'move'
       e.dataTransfer.setData('text/x-column', col.dataset.columnId)
+      const rect = col.getBoundingClientRect()
+      _colOffsetX = e.clientX - rect.left
+      _colOffsetY = e.clientY - rect.top
+      _colGhostEl = col.cloneNode(true)
+      _colGhostEl.style.cssText = 'position:fixed;opacity:0.92;transform:rotate(0.5deg) scale(1.01);width:' + col.offsetWidth + 'px;border-radius:8px;background:#1e1e2e;border:2px solid #4f46e5;box-shadow:0 12px 40px rgba(0,0,0,0.45);pointer-events:none;z-index:99999;overflow:hidden;'
+      _colGhostEl.style.left = (e.clientX - _colOffsetX) + 'px'
+      _colGhostEl.style.top = (e.clientY - _colOffsetY) + 'px'
+      document.body.appendChild(_colGhostEl)
       col.classList.add('dragging')
       return
     }
@@ -55,15 +69,19 @@ export function initDragDrop(renderFn) {
     _dragActive = false
     _dragCardHeight = 0
     if (_dragGhostEl) { _dragGhostEl.remove(); _dragGhostEl = null }
+    if (_colGhostEl) { _colGhostEl.remove(); _colGhostEl = null }
+    if (_colIndicatorEl) { _colIndicatorEl.remove(); _colIndicatorEl = null }
+    _colInsertPos = null
     const b = document.getElementById('boardArea')
     if (b) {
       b.querySelectorAll('.dragging, .drag-over').forEach(function(el) { el.classList.remove('dragging', 'drag-over') })
       b.querySelectorAll('.dragging-collapsed').forEach(function(el) { el.classList.remove('dragging-collapsed') })
       b.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
+      b.querySelectorAll('.col-drop-indicator').forEach(function(el) { el.remove() })
     }
   }
   document.addEventListener('dragend', cleanupDrag)
-  document.addEventListener('mouseup', function() { if (_dragGhostEl) cleanupDrag() })
+  document.addEventListener('mouseup', function() { if (_dragGhostEl || _colGhostEl) cleanupDrag() })
 
   board.addEventListener('dragenter', function(e) {
     if (e.target.closest('.board-column:not(.add-column), .column-cards')) e.preventDefault()
@@ -73,6 +91,10 @@ export function initDragDrop(renderFn) {
     if (_dragGhostEl) {
       _dragGhostEl.style.left = (e.clientX - _dragOffsetX) + 'px'
       _dragGhostEl.style.top = (e.clientY - _dragOffsetY) + 'px'
+    }
+    if (_colGhostEl) {
+      _colGhostEl.style.left = (e.clientX - _colOffsetX) + 'px'
+      _colGhostEl.style.top = (e.clientY - _colOffsetY) + 'px'
     }
     if (!e.target.closest('.board-column:not(.add-column), .column-cards')) return
     e.preventDefault()
@@ -91,8 +113,52 @@ export function initDragDrop(renderFn) {
       }
     }
     if (e.dataTransfer.types.includes('text/x-column')) {
-      const colEl = e.target.closest('.board-column:not(.add-column)')
-      if (colEl) colEl.classList.add('drag-over')
+      const container = board.querySelector('.board-columns')
+      if (!container) return
+
+      const cols = container.querySelectorAll('.board-column:not(.add-column)')
+      let targetCol = null
+      let insertSide = 'left'
+
+      for (const c of cols) {
+        const r = c.getBoundingClientRect()
+        if (e.clientX >= r.left && e.clientX <= r.right) {
+          targetCol = c
+          insertSide = e.clientX < r.left + r.width / 2 ? 'left' : 'right'
+          break
+        }
+      }
+
+      if (!targetCol && cols.length > 0) {
+        const first = cols[0].getBoundingClientRect()
+        const last = cols[cols.length - 1].getBoundingClientRect()
+        if (e.clientX < first.left) {
+          targetCol = cols[0]
+          insertSide = 'left'
+        } else if (e.clientX > last.right) {
+          targetCol = cols[cols.length - 1]
+          insertSide = 'right'
+        }
+      }
+
+      const posKey = targetCol ? targetCol.dataset.columnId + '-' + insertSide : null
+      if (posKey === _colInsertPos) return
+
+      if (_colIndicatorEl) { _colIndicatorEl.remove(); _colIndicatorEl = null }
+
+      if (targetCol) {
+        const indicator = document.createElement('div')
+        indicator.className = 'col-drop-indicator'
+        if (insertSide === 'left') {
+          container.insertBefore(indicator, targetCol)
+        } else {
+          container.insertBefore(indicator, targetCol.nextSibling)
+        }
+        _colIndicatorEl = indicator
+        _colInsertPos = posKey
+      } else {
+        _colInsertPos = null
+      }
     }
   })
 
@@ -108,17 +174,17 @@ export function initDragDrop(renderFn) {
   board.addEventListener('drop', function(e) {
     e.preventDefault()
     if (_dragGhostEl) { _dragGhostEl.remove(); _dragGhostEl = null }
+    if (_colGhostEl) { _colGhostEl.remove(); _colGhostEl = null }
     board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
-
-    let colEl = e.target.closest('.board-column:not(.add-column)')
-    if (!colEl) {
-      const ptr = document.elementFromPoint(e.clientX, e.clientY)
-      if (ptr) colEl = ptr.closest('.board-column:not(.add-column)')
-      if (!colEl) return
-    }
 
     const cardId = e.dataTransfer.getData('text/x-card')
     if (cardId) {
+      let colEl = e.target.closest('.board-column:not(.add-column)')
+      if (!colEl) {
+        const ptr = document.elementFromPoint(e.clientX, e.clientY)
+        if (ptr) colEl = ptr.closest('.board-column:not(.add-column)')
+        if (!colEl) return
+      }
       const targetZone = colEl.querySelector('.column-cards')
       if (!targetZone) return
       const targetColId = targetZone.dataset.colId
@@ -136,14 +202,66 @@ export function initDragDrop(renderFn) {
 
     const columnId = e.dataTransfer.getData('text/x-column')
     if (columnId) {
-      const b = findBoard(state.selectedBoardId)
-      if (!b) return
-      const fromIdx = b.columns.findIndex(function(c) { return c.id === columnId })
-      const toIdx = b.columns.findIndex(function(c) { return c.id === colEl.dataset.columnId })
-      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
-      const moved = b.columns.splice(fromIdx, 1)[0]
-      b.columns.splice(toIdx, 0, moved)
-      if (_renderFn) _renderFn()
+      const container = board.querySelector('.board-columns')
+      if (!container) return
+      const draggedCol = container.querySelector('.board-column[data-column-id="' + columnId + '"]')
+      if (!draggedCol) return
+
+      if (_colIndicatorEl) {
+        const indicator = _colIndicatorEl
+        _colIndicatorEl = null
+        _colInsertPos = null
+
+        if (indicator.previousElementSibling === draggedCol || indicator.nextElementSibling === draggedCol) return
+
+        const allCols = container.querySelectorAll('.board-column:not(.add-column)')
+        const oldPositions = Array.from(allCols).map(function(el) {
+          return { el: el, rect: el.getBoundingClientRect() }
+        })
+
+        container.insertBefore(draggedCol, indicator)
+        indicator.remove()
+
+        const newCols = container.querySelectorAll('.board-column:not(.add-column)')
+        const newPositions = Array.from(newCols).map(function(el) {
+          return { el: el, rect: el.getBoundingClientRect() }
+        })
+
+        newPositions.forEach(function(newItem) {
+          const oldItem = oldPositions.find(function(o) { return o.el === newItem.el })
+          if (oldItem) {
+            const dx = oldItem.rect.left - newItem.rect.left
+            const dy = oldItem.rect.top - newItem.rect.top
+            if (dx !== 0 || dy !== 0) {
+              newItem.el.style.transition = 'none'
+              newItem.el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)'
+            }
+          }
+        })
+
+        container.offsetHeight
+
+        newPositions.forEach(function(newItem) {
+          newItem.el.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)'
+          newItem.el.style.transform = 'translate(0, 0)'
+        })
+
+        setTimeout(function() {
+          newPositions.forEach(function(item) {
+            item.el.style.transition = ''
+            item.el.style.transform = ''
+          })
+        }, 400)
+
+        const b = findBoard(state.selectedBoardId)
+        if (!b) return
+        const oldIdx = b.columns.findIndex(function(c) { return c.id === columnId })
+        const newIdx = Array.from(newCols).findIndex(function(el) { return el.dataset.columnId === columnId })
+        if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
+          const moved = b.columns.splice(oldIdx, 1)[0]
+          b.columns.splice(newIdx, 0, moved)
+        }
+      }
     }
   })
 

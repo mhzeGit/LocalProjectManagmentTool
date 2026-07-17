@@ -25,8 +25,17 @@
 .column-footer { padding: 4px 8px 8px; }
 .btn-add-card { display: flex; align-items: center; gap: 4px; width: 100%; padding: 6px 8px; border-radius: 6px; color: #888; font-size: 13px; }
 .btn-add-card:hover { background: #2a2a3d; color: #ddd; }
-.card { background: #26263a; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; border: 1px solid #32324a; }
+.card { background: #26263a; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; border: 1px solid #32324a; display: flex; align-items: flex-start; gap: 10px; transition: opacity .15s; }
 .card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.4); border-color: #4f46e5; }
+.card.completed { opacity: .55; }
+.card.completed .card-title { text-decoration: line-through; color: #888; }
+.card-check { flex-shrink: 0; padding: 2px 0; cursor: pointer; }
+.card-check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #555; display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s; }
+.card-check:hover .card-check-circle { border-color: #4f46e5; }
+.card-check.checked .card-check-circle { background: #4f46e5; border-color: #4f46e5; }
+.card-check-check { width: 10px; height: 10px; color: #fff; display: none; }
+.card-check.checked .card-check-check { display: block; }
+.card-body { flex: 1; min-width: 0; }
 .card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #e8e8f0; }
 .card-desc { font-size: 12px; color: #999; }
 .card-actions { display: none; gap: 4px; margin-top: 8px; }
@@ -36,7 +45,17 @@
 .card.dragging { opacity: 0; }
 .card.dragging-collapsed { margin: 0 !important; padding: 0 !important; border: 0 none !important; height: 0 !important; overflow: hidden !important; flex: 0 1 0 !important; }
 .board-column.drag-over { border-color: #4f46e5; }
-.board-column.dragging { opacity: 0.35; }
+
+.col-drop-indicator {
+  width: 3px;
+  flex-shrink: 0;
+  align-self: stretch;
+  background: #4f46e5;
+  border-radius: 3px;
+  min-height: 200px;
+  box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
+  pointer-events: none;
+}
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 14px; }
 .empty-state p { margin-top: 8px; }

@@ -36,9 +36,14 @@ export function renderBoard() {
     html += '</div>'
     html += '<div class="column-cards" data-col-id="' + col.id + '">'
     for (const c of col.cards) {
-      html += '<div class="card" draggable="true" data-card-id="' + c.id + '">'
-      html += '  <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
-      if (c.description) html += '  <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      const completed = c.completed ? ' completed' : ''
+      const checked = c.completed ? ' checked' : ''
+      html += '<div class="card' + completed + '" draggable="true" data-card-id="' + c.id + '">'
+      html += '  <div class="card-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="card-check-circle"><svg class="card-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>'
+      html += '  <div class="card-body">'
+      html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
+      if (c.description) html += '    <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      html += '  </div>'
       html += '</div>'
     }
     html += '</div>'
