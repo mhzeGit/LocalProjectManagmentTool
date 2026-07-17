@@ -150,7 +150,7 @@ export function renderTimeline() {
 
   let hasDated = false
 
-  let html = '<div class="timeline">'
+  let html = '<div class="tl-wrapper"><div class="timeline">'
 
   html += '<div class="tl-header" style="width:' + (200 + totalWidth) + 'px">'
   html += '  <div class="tl-label-col">Task</div>'
@@ -310,7 +310,7 @@ export function renderTimeline() {
     html += '</div>'
   }
   html += '  </div>'
-  html += '</div>'
+  html += '</div></div>'
 
   const prevScroll = document.querySelector('.timeline')
   const savedScrollLeft = prevScroll ? prevScroll.scrollLeft : null
