@@ -18,6 +18,7 @@ let _resizing = null
 let _moving = null
 let _dragCardId = null
 let _dragActiveType = null
+let _clipboardCard = null
 
 function daysBetween(a, b) {
   const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
@@ -42,7 +43,7 @@ function formatShortDate(str) {
 }
 
 function pixelToDate(px) {
-  const dayOffset = Math.round(px / DAY_WIDTH)
+  const dayOffset = Math.floor(px / DAY_WIDTH)
   const d = new Date(_tlMinDate)
   d.setDate(d.getDate() + dayOffset)
   return d
@@ -365,23 +366,39 @@ function initTimelineDrag() {
     const track = e.target.closest('.tl-track')
     if (!track) return
     e.preventDefault()
+    document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
     const trackRect = track.getBoundingClientRect()
     const x = e.clientX - trackRect.left
     let newPx = snapPx(x)
     newPx = clamp(newPx, 0, _tlTotalWidth - DAY_WIDTH)
-    const date = pixelToDate(newPx)
-    const dateStr = formatDate(date)
-    const endDate = new Date(date)
-    endDate.setDate(endDate.getDate() + 1)
-    const endDateStr = formatDate(endDate)
-    const col = findColumn(track.dataset.colId)
-    if (!col) return
-    const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: dateStr, endDate: endDateStr, priority: 'medium', tags: [], members: [], checklists: [] }
-    col.cards.push(card)
-    renderTimeline()
+    const bar = e.target.closest('.tl-bar')
+    const menu = document.createElement('div')
+    menu.className = 'tl-ctx-menu'
+    menu.style.left = e.clientX + 'px'
+    menu.style.top = e.clientY + 'px'
+    menu.dataset.colId = track.dataset.colId
+    menu.dataset.dayPx = newPx
+    let html = ''
+    if (bar) {
+      menu.dataset.cardId = bar.dataset.cardId
+      html += '<button class="tl-ctx-item" data-action="copy">Copy</button>'
+      html += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
+      html += '<div class="tl-ctx-divider"></div>'
+      html += '<button class="tl-ctx-item tl-ctx-danger" data-action="delete">Delete</button>'
+    } else {
+      html += '<button class="tl-ctx-item" data-action="add">Add Card</button>'
+      if (_clipboardCard) {
+        html += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
+      }
+    }
+    menu.innerHTML = html
+    menu.addEventListener('mouseleave', function() { menu.remove() })
+    document.body.appendChild(menu)
   })
 
   area.addEventListener('mousedown', function(e) {
+    document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+    if (e.button !== 0) return
     const handle = e.target.closest('.tl-bar-resize')
     if (handle) {
       e.preventDefault()
@@ -452,6 +469,66 @@ function initTimelineZoom() {
     })
   }, { passive: false })
 }
+
+document.addEventListener('click', function(e) {
+  const item = e.target.closest('.tl-ctx-item')
+  if (item) {
+    const menu = item.closest('.tl-ctx-menu')
+    if (menu) {
+      const action = item.dataset.action
+      const col = findColumn(menu.dataset.colId)
+      const newPx = parseInt(menu.dataset.dayPx, 10)
+      if (action === 'add' && col) {
+        const date = pixelToDate(newPx)
+        const endDate = new Date(date)
+        endDate.setDate(endDate.getDate() + 1)
+        const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: 'medium', tags: [], members: [], checklists: [] }
+        col.cards.push(card)
+        renderTimeline()
+      } else if (action === 'copy') {
+        const card = findCard(menu.dataset.cardId)
+        if (card) {
+          _clipboardCard = JSON.parse(JSON.stringify(card))
+        }
+      } else if (action === 'paste' && col && _clipboardCard) {
+        const pasteCard = JSON.parse(JSON.stringify(_clipboardCard))
+        pasteCard.id = genId()
+        const date = pixelToDate(newPx)
+        pasteCard.startDate = formatDate(date)
+        const newEnd = new Date(date)
+        const s = parseDate(_clipboardCard.startDate) || parseDate(_clipboardCard.endDate)
+        const ee = parseDate(_clipboardCard.endDate) || parseDate(_clipboardCard.startDate)
+        const duration = s && ee ? daysBetween(s, ee) : 1
+        newEnd.setDate(newEnd.getDate() + duration)
+        pasteCard.endDate = formatDate(newEnd)
+        col.cards.push(pasteCard)
+        renderTimeline()
+      } else if (action === 'duplicate') {
+        const card = findCard(menu.dataset.cardId)
+        if (card) {
+          const srcCol = findCardColumn(card.id)
+          if (srcCol) {
+            const dup = JSON.parse(JSON.stringify(card))
+            dup.id = genId()
+            srcCol.cards.push(dup)
+            renderTimeline()
+          }
+        }
+      } else if (action === 'delete') {
+        const card = findCard(menu.dataset.cardId)
+        if (card) {
+          const srcCol = findCardColumn(card.id)
+          if (srcCol) {
+            const idx = srcCol.cards.indexOf(card)
+            if (idx !== -1) srcCol.cards.splice(idx, 1)
+            renderTimeline()
+          }
+        }
+      }
+    }
+  }
+  document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+})
 
 document.addEventListener('mousemove', function(e) {
   if (_resizing) {

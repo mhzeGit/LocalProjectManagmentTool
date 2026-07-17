@@ -422,6 +422,47 @@
   color: #a78bfa;
 }
 
+.tl-ctx-menu {
+  position: fixed;
+  background: #24243a;
+  border: 1px solid #3a3a55;
+  border-radius: 6px;
+  min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.tl-ctx-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #ddd;
+  background: none;
+  border: 0 none;
+  cursor: pointer;
+}
+
+.tl-ctx-item:hover {
+  background: #2a2a40;
+}
+
+.tl-ctx-item.tl-ctx-danger {
+  color: #f44;
+}
+
+.tl-ctx-item.tl-ctx-danger:hover {
+  background: rgba(255,68,68,.1);
+}
+
+.tl-ctx-divider {
+  height: 1px;
+  background: #3a3a55;
+  margin: 4px 0;
+}
+
 .tl-label-add:hover {
   color: #a78bfa;
   background: rgba(79, 70, 229, 0.04);
