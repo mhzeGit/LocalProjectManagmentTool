@@ -221,27 +221,24 @@ export function renderTimeline() {
 
   html += '</div></div>'
 
-  if (undatedItems.length > 0) {
-    html += '<div class="tl-us">'
-    for (const col of b.columns) {
-      const colUndated = undatedItems.filter(x => x.columnId === col.id)
-      if (colUndated.length === 0) continue
-      html += '<div class="tl-us-row">'
-      html += '  <div class="tl-us-label">' + escapeHtml(col.name) + '</div>'
-      html += '  <div class="tl-us-cards">'
-      for (const item of colUndated) {
-        const c = item.card
-        const completed = c.completed ? ' tl-ucard-done' : ''
-        html += '    <div class="tl-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" title="' + escapeHtml(c.title) + '">'
-        html += '      <span class="tl-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
-        html += '      <span class="tl-ucard-title">' + escapeHtml(c.title) + '</span>'
-        html += '    </div>'
-      }
-      html += '  </div>'
-      html += '</div>'
+  html += '<div class="tl-us">'
+  for (const col of b.columns) {
+    const colUndated = undatedItems.filter(x => x.columnId === col.id)
+    html += '<div class="tl-us-row" data-col-id="' + col.id + '">'
+    html += '  <div class="tl-us-label">' + escapeHtml(col.name) + '</div>'
+    html += '  <div class="tl-us-cards">'
+    for (const item of colUndated) {
+      const c = item.card
+      const completed = c.completed ? ' tl-ucard-done' : ''
+      html += '    <div class="tl-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" title="' + escapeHtml(c.title) + '">'
+      html += '      <span class="tl-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
+      html += '      <span class="tl-ucard-title">' + escapeHtml(c.title) + '</span>'
+      html += '    </div>'
     }
+    html += '  </div>'
     html += '</div>'
   }
+  html += '</div>'
 
   const prevScroll = document.querySelector('.timeline')
   const savedScrollLeft = prevScroll ? prevScroll.scrollLeft : null
@@ -354,7 +351,8 @@ function initTimelineDrag() {
       origLeft: bar.offsetLeft,
       origWidth: bar.offsetWidth,
       sourceColId: bar.closest('.tl-track')?.dataset.colId || '',
-      targetColId: null
+      targetColId: null,
+      targetUnscheduled: false
     }
     document.body.style.cursor = 'grabbing'
     document.body.style.userSelect = 'none'
@@ -455,11 +453,58 @@ document.addEventListener('mousemove', function(e) {
     for (const t of tracks) {
       if (t !== targetTrack) t.classList.remove('drag-over')
     }
+
+    const usRows = document.querySelectorAll('.tl-us-row')
+    let targetUsRow = null
+    for (const r of usRows) {
+      const rr = r.getBoundingClientRect()
+      if (e.clientY >= rr.top && e.clientY <= rr.bottom) {
+        targetUsRow = r
+        break
+      }
+    }
+    for (const r of usRows) {
+      if (r !== targetUsRow) r.classList.remove('drag-over-us')
+    }
+
     if (targetTrack) {
       targetTrack.classList.add('drag-over')
       _moving.targetColId = targetTrack.dataset.colId
+      _moving.targetUnscheduled = false
+    } else if (targetUsRow) {
+      targetUsRow.classList.add('drag-over-us')
+      _moving.targetColId = targetUsRow.dataset.colId
+      _moving.targetUnscheduled = true
     } else {
       _moving.targetColId = null
+      _moving.targetUnscheduled = false
+    }
+
+    const card = findCard(_moving.cardId)
+    if (card) {
+      const s = parseDate(card.startDate) || parseDate(card.endDate)
+      const e = parseDate(card.endDate) || parseDate(card.startDate)
+      const duration = daysBetween(s, e)
+      const newStart = pixelToDate(newLeft)
+      card.startDate = formatDate(newStart)
+      const newEnd = new Date(newStart)
+      newEnd.setDate(newEnd.getDate() + duration)
+      card.endDate = formatDate(newEnd)
+
+      if (_moving.targetColId && _moving.targetColId !== _moving.sourceColId) {
+        const sourceCol = findCardColumn(card.id)
+        if (sourceCol) {
+          const idx = sourceCol.cards.indexOf(card)
+          if (idx !== -1) sourceCol.cards.splice(idx, 1)
+        }
+        const targetCol = findColumn(_moving.targetColId)
+        if (targetCol) targetCol.cards.push(card)
+        const targetTrack = document.querySelector('.tl-track[data-col-id="' + _moving.targetColId + '"]')
+        if (targetTrack && bar.parentNode !== targetTrack) {
+          targetTrack.appendChild(bar)
+        }
+        _moving.sourceColId = _moving.targetColId
+      }
     }
   }
 })
@@ -523,12 +568,20 @@ document.addEventListener('mouseup', function() {
           if (targetCol) targetCol.cards.push(card)
         }
 
+        if (_moving.targetUnscheduled) {
+          card.startDate = null
+          card.endDate = null
+        }
+
         bar.classList.remove('moving')
         renderTimeline()
       }
     }
     document.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
       el.classList.remove('drag-over')
+    })
+    document.querySelectorAll('.tl-us-row.drag-over-us').forEach(function(el) {
+      el.classList.remove('drag-over-us')
     })
     _moving = null
     document.body.style.cursor = ''
