@@ -83,14 +83,18 @@ export function renderTimeline() {
       if (item.card.startDate) allDates.push(parseDate(item.card.startDate))
       if (item.card.endDate) allDates.push(parseDate(item.card.endDate))
     }
-    _tlMinDate = new Date(Math.min(...allDates))
+    if (_tlMinDate === null) {
+      _tlMinDate = new Date(Math.min(...allDates))
+      _tlMinDate.setDate(_tlMinDate.getDate() - 7)
+      if (_tlMinDate < todayMinus14) _tlMinDate = new Date(todayMinus14)
+    }
     const maxDate = new Date(Math.max(...allDates))
-    _tlMinDate.setDate(_tlMinDate.getDate() - 7)
-    if (_tlMinDate < todayMinus14) _tlMinDate = new Date(todayMinus14)
     maxDate.setDate(maxDate.getDate() + 14)
     _tlTotalWidth = Math.max(daysBetween(_tlMinDate, maxDate), 28) * DAY_WIDTH
   } else {
-    _tlMinDate = new Date(todayMinus14)
+    if (_tlMinDate === null) {
+      _tlMinDate = new Date(todayMinus14)
+    }
     _tlTotalWidth = Math.max(daysBetween(_tlMinDate, new Date(now.getFullYear(), now.getMonth() + 3, 1)), 28) * DAY_WIDTH
   }
 
@@ -236,14 +240,21 @@ export function renderTimeline() {
     html += '</div>'
   }
 
+  const prevScroll = document.querySelector('.timeline')
+  const savedScrollLeft = prevScroll ? prevScroll.scrollLeft : null
+
   area.innerHTML = html
   initTimelineDrag()
   initTimelineZoom()
   requestAnimationFrame(function() {
     const scrollTarget = document.querySelector('.timeline')
     if (scrollTarget) {
-      const todayPx = daysBetween(_tlMinDate, now) * DAY_WIDTH
-      scrollTarget.scrollLeft = Math.max(0, todayPx - 100)
+      if (savedScrollLeft !== null) {
+        scrollTarget.scrollLeft = savedScrollLeft
+      } else {
+        const todayPx = daysBetween(_tlMinDate, now) * DAY_WIDTH
+        scrollTarget.scrollLeft = Math.max(0, todayPx - 100)
+      }
     }
   })
 }
@@ -392,8 +403,26 @@ document.addEventListener('mousemove', function(e) {
   }
 
   if (_moving) {
+    e.preventDefault()
     const bar = document.querySelector('.tl-bar[data-card-id="' + _moving.cardId + '"]')
     if (!bar) return
+
+    const timeline = document.querySelector('.timeline')
+    if (timeline) {
+      const rect = timeline.getBoundingClientRect()
+      const edgeZone = 50
+      let scrollSpeed = 0
+      if (e.clientX < rect.left + edgeZone) {
+        scrollSpeed = -Math.ceil((rect.left + edgeZone - e.clientX) / 15)
+      } else if (e.clientX > rect.right - edgeZone) {
+        scrollSpeed = Math.ceil((e.clientX - (rect.right - edgeZone)) / 15)
+      }
+      if (scrollSpeed !== 0) {
+        timeline.scrollLeft += scrollSpeed
+        _moving.startX += scrollSpeed
+      }
+    }
+
     let newLeft = snapPx(_moving.origLeft + (e.clientX - _moving.startX))
     newLeft = clamp(newLeft, 0, _tlTotalWidth - _moving.origWidth)
     bar.style.left = newLeft + 'px'
