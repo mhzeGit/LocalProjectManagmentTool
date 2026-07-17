@@ -349,8 +349,11 @@ function initTimelineDrag() {
     _moving = {
       cardId: bar.dataset.cardId,
       startX: e.clientX,
+      startY: e.clientY,
       origLeft: bar.offsetLeft,
-      origWidth: bar.offsetWidth
+      origWidth: bar.offsetWidth,
+      sourceColId: bar.closest('.tl-track')?.dataset.colId || '',
+      targetColId: null
     }
     document.body.style.cursor = 'grabbing'
     document.body.style.userSelect = 'none'
@@ -429,6 +432,25 @@ document.addEventListener('mousemove', function(e) {
     newLeft = clamp(newLeft, 0, _tlTotalWidth - _moving.origWidth)
     bar.style.left = newLeft + 'px'
     bar.classList.add('moving')
+
+    const tracks = document.querySelectorAll('.tl-track')
+    let targetTrack = null
+    for (const t of tracks) {
+      const r = t.getBoundingClientRect()
+      if (e.clientY >= r.top && e.clientY <= r.bottom) {
+        targetTrack = t
+        break
+      }
+    }
+    for (const t of tracks) {
+      if (t !== targetTrack) t.classList.remove('drag-over')
+    }
+    if (targetTrack) {
+      targetTrack.classList.add('drag-over')
+      _moving.targetColId = targetTrack.dataset.colId
+    } else {
+      _moving.targetColId = null
+    }
   }
 })
 
@@ -480,10 +502,24 @@ document.addEventListener('mouseup', function() {
         const newEnd = new Date(newStart)
         newEnd.setDate(newEnd.getDate() + duration)
         card.endDate = formatDate(newEnd)
+
+        if (_moving.targetColId && _moving.targetColId !== _moving.sourceColId) {
+          const sourceCol = findCardColumn(card.id)
+          if (sourceCol) {
+            const idx = sourceCol.cards.indexOf(card)
+            if (idx !== -1) sourceCol.cards.splice(idx, 1)
+          }
+          const targetCol = findColumn(_moving.targetColId)
+          if (targetCol) targetCol.cards.push(card)
+        }
+
         bar.classList.remove('moving')
         renderTimeline()
       }
     }
+    document.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
+      el.classList.remove('drag-over')
+    })
     _moving = null
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
