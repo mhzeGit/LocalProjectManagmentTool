@@ -324,6 +324,18 @@ export function toggleCardCompleted(cardId) {
   render()
 }
 
+export function addProjectDirect(workspaceId) {
+  const w = findWorkspace(workspaceId)
+  if (!w) return
+  const project = { id: genId(), name: 'New Project', boards: [] }
+  w.projects.push(project)
+  render()
+  requestAnimationFrame(() => {
+    const span = document.getElementById('projectTitle-' + project.id)
+    if (span) span.dispatchEvent(new Event('dblclick'))
+  })
+}
+
 export function addCardDirect(columnId) {
   const col = findColumn(columnId)
   if (!col) return
@@ -334,4 +346,36 @@ export function addCardDirect(columnId) {
     const span = document.getElementById('cardTitle-' + card.id)
     if (span) span.dispatchEvent(new Event('dblclick'))
   })
+}
+
+export function archiveProject(id) {
+  for (const w of data.workspaces) {
+    const idx = w.projects.findIndex(p => p.id === id)
+    if (idx === -1) continue
+    const p = w.projects[idx]
+    if (!w.archivedProjects) w.archivedProjects = []
+    w.archivedProjects.push(p)
+    w.projects.splice(idx, 1)
+    if (state.selectedProjectId === id) {
+      state.selectedProjectId = null
+      state.selectedBoardId = null
+    }
+    render()
+    return
+  }
+}
+
+export function copyProject(id) {
+  for (const w of data.workspaces) {
+    const idx = w.projects.findIndex(p => p.id === id)
+    if (idx === -1) continue
+    const orig = w.projects[idx]
+    const copy = JSON.parse(JSON.stringify(orig))
+    copy.id = genId()
+    copy.name = orig.name + ' (copy)'
+    copy.boards.forEach(b => { b.id = genId(); b.columns.forEach(c => { c.id = genId(); c.cards.forEach(cd => cd.id = genId()) }) })
+    w.projects.splice(idx + 1, 0, copy)
+    render()
+    return
+  }
 }

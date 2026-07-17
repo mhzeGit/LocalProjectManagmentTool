@@ -2,17 +2,17 @@ import { render, selectWorkspace, selectProject, selectBoard } from './sidebar.j
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
-import { switchView } from './board.js'
+import { switchView, showWsCtxMenu, showProjectCtxMenu } from './board.js'
 import { openModal, closeModal, openCardDetail } from './modal.js'
 import {
   createWorkspace, deleteWorkspace,
-  createProject, deleteProject,
+  createProject, deleteProject, archiveProject, copyProject,
   createBoard, deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
   createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted,
-  addCardDirect, addColumnDirect
+  addProjectDirect, addCardDirect, addColumnDirect
 } from './store.js'
-import { startRenameColumn, startRenameCard } from './inlineEdit.js'
+import { startRenameColumn, startRenameCard, startRenameProject } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
 
 import './dragscroll.js'
@@ -25,12 +25,16 @@ Object.assign(window, {
   selectProject,
   selectBoard,
   switchView,
+  showWsCtxMenu,
+  showProjectCtxMenu,
   openModal,
   closeModal,
   createWorkspace,
   deleteWorkspace,
   createProject,
   deleteProject,
+  archiveProject,
+  copyProject,
   createBoard,
   deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
@@ -44,10 +48,12 @@ Object.assign(window, {
   pasteIntoColumn,
   getCopiedCard,
   toggleCardCompleted,
+  addProjectDirect,
   addCardDirect,
   addColumnDirect,
   startRenameColumn,
   startRenameCard,
+  startRenameProject,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
   openCardDetail,
 })

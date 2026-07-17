@@ -153,16 +153,16 @@ export function renderBoard() {
 }
 
 function renderWorkspacePage(area, w) {
-  let html = '<div class="page-view">'
-  html += '<div class="page-header"><h2>Projects</h2><button class="btn-create" onclick="openModal(\'project\',\'' + w.id + '\')">+ New Project</button></div>'
+  let html = '<div class="page-view" oncontextmenu="showWsCtxMenu(event,\'' + w.id + '\')">'
+  html += '<div class="page-header"><h2>Projects</h2><button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button></div>'
   if (w.projects.length === 0) {
     html += '<div class="empty-state"><p>No projects yet</p></div>'
   } else {
     html += '<div class="page-grid">'
     for (const p of w.projects) {
       const count = p.boards.length
-      html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')">'
-      html += '<h3>' + p.name + '</h3>'
+      html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')">'
+      html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
       html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
       html += '</div>'
     }
@@ -170,6 +170,34 @@ function renderWorkspacePage(area, w) {
   }
   html += '</div>'
   area.innerHTML = html
+}
+
+export function showWsCtxMenu(e, workspaceId) {
+  e.preventDefault()
+  document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+  const menu = document.createElement('div')
+  menu.className = 'tl-ctx-menu'
+  menu.style.left = e.clientX + 'px'
+  menu.style.top = e.clientY + 'px'
+  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>'
+  menu.addEventListener('mouseleave', function() { menu.remove() })
+  document.body.appendChild(menu)
+}
+
+export function showProjectCtxMenu(e, projectId) {
+  e.preventDefault()
+  document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+  const menu = document.createElement('div')
+  menu.className = 'tl-ctx-menu'
+  menu.style.left = e.clientX + 'px'
+  menu.style.top = e.clientY + 'px'
+  menu.innerHTML =
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();startRenameProject(\'' + projectId + '\')">Rename</button>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();copyProject(\'' + projectId + '\')">Duplicate</button>' +
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();archiveProject(\'' + projectId + '\')">Archive</button>'
+  menu.addEventListener('mouseleave', function() { menu.remove() })
+  document.body.appendChild(menu)
 }
 
 function renderProjectPage(area, p) {
