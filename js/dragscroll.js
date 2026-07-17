@@ -1,5 +1,12 @@
 let _panning = false
 let _panX = 0, _panY = 0, _panLX = 0, _panLY = 0
+let _rightDragged = false
+
+export function wasRightDragged() {
+  const v = _rightDragged
+  _rightDragged = false
+  return v
+}
 
 function hEl() {
   return document.querySelector('.timeline') || document.getElementById('boardArea')
@@ -19,11 +26,15 @@ document.addEventListener('mousedown', function(e) {
   _panLX = h.scrollLeft
   _panLY = board.scrollTop
   _panning = true
+  _rightDragged = false
   e.preventDefault()
 })
 
 document.addEventListener('mousemove', function(e) {
   if (!_panning) return
+  const dx = e.clientX - _panX
+  const dy = e.clientY - _panY
+  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) _rightDragged = true
   e.preventDefault()
   const h = hEl()
   const v = vEl()

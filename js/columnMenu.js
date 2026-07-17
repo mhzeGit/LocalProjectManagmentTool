@@ -1,4 +1,7 @@
+import { wasRightDragged } from './dragscroll.js'
+
 export function showColumnContextMenu(e, id) {
+  if (wasRightDragged()) return
   e.preventDefault()
   e.stopPropagation()
   closeAllColumnMenus()
@@ -10,6 +13,7 @@ export function showColumnContextMenu(e, id) {
 }
 
 export function showAddColContextMenu(e, boardId) {
+  if (wasRightDragged()) return
   e.preventDefault()
   e.stopPropagation()
   closeAllColumnMenus()

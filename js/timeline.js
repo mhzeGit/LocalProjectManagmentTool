@@ -1,6 +1,7 @@
 import { state, findBoard, findColumn, findCard, findCardColumn, genId } from './data.js'
 import { escapeHtml, getProgressColor } from './utils.js'
 import { openCardDetail } from './modal.js'
+import { wasRightDragged } from './dragscroll.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const PRIORITY_COLORS = {
@@ -513,6 +514,7 @@ function initTimelineDrag() {
   })
 
   area.addEventListener('contextmenu', function(e) {
+    if (_moving || _resizing || _dragActiveType || wasRightDragged()) return
     const rowLabel = e.target.closest('.tl-row-label')
     if (rowLabel) {
       e.preventDefault()

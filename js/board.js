@@ -3,6 +3,7 @@ import { escapeHtml, getProgressColor } from './utils.js'
 import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
+import { wasRightDragged } from './dragscroll.js'
 
 export function switchView(view) {
   state.selectedView = view
@@ -89,6 +90,7 @@ export function renderBoard() {
     area._kanbanCtxDone = true
     area.addEventListener('contextmenu', function(e) {
       if (state.selectedView !== 'kanban') return
+      if (wasRightDragged()) return
       const card = e.target.closest('.card')
       if (card) {
         e.preventDefault()
