@@ -150,10 +150,11 @@ export function renderTimeline() {
 
   let hasDated = false
 
-  let html = '<div class="tl-wrapper"><div class="timeline">'
+  let html = '<div class="tl-wrapper">'
+  html += '<div class="timeline">'
 
   html += '<div class="tl-header" style="width:' + (200 + totalWidth) + 'px">'
-  html += '  <div class="tl-label-col">Task</div>'
+  html += '  <div class="tl-label-col">Rows Name</div>'
   html += '  <div class="tl-scale" style="width:' + totalWidth + 'px">'
   for (const m of months) {
     html += '    <div class="tl-month" style="left:' + m.left + 'px;width:' + m.width + 'px">' + escapeHtml(m.name) + '</div>'
@@ -171,13 +172,16 @@ export function renderTimeline() {
     html += '    <div class="tl-month-marker" style="left:' + m.left + 'px"></div>'
   }
   if (showToday) {
-    html += '    <div class="tl-today-line" style="left:' + todayLeft + 'px"></div>'
     html += '    <div class="tl-today-label" style="left:' + todayLeft + 'px">Today</div>'
   }
   html += '  </div>'
   html += '</div>'
 
   html += '<div class="tl-body" style="width:' + (200 + totalWidth) + 'px">'
+  html += '<div class="tl-rows">'
+  if (showToday) {
+    html += '<div class="tl-today-line" style="left:' + (200 + todayLeft) + 'px"></div>'
+  }
 
   for (const col of b.columns) {
     const colDated = datedItems.filter(x => x.columnId === col.id)
@@ -279,6 +283,8 @@ export function renderTimeline() {
     html += '  </div>'
     html += '</div>'
   }
+
+  html += '</div>'
 
   html += '<div class="tl-label-add" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</div>'
 

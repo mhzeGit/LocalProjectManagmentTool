@@ -1,12 +1,13 @@
 .tl-wrapper {
-  border-radius: 8px;
-  overflow: hidden;
+  position: relative;
 }
 
 .timeline {
+  position: relative;
   overflow-x: auto;
   overflow-y: hidden;
   flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
 }
 
 .tl-header {
@@ -16,7 +17,7 @@
   z-index: 20;
   background: #1a1a26;
   border-bottom: 1px solid #2a2a40;
-  min-height: 56px;
+  min-height: 44px;
 }
 
 .tl-label-col {
@@ -25,7 +26,7 @@
   left: 0;
   z-index: 22;
   background: #1a1a26;
-  padding: 16px 16px 8px;
+  padding: 12px 16px 4px;
   font-size: 12px;
   font-weight: 600;
   color: #888;
@@ -39,14 +40,14 @@
 .tl-scale {
   position: relative;
   flex-shrink: 0;
-  height: 56px;
+  height: 44px;
 }
 
 .tl-month {
   position: absolute;
   top: 0;
-  height: 28px;
-  padding: 6px 10px 0;
+  height: 22px;
+  padding: 4px 10px 0;
   font-size: 13px;
   font-weight: 600;
   color: #e0e0e8;
@@ -58,7 +59,7 @@
 
 .tl-day-label {
   position: absolute;
-  top: 24px;
+  top: 20px;
   font-size: 11px;
   font-weight: 600;
   color: #555;
@@ -106,8 +107,8 @@
 .tl-today-line {
   position: absolute;
   top: 0;
+  bottom: 0;
   width: 2px;
-  height: 100%;
   background: #ef4444;
   pointer-events: none;
   z-index: 5;
@@ -131,7 +132,12 @@
 }
 
 .tl-body {
+  position: relative;
   min-height: 100px;
+}
+
+.tl-rows {
+  position: relative;
 }
 
 .tl-row {
@@ -299,10 +305,11 @@
 .tl-bar-resize:active { background: rgba(255, 255, 255, 0.3); }
 
 .tl-us {
+  position: relative;
   flex-shrink: 0;
   border: 1px solid #2a2a40;
-  border-width: 1px 1px 0;
   background: #111118;
+  border-radius: 0 0 8px 8px;
 }
 
 .tl-us-header {
