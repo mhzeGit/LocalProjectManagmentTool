@@ -158,6 +158,26 @@
   background: #1e1e34;
 }
 
+.tl-row-label {
+  cursor: grab;
+}
+
+.tl-row-label:active {
+  cursor: grabbing;
+}
+
+.tl-row-dragging {
+  opacity: 0.35;
+}
+
+.tl-us-label {
+  cursor: grab;
+}
+
+.tl-us-label:active {
+  cursor: grabbing;
+}
+
 .tl-row-name {
   font-size: 14px;
   font-weight: 600;

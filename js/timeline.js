@@ -18,7 +18,22 @@ let _resizing = null
 let _moving = null
 let _dragCardId = null
 let _dragActiveType = null
+let _dragRowId = null
+let _tlRowInsertLine = null
 let _clipboardCard = null
+
+function getRowInsertLine() {
+  if (!_tlRowInsertLine) {
+    _tlRowInsertLine = document.createElement('div')
+    _tlRowInsertLine.style.cssText = 'position:fixed;height:2px;background:#4f46e5;z-index:99999;pointer-events:none;display:none;'
+    document.body.appendChild(_tlRowInsertLine)
+  }
+  return _tlRowInsertLine
+}
+
+function removeRowInsertLine() {
+  if (_tlRowInsertLine) _tlRowInsertLine.style.display = 'none'
+}
 
 function daysBetween(a, b) {
   const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
@@ -202,8 +217,8 @@ export function renderTimeline() {
     const trackPadV = numLanes > 1 ? 6 : Math.floor((52 - laneBarH) / 2)
     const trackHeight = Math.max(52, trackPadV * 2 + numLanes * laneBarH + (numLanes - 1) * laneGap)
 
-    html += '<div class="tl-row">'
-    html += '  <div class="tl-row-label" data-col-id="' + col.id + '" style="min-height:' + trackHeight + 'px">'
+    html += '<div class="tl-row" data-col-id="' + col.id + '">'
+    html += '  <div class="tl-row-label" draggable="true" data-col-id="' + col.id + '" style="min-height:' + trackHeight + 'px">'
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
     html += '  </div>'
@@ -266,7 +281,7 @@ export function renderTimeline() {
   for (const col of b.columns) {
     const colUndated = undatedItems.filter(x => x.columnId === col.id)
     html += '<div class="tl-us-row" data-col-id="' + col.id + '">'
-    html += '  <div class="tl-us-label">' + escapeHtml(col.name) + '</div>'
+    html += '  <div class="tl-us-label" draggable="true">' + escapeHtml(col.name) + '</div>'
     html += '  <div class="tl-us-cards">'
     for (const item of colUndated) {
       const c = item.card
@@ -307,34 +322,97 @@ function initTimelineDrag() {
 
   area.addEventListener('dragstart', function(e) {
     const ucard = e.target.closest('.tl-ucard')
-    if (!ucard) return
-    _dragCardId = ucard.dataset.cardId
-    _dragActiveType = 'ucard'
-    e.dataTransfer.setData('text/x-tl-ucard', ucard.dataset.cardId)
-    e.dataTransfer.effectAllowed = 'move'
-    ucard.classList.add('dragging')
+    if (ucard) {
+      _dragCardId = ucard.dataset.cardId
+      _dragActiveType = 'ucard'
+      e.dataTransfer.setData('text/x-tl-ucard', ucard.dataset.cardId)
+      e.dataTransfer.effectAllowed = 'move'
+      ucard.classList.add('dragging')
+      return
+    }
+    const rowLabel = e.target.closest('.tl-row-label[draggable]')
+    if (rowLabel) {
+      _dragActiveType = 'tlrow'
+      _dragRowId = rowLabel.dataset.colId
+      e.dataTransfer.setData('text/x-tl-row', rowLabel.dataset.colId)
+      e.dataTransfer.effectAllowed = 'move'
+      const img = new Image()
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      e.dataTransfer.setDragImage(img, 0, 0)
+      rowLabel.closest('.tl-row').classList.add('tl-row-dragging')
+      return
+    }
+    const usLabel = e.target.closest('.tl-us-label[draggable]')
+    if (usLabel) {
+      const usRow = usLabel.closest('.tl-us-row')
+      _dragActiveType = 'tlrow'
+      _dragRowId = usRow.dataset.colId
+      e.dataTransfer.setData('text/x-tl-row', usRow.dataset.colId)
+      e.dataTransfer.effectAllowed = 'move'
+      const img = new Image()
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      e.dataTransfer.setDragImage(img, 0, 0)
+      usRow.classList.add('tl-row-dragging')
+      return
+    }
   })
 
   area.addEventListener('dragend', function() {
     removeDragPreview()
-    area.querySelectorAll('.dragging, .drag-over').forEach(function(el) {
-      el.classList.remove('dragging', 'drag-over')
+    removeRowInsertLine()
+    area.querySelectorAll('.dragging, .drag-over, .tl-row-dragging').forEach(function(el) {
+      el.classList.remove('dragging', 'drag-over', 'tl-row-dragging')
     })
     _dragCardId = null
     _dragActiveType = null
+    _dragRowId = null
   })
 
   area.addEventListener('dragover', function(e) {
-    if (_dragActiveType !== 'ucard') return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    const track = e.target.closest('.tl-track')
-    if (!track) return
-    area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
-      if (el !== track) el.classList.remove('drag-over')
-    })
-    track.classList.add('drag-over')
-    if (_dragCardId) showDragPreview(track, e)
+    if (_dragActiveType === 'ucard') {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      const track = e.target.closest('.tl-track')
+      if (!track) return
+      area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
+        if (el !== track) el.classList.remove('drag-over')
+      })
+      track.classList.add('drag-over')
+      if (_dragCardId) showDragPreview(track, e)
+      return
+    }
+    if (_dragActiveType === 'tlrow') {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      removeRowInsertLine()
+      let target = e.target.closest('.tl-row, .tl-us-row')
+      if (!target) {
+        const body = area.querySelector('.tl-body')
+        if (body && body.contains(e.target)) {
+          const rows = body.querySelectorAll('.tl-row')
+          if (rows.length > 0) target = rows[rows.length - 1]
+        } else {
+          const us = area.querySelector('.tl-us')
+          if (us && us.contains(e.target)) {
+            const rows = us.querySelectorAll('.tl-us-row')
+            if (rows.length > 0) target = rows[rows.length - 1]
+          }
+        }
+      }
+      if (!target) return
+      const targetRect = target.getBoundingClientRect()
+      const insertBefore = e.clientY < targetRect.top + targetRect.height / 2
+      const timelineEl = area.querySelector('.timeline')
+      if (timelineEl) {
+        const tlRect = timelineEl.getBoundingClientRect()
+        const line = getRowInsertLine()
+        line.style.display = 'block'
+        line.style.left = tlRect.left + 'px'
+        line.style.width = tlRect.width + 'px'
+        line.style.top = (insertBefore ? targetRect.top - 1 : targetRect.bottom - 1) + 'px'
+      }
+      return
+    }
   })
 
   area.addEventListener('click', function(e) {
@@ -373,20 +451,53 @@ function initTimelineDrag() {
   })
 
   area.addEventListener('dragleave', function(e) {
-    const track = e.target.closest('.tl-track')
-    if (track && !track.contains(e.relatedTarget)) track.classList.remove('drag-over')
+    if (_dragActiveType === 'ucard') {
+      const track = e.target.closest('.tl-track')
+      if (track && !track.contains(e.relatedTarget)) track.classList.remove('drag-over')
+      return
+    }
+    if (_dragActiveType === 'tlrow') {
+      removeRowInsertLine()
+      return
+    }
   })
 
   area.addEventListener('drop', function(e) {
-    if (_dragActiveType !== 'ucard') return
-    e.preventDefault()
-    removeDragPreview()
-    area.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
-    const id = _dragCardId
-    _dragCardId = null; _dragActiveType = null
-    const track = e.target.closest('.tl-track')
-    if (!track) return
-    handleUndatedCardDrop(id, track.dataset.colId, e, track)
+    if (_dragActiveType === 'ucard') {
+      e.preventDefault()
+      removeDragPreview()
+      area.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
+      const id = _dragCardId
+      _dragCardId = null; _dragActiveType = null
+      const track = e.target.closest('.tl-track')
+      if (!track) return
+      handleUndatedCardDrop(id, track.dataset.colId, e, track)
+      return
+    }
+    if (_dragActiveType === 'tlrow') {
+      e.preventDefault()
+      removeRowInsertLine()
+      area.querySelectorAll('.tl-row-dragging').forEach(function(el) {
+        el.classList.remove('tl-row-dragging')
+      })
+      const draggedColId = _dragRowId
+      _dragRowId = null; _dragActiveType = null
+      let targetEl = e.target.closest('.tl-row, .tl-us-row')
+      let targetColId = targetEl ? targetEl.dataset.colId : null
+      if (!targetColId || targetColId === draggedColId) return
+      const rect = targetEl.getBoundingClientRect()
+      const insertBefore = e.clientY < rect.top + rect.height / 2
+      const b = findBoard(state.selectedBoardId)
+      if (!b) return
+      const draggedIdx = b.columns.findIndex(function(c) { return c.id === draggedColId })
+      const targetIdx = b.columns.findIndex(function(c) { return c.id === targetColId })
+      if (draggedIdx === -1 || targetIdx === -1) return
+      const [moved] = b.columns.splice(draggedIdx, 1)
+      const newTargetIdx = b.columns.findIndex(function(c) { return c.id === targetColId })
+      b.columns.splice(insertBefore ? newTargetIdx : newTargetIdx + 1, 0, moved)
+      renderTimeline()
+      return
+    }
   })
 
   area.addEventListener('contextmenu', function(e) {
