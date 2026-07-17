@@ -68,3 +68,20 @@ export function selectBoard(id) {
   state.selectedBoardId = id
   render()
 }
+
+export function toggleAddBoardMenu(e, projectId) {
+  e.stopPropagation()
+  const existing = document.querySelector('.add-board-menu')
+  if (existing) { existing.remove(); return }
+
+  document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+  const btn = e.currentTarget
+  const rect = btn.getBoundingClientRect()
+  const menu = document.createElement('div')
+  menu.className = 'tl-ctx-menu add-board-menu'
+  menu.style.left = (rect.left - 80) + 'px'
+  menu.style.top = (rect.bottom + 2) + 'px'
+  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'board\',\'' + projectId + '\')">Task Board</button>'
+  menu.addEventListener('mouseleave', function() { menu.remove() })
+  document.body.appendChild(menu)
+}
