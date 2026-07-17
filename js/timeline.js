@@ -163,16 +163,14 @@ export function renderTimeline() {
     const d = new Date(_tlMinDate.getTime() + i * 86400000)
     const left = i * DAY_WIDTH
     const firstCls = i === 0 ? ' tl-day-label-first' : ''
-    html += '    <div class="tl-day-label' + firstCls + '" style="left:' + left + 'px">' + d.getDate() + '</div>'
+    const todayCls = d.getTime() === now.getTime() ? ' tl-today' : ''
+    html += '    <div class="tl-day-label' + firstCls + todayCls + '" style="left:' + left + 'px">' + d.getDate() + '</div>'
   }
   for (const d of dayMarkers) {
     html += '    <div class="tl-day-marker" style="left:' + d.left + 'px"></div>'
   }
   for (const m of monthBoundaries) {
     html += '    <div class="tl-month-marker" style="left:' + m.left + 'px"></div>'
-  }
-  if (showToday) {
-    html += '    <div class="tl-today-label" style="left:' + todayLeft + 'px">Today</div>'
   }
   html += '  </div>'
   html += '</div>'
@@ -324,17 +322,19 @@ export function renderTimeline() {
   area.innerHTML = html
   initTimelineDrag()
   initTimelineZoom()
-  requestAnimationFrame(function() {
-    const scrollTarget = document.querySelector('.timeline')
-    if (scrollTarget) {
-      if (savedScrollLeft !== null) {
-        scrollTarget.scrollLeft = savedScrollLeft
-      } else {
-        const todayPx = daysBetween(_tlMinDate, now) * DAY_WIDTH
-        scrollTarget.scrollLeft = Math.max(0, todayPx - 100)
+  if (!arguments[0]) {
+    requestAnimationFrame(function() {
+      const scrollTarget = document.querySelector('.timeline')
+      if (scrollTarget) {
+        if (savedScrollLeft !== null) {
+          scrollTarget.scrollLeft = savedScrollLeft
+        } else {
+          const todayPx = daysBetween(_tlMinDate, now) * DAY_WIDTH
+          scrollTarget.scrollLeft = Math.max(0, todayPx - 100)
+        }
       }
-    }
-  })
+    })
+  }
 }
 
 function initTimelineDrag() {
@@ -633,15 +633,24 @@ function initTimelineZoom() {
     const focalXRaw = e.clientX - tlRect.left + timelineEl.scrollLeft - 200
     const focalDay = focalXRaw / oldWidth
 
-    renderTimeline()
-
-    const newFocalX = focalDay * DAY_WIDTH
     requestAnimationFrame(function() {
+      renderTimeline(true)
       const scrollTarget = document.querySelector('.timeline')
       if (scrollTarget) {
+        const newFocalX = focalDay * DAY_WIDTH
         const rect = scrollTarget.getBoundingClientRect()
         scrollTarget.scrollLeft = newFocalX + 200 - (e.clientX - rect.left)
+        const underMouse = document.elementFromPoint(e.clientX, e.clientY)
+        if (underMouse) {
+          const row = underMouse.closest('.tl-row')
+          if (row) row.classList.add('tl-row-hover')
+        }
       }
+      function removeForceHover() {
+        area.querySelectorAll('.tl-row-hover').forEach(function(r) { r.classList.remove('tl-row-hover') })
+        area.removeEventListener('mouseover', removeForceHover)
+      }
+      area.addEventListener('mouseover', removeForceHover, { once: true })
     })
   }, { passive: false })
 }
