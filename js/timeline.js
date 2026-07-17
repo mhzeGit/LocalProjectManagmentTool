@@ -288,7 +288,7 @@ export function renderTimeline() {
   html += '</div>'
 
   html += '<div class="tl-row tl-row-add">'
-  html += '  <div class="tl-label-add" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</div>'
+  html += '  <div class="tl-label-add"><button class="tl-add-row-btn" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</button></div>'
   html += '  <div class="tl-track-add" style="width:' + totalWidth + 'px"></div>'
   html += '</div>'
 

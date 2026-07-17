@@ -183,7 +183,6 @@
 }
 
 .tl-row:last-child {
-  border-bottom: none;
   background: transparent;
 }
 
@@ -479,48 +478,54 @@
 .tl-row-add {
   display: flex;
   background: transparent;
-  border-bottom: none;
+  border-bottom: 1px solid #2a2a40;
   margin: 0 0 12px;
-}
-
-.tl-label-add:hover {
-  background: #2a2a3d;
-  color: #ddd;
-  border-color: #4f46e5;
 }
 
 .tl-label-add {
   flex: 0 0 200px;
   position: sticky;
   left: 0;
-  z-index: 25;
+  z-index: 22;
   padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #888;
-  cursor: pointer;
   box-sizing: border-box;
-  background: #1a1a26;
+  background: #1e1e2e;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   min-height: 48px;
-  border: 1px dashed #3a3a55;
-  border-top: none;
-  border-right: none;
+  border-right: 1px solid #2a2a40;
   border-radius: 0 0 0 8px;
+}
+
+.tl-add-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+  background: transparent;
+  border: 1px dashed #4a4a65;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  z-index: 25;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.tl-add-row-btn:hover {
+  background: #2a2a3d;
+  color: #ddd;
+  border-color: #4f46e5;
 }
 
 .tl-track-add {
   flex-shrink: 0;
   min-height: 48px;
   background: #1a1a26;
-  position: relative;
-  z-index: 22;
-  border: 1px dashed #3a3a55;
-  border-top: none;
-  border-left: none;
   border-radius: 0 0 8px 0;
 }
 
