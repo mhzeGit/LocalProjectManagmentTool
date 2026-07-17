@@ -90,7 +90,9 @@ export function renderTimeline() {
     }
     const maxDate = new Date(Math.max(...allDates))
     maxDate.setDate(maxDate.getDate() + 14)
-    _tlTotalWidth = Math.max(daysBetween(_tlMinDate, maxDate), 28) * DAY_WIDTH
+    const futureDate = new Date(now.getFullYear(), now.getMonth() + 3, 1)
+    const endDate = maxDate > futureDate ? maxDate : futureDate
+    _tlTotalWidth = Math.max(daysBetween(_tlMinDate, endDate), 28) * DAY_WIDTH
   } else {
     if (_tlMinDate === null) {
       _tlMinDate = new Date(todayMinus14)
