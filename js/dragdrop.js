@@ -23,6 +23,7 @@ export function initDragDrop(renderFn) {
   board._dragInited = true
 
   board.addEventListener('dragstart', function(e) {
+    if (state.selectedView !== 'kanban') return
     const card = e.target.closest('.card')
     if (card && card.closest('.board-column')) {
       _dragActive = true
