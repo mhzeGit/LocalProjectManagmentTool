@@ -16,6 +16,7 @@ export function switchView(view) {
 export function renderBoard() {
   const area = document.getElementById('boardArea')
   const breadcrumb = document.getElementById('breadcrumb')
+  const viewSwitcher = document.querySelector('.view-switcher')
 
   const b = state.selectedBoardId ? findBoard(state.selectedBoardId) : null
   const p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
@@ -25,10 +26,24 @@ export function renderBoard() {
   if (w) bc += w.name
   if (p) bc += ' <span>›</span> ' + p.name
   if (b) bc += ' <span>›</span> ' + b.name
-  breadcrumb.innerHTML = bc || 'Select a board'
+  breadcrumb.innerHTML = bc
 
-  if (!b) {
-    area.innerHTML = '<div class="empty-state"><p>' + (w ? 'Select a board from the sidebar' : 'Select or create a workspace to get started') + '</p></div>'
+  if (viewSwitcher) {
+    viewSwitcher.style.display = b ? 'flex' : 'none'
+  }
+
+  if (!w) {
+    area.innerHTML = '<div class="empty-state"><p>Select or create a workspace to get started</p></div>'
+    return
+  }
+
+  if (w && !p) {
+    renderWorkspacePage(area, w)
+    return
+  }
+
+  if (p && !b) {
+    renderProjectPage(area, p)
     return
   }
 
@@ -135,4 +150,45 @@ export function renderBoard() {
       }
     })
   }
+}
+
+function renderWorkspacePage(area, w) {
+  let html = '<div class="page-view">'
+  html += '<div class="page-header"><h2>Projects</h2><button class="btn-create" onclick="openModal(\'project\',\'' + w.id + '\')">+ New Project</button></div>'
+  if (w.projects.length === 0) {
+    html += '<div class="empty-state"><p>No projects yet</p></div>'
+  } else {
+    html += '<div class="page-grid">'
+    for (const p of w.projects) {
+      const count = p.boards.length
+      html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')">'
+      html += '<h3>' + p.name + '</h3>'
+      html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
+      html += '</div>'
+    }
+    html += '</div>'
+  }
+  html += '</div>'
+  area.innerHTML = html
+}
+
+function renderProjectPage(area, p) {
+  let html = '<div class="page-view">'
+  html += '<div class="page-header"><h2>Task Boards</h2><button class="btn-create" onclick="openModal(\'board\',\'' + p.id + '\')">+ New Board</button></div>'
+  if (p.boards.length === 0) {
+    html += '<div class="empty-state"><p>No boards yet</p></div>'
+  } else {
+    html += '<div class="page-grid">'
+    for (const b of p.boards) {
+      const colCount = b.columns.length
+      const cardCount = b.columns.reduce((sum, col) => sum + col.cards.length, 0)
+      html += '<div class="page-card" onclick="selectBoard(\'' + b.id + '\')">'
+      html += '<h3>' + b.name + '</h3>'
+      html += '<p class="count">' + colCount + ' column' + (colCount !== 1 ? 's' : '') + ' · ' + cardCount + ' card' + (cardCount !== 1 ? 's' : '') + '</p>'
+      html += '</div>'
+    }
+    html += '</div>'
+  }
+  html += '</div>'
+  area.innerHTML = html
 }

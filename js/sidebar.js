@@ -48,10 +48,8 @@ export function selectWorkspace(id) {
   if (state.selectedWorkspaceId === id) { state.selectedWorkspaceId = null; state.selectedProjectId = null; state.selectedBoardId = null }
   else {
     state.selectedWorkspaceId = id
-    const w = findWorkspace(id)
-    state.selectedProjectId = w && w.projects.length > 0 ? w.projects[0].id : null
-    const p = findProject(state.selectedProjectId)
-    state.selectedBoardId = p && p.boards.length > 0 ? p.boards[0].id : null
+    state.selectedProjectId = null
+    state.selectedBoardId = null
   }
   render()
 }
@@ -60,8 +58,7 @@ export function selectProject(id) {
   if (state.selectedProjectId === id) { state.selectedProjectId = null; state.selectedBoardId = null }
   else {
     state.selectedProjectId = id
-    const p = findProject(id)
-    state.selectedBoardId = p && p.boards.length > 0 ? p.boards[0].id : null
+    state.selectedBoardId = null
   }
   render()
 }

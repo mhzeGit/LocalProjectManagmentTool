@@ -17,7 +17,7 @@ export function openModal(type, parentId) {
     body.innerHTML = '<label>Project Name</label><input id="modalInput" placeholder="e.g. My Project" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createProject(\'' + parentId + '\')">Create</button></div>'
   } else if (type === 'board') {
     title.textContent = 'Create Board'
-    body.innerHTML = '<label>Board Name</label><input id="modalInput" placeholder="e.g. Kanban Board" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createBoard(\'' + parentId + '\')">Create</button></div>'
+    body.innerHTML = '<label>Board Name</label><input id="modalInput" placeholder="e.g. Task Board" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createBoard(\'' + parentId + '\')">Create</button></div>'
   } else if (type === 'column') {
     title.textContent = 'Add Column'
     body.innerHTML = '<label>Column Name</label><input id="modalInput" placeholder="e.g. In Review" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createColumn(\'' + parentId + '\')">Add</button></div>'

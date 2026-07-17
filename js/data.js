@@ -7,7 +7,7 @@ export const data = {
           id: 'p1', name: 'Template Project',
           boards: [
             {
-              id: 'b1', name: 'Kanban Board',
+              id: 'b1', name: 'Task Board',
               columns: [
                 { id: 'col1', name: 'To Do', cards: [] },
                 { id: 'col2', name: 'Doing', cards: [] },
