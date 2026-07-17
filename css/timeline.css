@@ -138,6 +138,7 @@
 
 .tl-rows {
   position: relative;
+  z-index: 1;
 }
 
 .tl-row {
@@ -167,7 +168,21 @@
   transition: background 0.15s;
 }
 
+.tl-row-label::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #1e1e2e;
+}
+
 .tl-row:hover .tl-row-label {
+  background: #2a2a3d;
+}
+
+.tl-row:hover .tl-row-label::after {
   background: #2a2a3d;
 }
 
