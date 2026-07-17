@@ -222,7 +222,7 @@ export function renderTimeline() {
       const start = s || e
       const end = e || s
       let barLeft = daysBetween(_tlMinDate, start) * DAY_WIDTH
-      let barWidth = Math.max(DAY_WIDTH, (daysBetween(start, end) + 1) * DAY_WIDTH)
+      let barWidth = Math.max(DAY_WIDTH, daysBetween(start, end) * DAY_WIDTH)
       if (barLeft < 0) { barWidth += barLeft; barLeft = 0 }
       if (barLeft + barWidth > totalWidth) barWidth = totalWidth - barLeft
       if (barWidth <= DAY_WIDTH * 0.5) continue
@@ -707,9 +707,7 @@ document.addEventListener('mouseup', function() {
             if (endD < startD) card.endDate = card.startDate
           }
         } else {
-          const endDate = pixelToDate(newLeft + newWidth)
-          endDate.setDate(endDate.getDate() - 1)
-          card.endDate = formatDate(endDate)
+          card.endDate = formatDate(pixelToDate(newLeft + newWidth))
           if (card.startDate) {
             const startD = parseDate(card.startDate)
             const endD = parseDate(card.endDate)
@@ -783,7 +781,7 @@ function showDragPreview(track, e) {
   if (!cardStart && !cardEnd) return
   const start = cardStart || cardEnd
   const end = cardEnd || cardStart
-  let previewWidth = (daysBetween(start, end) + 1) * DAY_WIDTH
+  let previewWidth = daysBetween(start, end) * DAY_WIDTH
 
   const trackRect = track.getBoundingClientRect()
   const x = e.clientX - trackRect.left
