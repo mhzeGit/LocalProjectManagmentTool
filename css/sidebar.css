@@ -21,3 +21,4 @@
 .nav-child .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-add { padding: 6px 16px 6px 36px; color: #4f46e5; cursor: pointer; font-size: 13px; }
 .nav-add:hover { background: #2a2a40; }
+.sidebar-hint { padding: 24px 16px; text-align: center; color: #666; font-size: 13px; }

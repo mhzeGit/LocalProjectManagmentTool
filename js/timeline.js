@@ -795,7 +795,8 @@ document.addEventListener('mousemove', function(e) {
     if (timeline) {
       const tlRect = timeline.getBoundingClientRect()
       const xInTimeline = e.clientX - tlRect.left - 200 + timeline.scrollLeft
-      let virtualLeft = snapPx(xInTimeline)
+      const barLeftInTimeline = xInTimeline + _moving.ghostOffX
+      let virtualLeft = snapPx(barLeftInTimeline)
       virtualLeft = clamp(virtualLeft, 0, _tlTotalWidth - _moving.origWidth)
       _moving.virtualLeft = virtualLeft
     }

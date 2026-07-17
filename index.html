@@ -15,14 +15,22 @@
 <aside class="sidebar">
   <div class="sidebar-header">
     <h1>Task Board</h1>
-    <button class="btn-add" onclick="openModal('workspace')">+ Workspace</button>
   </div>
-  <div class="sidebar-section" id="sidebarContent"></div>
+  <div class="sidebar-section" id="sidebarContent">
+    <div class="sidebar-hint">Select a project to view boards</div>
+  </div>
 </aside>
 
 <div class="main">
   <div class="topbar">
-    <span class="breadcrumb" id="breadcrumb"></span>
+    <div class="topbar-left">
+      <select id="workspaceSelect" class="topbar-select" onchange="onWorkspaceChange(this.value)">
+        <option value="">Select Workspace...</option>
+      </select>
+      <select id="projectSelect" class="topbar-select" onchange="onProjectChange(this.value)">
+        <option value="">Select Project...</option>
+      </select>
+    </div>
     <div class="view-switcher">
       <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
       <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
