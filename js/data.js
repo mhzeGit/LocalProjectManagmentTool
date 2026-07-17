@@ -14,6 +14,9 @@ export const data = {
                 { id: 'col3', name: 'Done', cards: [] },
               ]
             }
+          ],
+          documents: [
+            { id: 'd1', name: 'Getting Started', content: '<h1>Welcome</h1><p>Start writing your document here. This supports <strong>bold</strong>, <em>italic</em>, and more!</p>' }
           ]
         }
       ]
@@ -29,7 +32,8 @@ export const PREDEFINED_MEMBERS = ['Alice', 'Bob', 'Charlie']
 export const state = {
   selectedWorkspaceId: 'w1',
   selectedProjectId: 'p1',
-  selectedBoardId: 'b1',
+  selectedBoardId: null,
+  selectedDocumentId: 'd1',
   selectedView: 'kanban',
 }
 
@@ -39,3 +43,4 @@ export function findBoard(id) { for (const w of data.workspaces) { for (const p 
 export function findColumn(id) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { const c = b.columns.find(cl => cl.id === id); if (c) return c } } } return null }
 export function findCard(id) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { for (const c of b.columns) { const cd = c.cards.find(crd => crd.id === id); if (cd) return cd } } } } return null }
 export function findCardColumn(cardId) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { for (const c of b.columns) { if (c.cards.find(crd => crd.id === cardId)) return c } } } } return null }
+export function findDocument(id) { for (const w of data.workspaces) { for (const p of w.projects) { const d = p.documents.find(doc => doc.id === id); if (d) return d } } return null }

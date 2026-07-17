@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, toggleAddBoardMenu } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard, selectDocument, toggleAddBoardMenu } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -10,9 +10,10 @@ import {
   createBoard, deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
   createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted,
-  addProjectDirect, addCardDirect, addColumnDirect
+  addProjectDirect, addCardDirect, addColumnDirect,
+  createDocument, deleteDocument
 } from './store.js'
-import { startRenameColumn, startRenameCard, startRenameProject } from './inlineEdit.js'
+import { startRenameColumn, startRenameCard, startRenameProject, startRenameDocument } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
 
 import './dragscroll.js'
@@ -24,6 +25,7 @@ Object.assign(window, {
   selectWorkspace,
   selectProject,
   selectBoard,
+  selectDocument,
   toggleAddBoardMenu,
   switchView,
   showWsCtxMenu,
@@ -53,9 +55,12 @@ Object.assign(window, {
   addProjectDirect,
   addCardDirect,
   addColumnDirect,
+  createDocument,
+  deleteDocument,
   startRenameColumn,
   startRenameCard,
   startRenameProject,
+  startRenameDocument,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
   openCardDetail,
 })

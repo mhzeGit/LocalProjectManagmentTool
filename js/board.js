@@ -1,12 +1,14 @@
-import { state, findBoard, findProject, findWorkspace } from './data.js'
+import { state, findBoard, findProject, findWorkspace, findDocument } from './data.js'
 import { escapeHtml, getProgressColor } from './utils.js'
 import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
 import { wasRightDragged } from './dragscroll.js'
+import { renderDocument, destroyEditor } from './document.js'
 
 export function switchView(view) {
   state.selectedView = view
+  state.selectedDocumentId = null
   renderBoard()
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === view)
@@ -21,37 +23,49 @@ export function renderBoard() {
   const b = state.selectedBoardId ? findBoard(state.selectedBoardId) : null
   const p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
   const w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
+  const d = state.selectedDocumentId ? findDocument(state.selectedDocumentId) : null
 
   let bc = ''
   if (w) bc += `<span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
   if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
   if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
+  if (d) bc += ` <span>›</span> <span class="bc-link" onclick="selectDocument('${d.id}')">${d.name}</span>`
   breadcrumb.innerHTML = bc
 
   if (viewSwitcher) {
-    viewSwitcher.style.display = b ? 'flex' : 'none'
+    viewSwitcher.style.display = b && !d ? 'flex' : 'none'
   }
 
   if (!w) {
+    destroyEditor()
     area.innerHTML = '<div class="empty-state"><p>Select a workspace to get started</p></div>'
     return
   }
 
   if (w && !p) {
+    destroyEditor()
     renderWorkspacePage(area, w)
     return
   }
 
+  if (p && d) {
+    renderDocumentView(d.id)
+    return
+  }
+
   if (p && !b) {
+    destroyEditor()
     renderProjectPage(area, p)
     return
   }
 
   if (state.selectedView === 'timeline') {
+    destroyEditor()
     renderTimeline()
     return
   }
   if (state.selectedView === 'calendar') {
+    destroyEditor()
     area.innerHTML = '<div class="empty-state"><p>Calendar view — coming soon</p></div>'
     return
   }
@@ -213,5 +227,13 @@ export function showProjectCtxMenu(e, projectId) {
 }
 
 function renderProjectPage(area) {
-  area.innerHTML = '<div class="empty-state"><p>Select a board to view details</p></div>'
+  area.innerHTML = '<div class="empty-state"><p>Select a board or document from the sidebar</p></div>'
+}
+
+export async function renderDocumentView(documentId) {
+  const area = document.getElementById('boardArea')
+  const doc = findDocument(documentId)
+  if (!doc) return
+  area.innerHTML = '<div class="doc-loading">Loading editor...</div>'
+  await renderDocument(documentId)
 }

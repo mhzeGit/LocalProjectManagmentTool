@@ -24,6 +24,9 @@ export function openModal(type, parentId) {
   } else if (type === 'card') {
     title.textContent = 'Create Card'
     body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
+  } else if (type === 'document') {
+    title.textContent = 'Create Document'
+    body.innerHTML = '<label>Document Name</label><input id="modalInput" placeholder="e.g. Meeting Notes" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createDocument(\'' + parentId + '\')">Create</button></div>'
   }
 }
 

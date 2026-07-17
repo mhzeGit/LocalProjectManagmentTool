@@ -1,6 +1,6 @@
 import { state, findProject } from './data.js'
 import { openModal } from './modal.js'
-import { renderBoard } from './board.js'
+import { renderBoard, renderDocumentView } from './board.js'
 import { initDragDrop } from './dragdrop.js'
 
 export function render() {
@@ -46,6 +46,15 @@ export function render() {
       <button class="btn-del" onclick="event.stopPropagation();deleteBoard('${b.id}')">✕</button>
     </div>`
   }
+  const docs = p.documents || []
+  html += '<div class="section-title" style="margin-top:12px"><span>Documents</span><span class="btn-add-board" onclick="event.stopPropagation();openModal(\'document\',\'' + p.id + '\')">+</span></div>'
+  for (const d of docs) {
+    const active = state.selectedDocumentId === d.id ? ' active' : ''
+    html += `<div class="nav-child${active}" onclick="selectDocument('${d.id}')">
+      <span class="name">${d.name}</span>
+      <button class="btn-del" onclick="event.stopPropagation();deleteDocument('${d.id}')">✕</button>
+    </div>`
+  }
   sidebar.innerHTML = html
   renderBoard()
   initDragDrop(render)
@@ -55,17 +64,26 @@ export function selectWorkspace(id) {
   state.selectedWorkspaceId = id
   state.selectedProjectId = null
   state.selectedBoardId = null
+  state.selectedDocumentId = null
   render()
 }
 
 export function selectProject(id) {
   state.selectedProjectId = id
   state.selectedBoardId = null
+  state.selectedDocumentId = null
   render()
 }
 
 export function selectBoard(id) {
   state.selectedBoardId = id
+  state.selectedDocumentId = null
+  render()
+}
+
+export function selectDocument(id) {
+  state.selectedDocumentId = id
+  state.selectedBoardId = null
   render()
 }
 

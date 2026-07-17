@@ -1,4 +1,4 @@
-import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn } from './data.js'
+import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument } from './data.js'
 import { render } from './sidebar.js'
 import { closeModal } from './modal.js'
 
@@ -375,6 +375,48 @@ export function setProjectColor(id, color) {
   }
 }
 
+export function createDocument(projectId) {
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  const p = findProject(projectId)
+  if (!p) return
+  if (!p.documents) p.documents = []
+  const doc = { id: genId(), name, content: '<h1>' + name + '</h1><p></p>' }
+  p.documents.push(doc)
+  closeModal()
+  state.selectedDocumentId = doc.id
+  state.selectedBoardId = null
+  render()
+}
+
+export function deleteDocument(id) {
+  if (!confirm('Delete this document?')) return
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      if (!p.documents) continue
+      const idx = p.documents.findIndex(d => d.id === id)
+      if (idx !== -1) {
+        p.documents.splice(idx, 1)
+        if (state.selectedDocumentId === id) {
+          state.selectedDocumentId = p.documents.length > 0 ? p.documents[0].id : null
+        }
+        render()
+        return
+      }
+    }
+  }
+}
+
+export function saveDocumentContent(documentId, html) {
+  const d = findDocument(documentId)
+  if (d) d.content = html
+}
+
+export function renameDocument(id, name) {
+  const d = findDocument(id)
+  if (d) { d.name = name; render() }
+}
+
 export function copyProject(id) {
   for (const w of data.workspaces) {
     const idx = w.projects.findIndex(p => p.id === id)
@@ -384,6 +426,7 @@ export function copyProject(id) {
     copy.id = genId()
     copy.name = orig.name + ' (copy)'
     copy.boards.forEach(b => { b.id = genId(); b.columns.forEach(c => { c.id = genId(); c.cards.forEach(cd => cd.id = genId()) }) })
+    if (copy.documents) copy.documents.forEach(d => { d.id = genId() })
     w.projects.splice(idx + 1, 0, copy)
     render()
     return
