@@ -14,7 +14,9 @@ let _colCurrentPosKey = null
 let _colFlipTimer = null
 let _colDraggedId = null
 let _colGrabOffsetX = 0
+let _colGrabOffsetY = 0
 let _colDomLeft = 0
+let _colDomTop = 0
 
 export function initDragDrop(renderFn) {
   _renderFn = renderFn
@@ -57,7 +59,9 @@ export function initDragDrop(renderFn) {
       _colDraggedId = col.dataset.columnId
       const colRect = col.getBoundingClientRect()
       _colGrabOffsetX = e.clientX - colRect.left
+      _colGrabOffsetY = e.clientY - colRect.top
       _colDomLeft = colRect.left
+      _colDomTop = colRect.top
       const container = board.querySelector('.board-columns')
       if (container) {
         const allCols = container.querySelectorAll('.board-column:not(.add-column)')
@@ -87,7 +91,9 @@ export function initDragDrop(renderFn) {
     _colCurrentPosKey = null
     _colDraggedId = null
     _colGrabOffsetX = 0
+    _colGrabOffsetY = 0
     _colDomLeft = 0
+    _colDomTop = 0
     const b = document.getElementById('boardArea')
     if (b) {
       b.querySelectorAll('.board-column').forEach(function(el) {
@@ -121,6 +127,7 @@ export function initDragDrop(renderFn) {
     container.insertBefore(draggedCol, insertBeforeNode)
 
     _colDomLeft = draggedCol.getBoundingClientRect().left
+    _colDomTop = draggedCol.getBoundingClientRect().top
 
     const newCols = container.querySelectorAll('.board-column:not(.add-column)')
     const newPositions = Array.from(newCols).map(function(el) {
@@ -170,7 +177,8 @@ export function initDragDrop(renderFn) {
       _dragGhostEl.style.left = (e.clientX - _dragOffsetX) + 'px'
       _dragGhostEl.style.top = (e.clientY - _dragOffsetY) + 'px'
     }
-    if (!e.target.closest('.board-column:not(.add-column), .column-cards')) return
+    var _overCol = e.target.closest('.board-column:not(.add-column), .column-cards')
+    if (!_overCol && !_colDraggedId) return
     e.preventDefault()
     if (!e.dataTransfer.types) return
     if (e.dataTransfer.types.includes('text/x-card')) {
@@ -195,64 +203,67 @@ export function initDragDrop(renderFn) {
       const draggedCol = container.querySelector('.board-column[data-column-id="' + _colDraggedId + '"]')
       if (!draggedCol) return
 
-      const cols = container.querySelectorAll('.board-column:not(.add-column)')
-      const others = Array.from(cols).filter(function(c) { return c !== draggedCol })
-      let targetCol = null
-      let insertSide = 'left'
+      if (_overCol) {
+        const cols = container.querySelectorAll('.board-column:not(.add-column)')
+        const others = Array.from(cols).filter(function(c) { return c !== draggedCol })
+        let targetCol = null
+        let insertSide = 'left'
 
-      for (const c of others) {
-        const r = c.getBoundingClientRect()
-        if (e.clientX >= r.left && e.clientX <= r.right) {
-          targetCol = c
-          insertSide = e.clientX < r.left + r.width / 2 ? 'left' : 'right'
-          break
-        }
-      }
-
-      if (!targetCol) {
-        for (let i = 0; i < others.length; i++) {
-          const cur = others[i].getBoundingClientRect()
-          if (e.clientX >= cur.left && e.clientX <= cur.right) continue
-          const next = others[i + 1]
-          if (next) {
-            const nextRect = next.getBoundingClientRect()
-            if (e.clientX > cur.right && e.clientX < nextRect.left) {
-              targetCol = next
-              insertSide = 'left'
-              break
-            }
-          } else if (e.clientX > cur.right) {
-            targetCol = cur
-            insertSide = 'right'
+        for (const c of others) {
+          const r = c.getBoundingClientRect()
+          if (e.clientX >= r.left && e.clientX <= r.right) {
+            targetCol = c
+            insertSide = e.clientX < r.left + r.width / 2 ? 'left' : 'right'
             break
           }
         }
-        if (!targetCol && others.length > 0) {
-          const first = others[0].getBoundingClientRect()
-          if (e.clientX < first.left) {
-            targetCol = others[0]
-            insertSide = 'left'
-          } else {
-            targetCol = others[others.length - 1]
-            insertSide = 'right'
+
+        if (!targetCol) {
+          for (let i = 0; i < others.length; i++) {
+            const cur = others[i].getBoundingClientRect()
+            if (e.clientX >= cur.left && e.clientX <= cur.right) continue
+            const next = others[i + 1]
+            if (next) {
+              const nextRect = next.getBoundingClientRect()
+              if (e.clientX > cur.right && e.clientX < nextRect.left) {
+                targetCol = next
+                insertSide = 'left'
+                break
+              }
+            } else if (e.clientX > cur.right) {
+              targetCol = cur
+              insertSide = 'right'
+              break
+            }
+          }
+          if (!targetCol && others.length > 0) {
+            const first = others[0].getBoundingClientRect()
+            if (e.clientX < first.left) {
+              targetCol = others[0]
+              insertSide = 'left'
+            } else {
+              targetCol = others[others.length - 1]
+              insertSide = 'right'
+            }
           }
         }
-      }
 
-      if (targetCol) {
-        const posKey = targetCol.dataset.columnId + '-' + insertSide
-        if (posKey !== _colCurrentPosKey) {
-          const insertBeforeNode = insertSide === 'left' ? targetCol : targetCol.nextSibling
-          if (draggedCol.nextSibling !== insertBeforeNode && draggedCol !== insertBeforeNode) {
-            _colCurrentPosKey = posKey
-            flipColumn(container, draggedCol, insertBeforeNode, _colDraggedId)
+        if (targetCol) {
+          const posKey = targetCol.dataset.columnId + '-' + insertSide
+          if (posKey !== _colCurrentPosKey) {
+            const insertBeforeNode = insertSide === 'left' ? targetCol : targetCol.nextSibling
+            if (draggedCol.nextSibling !== insertBeforeNode && draggedCol !== insertBeforeNode) {
+              _colCurrentPosKey = posKey
+              flipColumn(container, draggedCol, insertBeforeNode, _colDraggedId)
+            }
           }
         }
       }
 
       const followX = (e.clientX - _colGrabOffsetX) - _colDomLeft
+      const followY = (e.clientY - _colGrabOffsetY) - _colDomTop
       draggedCol.style.transition = 'none'
-      draggedCol.style.transform = 'translateX(' + followX + 'px)'
+      draggedCol.style.transform = 'translate(' + followX + 'px, ' + followY + 'px)'
       draggedCol.style.zIndex = '100'
     }
   })
