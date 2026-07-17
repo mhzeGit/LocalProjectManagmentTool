@@ -374,14 +374,22 @@ function initTimelineZoom() {
     DAY_WIDTH = Math.max(16, Math.min(80, oldWidth + delta))
     if (DAY_WIDTH === oldWidth) return
 
-    const areaRect = area.getBoundingClientRect()
-    const focalXRaw = e.clientX - areaRect.left + area.scrollLeft - 200
+    const timelineEl = document.querySelector('.timeline')
+    if (!timelineEl) return
+    const tlRect = timelineEl.getBoundingClientRect()
+    const focalXRaw = e.clientX - tlRect.left + timelineEl.scrollLeft - 200
     const focalDay = focalXRaw / oldWidth
 
     renderTimeline()
 
     const newFocalX = focalDay * DAY_WIDTH
-    area.scrollLeft = newFocalX + 200 - (e.clientX - areaRect.left)
+    requestAnimationFrame(function() {
+      const scrollTarget = document.querySelector('.timeline')
+      if (scrollTarget) {
+        const rect = scrollTarget.getBoundingClientRect()
+        scrollTarget.scrollLeft = newFocalX + 200 - (e.clientX - rect.left)
+      }
+    })
   }, { passive: false })
 }
 
