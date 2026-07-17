@@ -9,12 +9,12 @@ import {
   createWorkspace, deleteWorkspace,
   createProject, deleteProject,
   createBoard, deleteBoard,
-  deleteColumn,
-  createCard, saveCard, deleteCard, archiveCard, toggleCardCompleted,
+  deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
+  createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted,
   addCardDirect, addColumnDirect
 } from './store.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
-import { showColumnContextMenu } from './columnMenu.js'
+import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
 
 import './dragscroll.js'
 
@@ -34,17 +34,22 @@ Object.assign(window, {
   deleteProject,
   createBoard,
   deleteBoard,
-  deleteColumn,
+  deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
   createCard,
   saveCard,
   deleteCard,
   archiveCard,
+  copyCard,
+  duplicateCard,
+  pasteCard,
+  pasteIntoColumn,
+  getCopiedCard,
   toggleCardCompleted,
   addCardDirect,
   addColumnDirect,
   startRenameColumn,
   startRenameCard,
-  showColumnContextMenu,
+  showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
   openCardDetail,
 })
 

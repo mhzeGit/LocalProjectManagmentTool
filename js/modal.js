@@ -1,5 +1,5 @@
 import { findCard, PREDEFINED_MEMBERS } from './data.js'
-import { escapeHtml } from './utils.js'
+import { escapeHtml, getProgressColor } from './utils.js'
 
 let _editingCardId = null
 
@@ -65,8 +65,8 @@ function buildCardForm(c, saveAction) {
   const clTotal = checklists.length
   const clDone = checklists.filter(function(i) { return i.completed }).length
   const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0
-  html += '        <div class="cd-cl-progress' + (clTotal > 0 && clDone === clTotal ? ' done' : '') + '">'
-  html += '          <div class="cd-cl-progress-bar" style="width:' + clPct + '%"></div>'
+  html += '        <div id="cd-cl-progress" class="cd-cl-progress' + (clTotal > 0 && clDone === clTotal ? ' done' : '') + '">'
+  html += '          <div id="cd-cl-progress-bar" class="cd-cl-progress-bar" style="width:' + clPct + '%;background:' + getProgressColor(clPct) + '"></div>'
   html += '          <span class="cd-cl-progress-text">' + clDone + '/' + clTotal + ' · ' + clPct + '%</span>'
   html += '        </div>'
   html += '        <div id="cd-checklist">'
@@ -170,28 +170,7 @@ export function setupModalKeyboard() {
     const target = e.target
     if (target.type === 'checkbox' && target.closest('#cd-checklist')) {
       target.closest('.cd-checklist-item').classList.toggle('cd-cl-done', target.checked)
-      const items = document.querySelectorAll('#cd-checklist .cd-checklist-item')
-      let done = 0
-      items.forEach(function(item) {
-        if (item.querySelector('input[type=checkbox]').checked) done++
-      })
-      const total = items.length
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0
-      const bar = document.getElementById('cd-cl-progress-bar')
-      const prog = document.getElementById('cd-cl-progress')
-      if (bar) bar.style.width = pct + '%'
-      if (prog) prog.classList.toggle('done', total > 0 && done === total)
-      const text = prog ? prog.querySelector('.cd-cl-progress-text') : null
-      if (text) text.textContent = done + '/' + total + ' · ' + pct + '%'
-      if (_editingCardId) {
-        document.querySelectorAll('[data-card-id="' + _editingCardId + '"]').forEach(function(el) {
-          var cp = el.querySelector('.card-cl-progress, .tl-bar-cl-progress, .tl-ucard-cl-progress')
-          if (!cp) return
-          var cf = cp.querySelector('.card-cl-progress-bar, .tl-bar-cl-progress-fill, .tl-ucard-cl-progress-fill')
-          if (cf) cf.style.width = pct + '%'
-          cp.classList.toggle('done', total > 0 && done === total)
-        })
-      }
+      updateChecklistProgress()
       return
     }
     if (target.id === 'cd-member-select') {
@@ -226,6 +205,7 @@ export function setupModalKeyboard() {
 
     if (action === 'remove-checklist-item') {
       target.closest('.cd-checklist-item').remove()
+      updateChecklistProgress()
       return
     }
 
@@ -348,6 +328,32 @@ function addChip(input, containerId) {
   input.focus()
 }
 
+function updateChecklistProgress() {
+  const items = document.querySelectorAll('#cd-checklist .cd-checklist-item')
+  let done = 0
+  items.forEach(function(item) {
+    if (item.querySelector('input[type=checkbox]').checked) done++
+  })
+  const total = items.length
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+  const color = getProgressColor(pct)
+  const bar = document.getElementById('cd-cl-progress-bar')
+  const prog = document.getElementById('cd-cl-progress')
+  if (bar) { bar.style.width = pct + '%'; bar.style.background = color }
+  if (prog) prog.classList.toggle('done', total > 0 && done === total)
+  const text = prog ? prog.querySelector('.cd-cl-progress-text') : null
+  if (text) text.textContent = done + '/' + total + ' · ' + pct + '%'
+  if (_editingCardId) {
+    document.querySelectorAll('[data-card-id="' + _editingCardId + '"]').forEach(function(el) {
+      var cp = el.querySelector('.card-cl-progress, .tl-bar-cl-progress, .tl-ucard-cl-progress')
+      if (!cp) return
+      var cf = cp.querySelector('.card-cl-progress-bar, .tl-bar-cl-progress-fill, .tl-ucard-cl-progress-fill')
+      if (cf) { cf.style.width = pct + '%'; cf.style.background = color }
+      cp.classList.toggle('done', total > 0 && done === total)
+    })
+  }
+}
+
 function addChecklistItem(input) {
   const val = input.value.trim()
   if (!val) return
@@ -360,6 +366,7 @@ function addChecklistItem(input) {
   container.appendChild(item)
   input.value = ''
   input.focus()
+  updateChecklistProgress()
 }
 
 function addMemberChip(name) {

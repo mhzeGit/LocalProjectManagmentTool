@@ -269,8 +269,7 @@
 .tl-bar-done .tl-bar-title { text-decoration: line-through; color: rgba(255, 255, 255, 0.5); }
 
 .tl-bar-cl-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(0,0,0,0.3); overflow: hidden; border-radius: 0 0 6px 6px; }
-.tl-bar-cl-progress-fill { height: 100%; background: rgba(255,255,255,0.5); transition: width .2s; }
-.tl-bar-cl-progress.done .tl-bar-cl-progress-fill { background: #22c55e; }
+.tl-bar-cl-progress-fill { height: 100%; transition: width .2s, background .2s; }
 
 .tl-bar-title {
   font-size: 12px;
@@ -410,8 +409,7 @@
 }
 
 .tl-ucard-cl-progress { height: 2px; border-radius: 1px; background: rgba(255,255,255,0.08); margin-top: 3px; overflow: hidden; width: 100%; }
-.tl-ucard-cl-progress-fill { height: 100%; border-radius: 1px; background: #4f46e5; transition: width .2s; }
-.tl-ucard-cl-progress.done .tl-ucard-cl-progress-fill { background: #22c55e; }
+.tl-ucard-cl-progress-fill { height: 100%; border-radius: 1px; transition: width .2s, background .2s; }
 
 .tl-bar-preview {
   position: absolute;

@@ -1,5 +1,5 @@
 import { state, findBoard, findColumn, findCard, findCardColumn, genId } from './data.js'
-import { escapeHtml } from './utils.js'
+import { escapeHtml, getProgressColor } from './utils.js'
 import { openCardDetail } from './modal.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -20,7 +20,7 @@ let _dragCardId = null
 let _dragActiveType = null
 let _dragRowId = null
 let _tlRowInsertLine = null
-let _clipboardCard = null
+
 
 function getRowInsertLine() {
   if (!_tlRowInsertLine) {
@@ -266,7 +266,7 @@ export function renderTimeline() {
         const clDone = c.checklists.filter(function(i) { return i.completed }).length
         const clPct = Math.round((clDone / c.checklists.length) * 100)
         const clAllDone = clDone === c.checklists.length ? ' done' : ''
-        html += '      <div class="tl-bar-cl-progress' + clAllDone + '"><div class="tl-bar-cl-progress-fill" style="width:' + clPct + '%"></div></div>'
+        html += '      <div class="tl-bar-cl-progress' + clAllDone + '"><div class="tl-bar-cl-progress-fill" style="width:' + clPct + '%;background:' + getProgressColor(clPct) + '"></div></div>'
       }
       html += '    </div>'
     }
@@ -299,7 +299,7 @@ export function renderTimeline() {
         const clDone = c.checklists.filter(function(i) { return i.completed }).length
         const clPct = Math.round((clDone / c.checklists.length) * 100)
         const clAllDone = clDone === c.checklists.length ? ' done' : ''
-        html += '      <div class="tl-ucard-cl-progress' + clAllDone + '"><div class="tl-ucard-cl-progress-fill" style="width:' + clPct + '%"></div></div>'
+        html += '      <div class="tl-ucard-cl-progress' + clAllDone + '"><div class="tl-ucard-cl-progress-fill" style="width:' + clPct + '%;background:' + getProgressColor(clPct) + '"></div></div>'
       }
       html += '    </div>'
     }
@@ -545,7 +545,7 @@ function initTimelineDrag() {
     menu.dataset.colId = track.dataset.colId
     menu.dataset.dayPx = newPx
     let html = '<button class="tl-ctx-item" data-action="add">Add Card</button>'
-    if (_clipboardCard) {
+    if (window.getCopiedCard()) {
       html += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
     }
     if (bar) {
@@ -651,34 +651,27 @@ document.addEventListener('click', function(e) {
         col.cards.push(card)
         renderTimeline()
       } else if (action === 'copy') {
-        const card = findCard(menu.dataset.cardId)
-        if (card) {
-          _clipboardCard = JSON.parse(JSON.stringify(card))
-        }
-      } else if (action === 'paste' && col && _clipboardCard) {
-        const pasteCard = JSON.parse(JSON.stringify(_clipboardCard))
+        window.copyCard(menu.dataset.cardId)
+      } else if (action === 'paste' && col && !Number.isNaN(newPx) && window.getCopiedCard()) {
+        const clipCard = window.getCopiedCard()
+        const pasteCard = JSON.parse(JSON.stringify(clipCard))
         pasteCard.id = genId()
         const date = pixelToDate(newPx)
         pasteCard.startDate = formatDate(date)
         const newEnd = new Date(date)
-        const s = parseDate(_clipboardCard.startDate) || parseDate(_clipboardCard.endDate)
-        const ee = parseDate(_clipboardCard.endDate) || parseDate(_clipboardCard.startDate)
+        const s = parseDate(clipCard.startDate) || parseDate(clipCard.endDate)
+        const ee = parseDate(clipCard.endDate) || parseDate(clipCard.startDate)
         const duration = s && ee ? daysBetween(s, ee) : 1
         newEnd.setDate(newEnd.getDate() + duration)
         pasteCard.endDate = formatDate(newEnd)
         col.cards.push(pasteCard)
         renderTimeline()
+      } else if (action === 'paste' && menu.dataset.cardId && window.getCopiedCard()) {
+        window.pasteCard(menu.dataset.cardId)
+      } else if (action === 'paste' && menu.dataset.colId && window.getCopiedCard()) {
+        window.pasteIntoColumn(menu.dataset.colId)
       } else if (action === 'duplicate') {
-        const card = findCard(menu.dataset.cardId)
-        if (card) {
-          const srcCol = findCardColumn(card.id)
-          if (srcCol) {
-            const dup = JSON.parse(JSON.stringify(card))
-            dup.id = genId()
-            srcCol.cards.push(dup)
-            renderTimeline()
-          }
-        }
+        window.duplicateCard(menu.dataset.cardId)
       } else if (action === 'archive') {
         if (menu.dataset.cardId) {
           window.archiveCard(menu.dataset.cardId)

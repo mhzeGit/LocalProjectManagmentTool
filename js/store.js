@@ -94,6 +94,83 @@ export function addColumnDirect(boardId) {
   })
 }
 
+let _copiedColumn = null
+
+export function copyColumn(id) {
+  const col = findColumn(id)
+  if (!col) return
+  _copiedColumn = JSON.parse(JSON.stringify(col))
+  delete _copiedColumn.id
+}
+
+export function pasteColumn(id) {
+  if (!_copiedColumn) return
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      for (const b of p.boards) {
+        const idx = b.columns.findIndex(c => c.id === id)
+        if (idx !== -1) {
+          const newCol = JSON.parse(JSON.stringify(_copiedColumn))
+          newCol.id = genId()
+          newCol.cards.forEach(c => { c.id = genId() })
+          b.columns.splice(idx + 1, 0, newCol)
+          render()
+          return
+        }
+      }
+    }
+  }
+}
+
+export function pasteColumnToBoard(boardId) {
+  if (!_copiedColumn) return
+  const b = findBoard(boardId)
+  if (!b) return
+  const newCol = JSON.parse(JSON.stringify(_copiedColumn))
+  newCol.id = genId()
+  newCol.cards.forEach(c => { c.id = genId() })
+  b.columns.push(newCol)
+  render()
+}
+
+export function duplicateColumn(id) {
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      for (const b of p.boards) {
+        const idx = b.columns.findIndex(c => c.id === id)
+        if (idx !== -1) {
+          const orig = b.columns[idx]
+          const newCol = JSON.parse(JSON.stringify(orig))
+          newCol.id = genId()
+          newCol.name = orig.name + ' (copy)'
+          newCol.cards.forEach(c => { c.id = genId() })
+          b.columns.splice(idx + 1, 0, newCol)
+          render()
+          return
+        }
+      }
+    }
+  }
+}
+
+export function archiveColumn(id) {
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      for (const b of p.boards) {
+        const idx = b.columns.findIndex(c => c.id === id)
+        if (idx !== -1) {
+          const col = b.columns[idx]
+          if (!b.archivedCards) b.archivedCards = []
+          b.archivedCards.push(...col.cards)
+          b.columns.splice(idx, 1)
+          render()
+          return
+        }
+      }
+    }
+  }
+}
+
 export function deleteColumn(id) {
   if (!confirm('Delete this column and all its cards?')) return
   for (const w of data.workspaces) {
@@ -165,6 +242,55 @@ function collectCardForm() {
   })
 
   return { title, description, startDate, endDate, priority, tags, members, checklists }
+}
+
+let _copiedCard = null
+
+export function copyCard(cardId) {
+  const card = findCard(cardId)
+  if (!card) return
+  _copiedCard = JSON.parse(JSON.stringify(card))
+}
+
+export function getCopiedCard() {
+  return _copiedCard
+}
+
+export function duplicateCard(cardId) {
+  const card = findCard(cardId)
+  if (!card) return
+  const srcCol = findCardColumn(card.id)
+  if (!srcCol) return
+  const dup = JSON.parse(JSON.stringify(card))
+  dup.id = genId()
+  srcCol.cards.push(dup)
+  render()
+}
+
+export function pasteIntoColumn(columnId) {
+  if (!_copiedCard) return
+  const col = findColumn(columnId)
+  if (!col) return
+  const pasteData = JSON.parse(JSON.stringify(_copiedCard))
+  pasteData.id = genId()
+  pasteData.startDate = null
+  pasteData.endDate = null
+  col.cards.push(pasteData)
+  render()
+}
+
+export function pasteCard(cardId) {
+  if (!_copiedCard) return
+  const card = findCard(cardId)
+  if (!card) return
+  const srcCol = findCardColumn(card.id)
+  if (!srcCol) return
+  const pasteData = JSON.parse(JSON.stringify(_copiedCard))
+  pasteData.id = genId()
+  pasteData.startDate = null
+  pasteData.endDate = null
+  srcCol.cards.push(pasteData)
+  render()
 }
 
 export function archiveCard(cardId) {

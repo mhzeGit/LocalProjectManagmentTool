@@ -1,5 +1,5 @@
 import { state, findBoard, findProject, findWorkspace } from './data.js'
-import { escapeHtml } from './utils.js'
+import { escapeHtml, getProgressColor } from './utils.js'
 import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
@@ -46,7 +46,11 @@ export function renderBoard() {
     html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
     html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
     html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
-    html += '    <button class="col-menu-item danger" onclick="event.stopPropagation();deleteColumn(\'' + col.id + '\')">Delete</button>'
+    html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();copyColumn(\'' + col.id + '\')">Copy</button>'
+    html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();pasteColumn(\'' + col.id + '\')">Paste</button>'
+    html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();duplicateColumn(\'' + col.id + '\')">Duplicate</button>'
+    html += '    <div class="col-menu-sep"></div>'
+    html += '    <button class="col-menu-item danger" onclick="closeAllColumnMenus();archiveColumn(\'' + col.id + '\')">Archive</button>'
     html += '  </div>'
     html += '</div>'
     html += '<div class="column-cards" data-col-id="' + col.id + '">'
@@ -62,7 +66,7 @@ export function renderBoard() {
         const completedCount = c.checklists.filter(function(item) { return item.completed }).length
         const pct = Math.round((completedCount / c.checklists.length) * 100)
         const done = completedCount === c.checklists.length ? ' done' : ''
-        html += '    <div class="card-cl-progress' + done + '"><div class="card-cl-progress-bar" style="width:' + pct + '%"></div></div>'
+        html += '    <div class="card-cl-progress' + done + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
       }
       html += '  </div>'
       html += '</div>'
@@ -72,8 +76,11 @@ export function renderBoard() {
     html += '  <button class="btn-add-card" onclick="addCardDirect(\'' + col.id + '\')">+ Add a card</button>'
     html += '</div></div>'
   }
-  html += '<div class="board-column add-column" onclick="addColumnDirect(\'' + b.id + '\')">'
+  html += '<div class="board-column add-column" onclick="addColumnDirect(\'' + b.id + '\')" oncontextmenu="showAddColContextMenu(event,\'' + b.id + '\')">'
   html += '  <span style="color:#888;font-size:13px;">+ Add Another Column</span>'
+  html += '  <div class="col-menu" id="addColMenu-' + b.id + '">'
+    html += '    <button class="col-menu-item" onclick="event.stopPropagation();closeAllColumnMenus();pasteColumnToBoard(\'' + b.id + '\')">Paste</button>'
+  html += '  </div>'
   html += '</div>'
   html += '</div>'
   area.innerHTML = html
@@ -83,18 +90,46 @@ export function renderBoard() {
     area.addEventListener('contextmenu', function(e) {
       if (state.selectedView !== 'kanban') return
       const card = e.target.closest('.card')
-      if (!card) return
-      e.preventDefault()
-      e.stopPropagation()
-      document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
-      const menu = document.createElement('div')
-      menu.className = 'tl-ctx-menu'
-      menu.style.left = e.clientX + 'px'
-      menu.style.top = e.clientY + 'px'
-      menu.dataset.cardId = card.dataset.cardId
-      menu.innerHTML = '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
-      menu.addEventListener('mouseleave', function() { menu.remove() })
-      document.body.appendChild(menu)
+      if (card) {
+        e.preventDefault()
+        e.stopPropagation()
+        document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+        const menu = document.createElement('div')
+        menu.className = 'tl-ctx-menu'
+        menu.style.left = e.clientX + 'px'
+        menu.style.top = e.clientY + 'px'
+        menu.dataset.cardId = card.dataset.cardId
+        const colId = card.closest('[data-col-id]')?.dataset.colId || ''
+        let ctxHtml = '<button class="tl-ctx-item" data-action="copy">Copy</button>'
+        ctxHtml += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
+        if (window.getCopiedCard && window.getCopiedCard()) {
+          ctxHtml += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
+        }
+        ctxHtml += '<div class="tl-ctx-divider"></div>'
+        ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
+        menu.innerHTML = ctxHtml
+        if (colId) menu.dataset.colId = colId
+        menu.addEventListener('mouseleave', function() { menu.remove() })
+        document.body.appendChild(menu)
+        return
+      }
+
+      const addBtn = e.target.closest('.btn-add-card')
+      if (addBtn && window.getCopiedCard && window.getCopiedCard()) {
+        e.preventDefault()
+        e.stopPropagation()
+        document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+        const colEl = addBtn.closest('[data-column-id]')
+        if (!colEl) return
+        const menu = document.createElement('div')
+        menu.className = 'tl-ctx-menu'
+        menu.style.left = e.clientX + 'px'
+        menu.style.top = e.clientY + 'px'
+        menu.dataset.colId = colEl.dataset.columnId
+        menu.innerHTML = '<button class="tl-ctx-item" data-action="paste">Paste</button>'
+        menu.addEventListener('mouseleave', function() { menu.remove() })
+        document.body.appendChild(menu)
+      }
     })
   }
 }

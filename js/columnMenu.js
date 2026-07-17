@@ -9,6 +9,17 @@ export function showColumnContextMenu(e, id) {
   menu.classList.add('open')
 }
 
+export function showAddColContextMenu(e, boardId) {
+  e.preventDefault()
+  e.stopPropagation()
+  closeAllColumnMenus()
+  const menu = document.getElementById('addColMenu-' + boardId)
+  if (!menu) return
+  menu.style.left = e.clientX + 'px'
+  menu.style.top = e.clientY + 'px'
+  menu.classList.add('open')
+}
+
 export function closeAllColumnMenus() {
   document.querySelectorAll('.col-menu').forEach(m => {
     m.classList.remove('open')
