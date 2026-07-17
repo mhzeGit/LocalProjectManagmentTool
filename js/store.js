@@ -167,6 +167,22 @@ function collectCardForm() {
   return { title, description, startDate, endDate, priority, tags, members, checklists }
 }
 
+export function archiveCard(cardId) {
+  const card = findCard(cardId)
+  if (!card) return
+  const srcCol = findCardColumn(card.id)
+  if (!srcCol) return
+  const idx = srcCol.cards.indexOf(card)
+  if (idx === -1) return
+  srcCol.cards.splice(idx, 1)
+  const b = findBoard(state.selectedBoardId)
+  if (b) {
+    if (!b.archivedCards) b.archivedCards = []
+    b.archivedCards.push(card)
+  }
+  render()
+}
+
 export function deleteCard(cardId) {
   if (!confirm('Delete this card?')) return
   const col = findCardColumn(cardId)

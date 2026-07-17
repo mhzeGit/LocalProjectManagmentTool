@@ -18,9 +18,7 @@
 .board-column { background: #1e1e2e; border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid #2a2a40; }
 .board-column.add-column { min-width: 280px; max-width: 320px; height: 6vh; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #2a2a40; background: transparent; }
 .column-header { padding: 12px 16px 8px; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: #e0e0e8; position: relative; }
-.col-menu-btn { background: none; color: #888; font-size: 16px; padding: 2px 6px; border-radius: 4px; letter-spacing: 1px; }
-.col-menu-btn:hover { background: #2a2a3d; color: #fff; }
-.col-menu { display: none; position: absolute; top: 100%; right: 8px; background: #24243a; border: 1px solid #3a3a55; border-radius: 6px; min-width: 140px; box-shadow: 0 4px 16px rgba(0,0,0,.4); z-index: 10; }
+.col-menu { display: none; position: fixed; background: #24243a; border: 1px solid #3a3a55; border-radius: 6px; min-width: 140px; box-shadow: 0 4px 16px rgba(0,0,0,.4); z-index: 10; }
 .col-menu.open { display: block; }
 .col-menu-item { display: block; width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; color: #ddd; }
 .col-menu-item:hover { background: #2a2a40; }
@@ -43,6 +41,9 @@
 .card-body { flex: 1; min-width: 0; }
 .card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #e8e8f0; }
 .card-desc { font-size: 12px; color: #999; }
+.card-cl-progress { height: 3px; border-radius: 2px; background: #32324a; margin-top: 8px; overflow: hidden; }
+.card-cl-progress-bar { height: 100%; border-radius: 2px; background: #4f46e5; transition: width .2s; }
+.card-cl-progress.done .card-cl-progress-bar { background: #22c55e; }
 .card-actions { display: none; gap: 4px; margin-top: 8px; }
 .card:hover .card-actions { display: flex; }
 .card-actions button { font-size: 11px; color: #f44; }

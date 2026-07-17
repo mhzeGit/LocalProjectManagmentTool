@@ -60,6 +60,10 @@
 .cd-chip-add-btn { flex-shrink: 0; padding: 5px 12px; background: #2a2a3d; color: #ccc; border-radius: 6px; font-size: 15px; font-weight: 600; line-height: 1; }
 .cd-chip-add-btn:hover { background: #3a3a50; color: #fff; }
 
+.cd-cl-progress { height: 4px; border-radius: 2px; background: #2a2a40; margin-bottom: 8px; overflow: hidden; position: relative; }
+.cd-cl-progress-bar { height: 100%; border-radius: 2px; background: #4f46e5; transition: width .2s; }
+.cd-cl-progress.done .cd-cl-progress-bar { background: #22c55e; }
+.cd-cl-progress-text { font-size: 11px; color: #888; position: absolute; right: 0; top: -16px; font-variant-numeric: tabular-nums; }
 #cd-checklist { margin-bottom: 6px; max-height: 200px; overflow-y: auto; }
 #cd-checklist::-webkit-scrollbar { width: 5px; }
 #cd-checklist::-webkit-scrollbar-track { background: transparent; }

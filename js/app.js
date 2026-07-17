@@ -10,11 +10,11 @@ import {
   createProject, deleteProject,
   createBoard, deleteBoard,
   deleteColumn,
-  createCard, saveCard, deleteCard, toggleCardCompleted,
+  createCard, saveCard, deleteCard, archiveCard, toggleCardCompleted,
   addCardDirect, addColumnDirect
 } from './store.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
-import { toggleColumnMenu } from './columnMenu.js'
+import { showColumnContextMenu } from './columnMenu.js'
 
 import './dragscroll.js'
 
@@ -38,12 +38,13 @@ Object.assign(window, {
   createCard,
   saveCard,
   deleteCard,
+  archiveCard,
   toggleCardCompleted,
   addCardDirect,
   addColumnDirect,
   startRenameColumn,
   startRenameCard,
-  toggleColumnMenu,
+  showColumnContextMenu,
   openCardDetail,
 })
 

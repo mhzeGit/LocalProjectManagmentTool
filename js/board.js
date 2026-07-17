@@ -1,6 +1,6 @@
 import { state, findBoard, findProject, findWorkspace } from './data.js'
 import { escapeHtml } from './utils.js'
-import { toggleColumnMenu } from './columnMenu.js'
+import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
 
@@ -43,13 +43,10 @@ export function renderBoard() {
   let html = '<div class="board-columns">'
   for (const col of b.columns) {
     html += '<div class="board-column" draggable="true" data-column-id="' + col.id + '">'
-    html += '<div class="column-header">'
+    html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
     html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
-    html += '  <div style="position:relative;">'
-    html += '    <button class="col-menu-btn" onclick="event.stopPropagation();toggleColumnMenu(\'' + col.id + '\')">⋮</button>'
-    html += '    <div class="col-menu" id="colMenu-' + col.id + '">'
-    html += '      <button class="col-menu-item danger" onclick="event.stopPropagation();deleteColumn(\'' + col.id + '\')">Delete</button>'
-    html += '    </div>'
+    html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
+    html += '    <button class="col-menu-item danger" onclick="event.stopPropagation();deleteColumn(\'' + col.id + '\')">Delete</button>'
     html += '  </div>'
     html += '</div>'
     html += '<div class="column-cards" data-col-id="' + col.id + '">'
@@ -61,6 +58,12 @@ export function renderBoard() {
       html += '  <div class="card-body">'
       html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
       if (c.description) html += '    <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      if (c.checklists && c.checklists.length > 0) {
+        const completedCount = c.checklists.filter(function(item) { return item.completed }).length
+        const pct = Math.round((completedCount / c.checklists.length) * 100)
+        const done = completedCount === c.checklists.length ? ' done' : ''
+        html += '    <div class="card-cl-progress' + done + '"><div class="card-cl-progress-bar" style="width:' + pct + '%"></div></div>'
+      }
       html += '  </div>'
       html += '</div>'
     }
@@ -74,4 +77,24 @@ export function renderBoard() {
   html += '</div>'
   html += '</div>'
   area.innerHTML = html
+
+  if (!area._kanbanCtxDone) {
+    area._kanbanCtxDone = true
+    area.addEventListener('contextmenu', function(e) {
+      if (state.selectedView !== 'kanban') return
+      const card = e.target.closest('.card')
+      if (!card) return
+      e.preventDefault()
+      e.stopPropagation()
+      document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+      const menu = document.createElement('div')
+      menu.className = 'tl-ctx-menu'
+      menu.style.left = e.clientX + 'px'
+      menu.style.top = e.clientY + 'px'
+      menu.dataset.cardId = card.dataset.cardId
+      menu.innerHTML = '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
+      menu.addEventListener('mouseleave', function() { menu.remove() })
+      document.body.appendChild(menu)
+    })
+  }
 }

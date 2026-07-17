@@ -262,6 +262,12 @@ export function renderTimeline() {
         html += '      <span class="tl-bar-dates">' + formatShortDate(c.startDate) + ' - ' + formatShortDate(c.endDate) + '</span>'
       }
       html += '      <div class="tl-bar-resize tl-bar-resize-r" data-resize="end"></div>'
+      if (c.checklists && c.checklists.length > 0) {
+        const clDone = c.checklists.filter(function(i) { return i.completed }).length
+        const clPct = Math.round((clDone / c.checklists.length) * 100)
+        const clAllDone = clDone === c.checklists.length ? ' done' : ''
+        html += '      <div class="tl-bar-cl-progress' + clAllDone + '"><div class="tl-bar-cl-progress-fill" style="width:' + clPct + '%"></div></div>'
+      }
       html += '    </div>'
     }
 
@@ -289,6 +295,12 @@ export function renderTimeline() {
       html += '    <div class="tl-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" title="' + escapeHtml(c.title) + '">'
       html += '      <span class="tl-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
       html += '      <span class="tl-ucard-title">' + escapeHtml(c.title) + '</span>'
+      if (c.checklists && c.checklists.length > 0) {
+        const clDone = c.checklists.filter(function(i) { return i.completed }).length
+        const clPct = Math.round((clDone / c.checklists.length) * 100)
+        const clAllDone = clDone === c.checklists.length ? ' done' : ''
+        html += '      <div class="tl-ucard-cl-progress' + clAllDone + '"><div class="tl-ucard-cl-progress-fill" style="width:' + clPct + '%"></div></div>'
+      }
       html += '    </div>'
     }
     html += '  </div>'
@@ -542,7 +554,7 @@ function initTimelineDrag() {
       html += '<button class="tl-ctx-item" data-action="copy">Copy</button>'
       html += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
       html += '<div class="tl-ctx-divider"></div>'
-      html += '<button class="tl-ctx-item tl-ctx-danger" data-action="delete">Delete</button>'
+      html += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
     }
     menu.innerHTML = html
     menu.addEventListener('mouseleave', function() { menu.remove() })
@@ -667,25 +679,19 @@ document.addEventListener('click', function(e) {
             renderTimeline()
           }
         }
-      } else if (action === 'delete') {
-        const card = findCard(menu.dataset.cardId)
-        if (card) {
-          const srcCol = findCardColumn(card.id)
-          if (srcCol) {
-            const idx = srcCol.cards.indexOf(card)
-            if (idx !== -1) srcCol.cards.splice(idx, 1)
-            renderTimeline()
-          }
-        }
       } else if (action === 'archive') {
-        const b = findBoard(state.selectedBoardId)
-        if (b) {
-          const colIdx = b.columns.findIndex(function(c) { return c.id === menu.dataset.colId })
-          if (colIdx !== -1) {
-            const archived = b.columns.splice(colIdx, 1)[0]
-            if (!b.archivedColumns) b.archivedColumns = []
-            b.archivedColumns.push(archived)
-            renderTimeline()
+        if (menu.dataset.cardId) {
+          window.archiveCard(menu.dataset.cardId)
+        } else {
+          const b = findBoard(state.selectedBoardId)
+          if (b) {
+            const colIdx = b.columns.findIndex(function(c) { return c.id === menu.dataset.colId })
+            if (colIdx !== -1) {
+              const archived = b.columns.splice(colIdx, 1)[0]
+              if (!b.archivedColumns) b.archivedColumns = []
+              b.archivedColumns.push(archived)
+              renderTimeline()
+            }
           }
         }
       }

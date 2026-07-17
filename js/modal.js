@@ -1,6 +1,8 @@
 import { findCard, PREDEFINED_MEMBERS } from './data.js'
 import { escapeHtml } from './utils.js'
 
+let _editingCardId = null
+
 export function openModal(type, parentId) {
   const overlay = document.getElementById('modal')
   const title = document.getElementById('modalTitle')
@@ -21,13 +23,14 @@ export function openModal(type, parentId) {
     body.innerHTML = '<label>Column Name</label><input id="modalInput" placeholder="e.g. In Review" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createColumn(\'' + parentId + '\')">Add</button></div>'
   } else if (type === 'card') {
     title.textContent = 'Create Card'
-    body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')', false)
+    body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
   }
 }
 
 export function openCardDetail(cardId) {
   const c = findCard(cardId)
   if (!c) return
+  _editingCardId = cardId
   const overlay = document.getElementById('modal')
   const title = document.getElementById('modalTitle')
   const body = document.getElementById('modalBody')
@@ -37,7 +40,7 @@ export function openCardDetail(cardId) {
   body.querySelector('.cd-title-input')?.focus()
 }
 
-function buildCardForm(c, saveAction, showDelete) {
+function buildCardForm(c, saveAction) {
   const startVal = c.startDate || ''
   const endVal = c.endDate || ''
   const tags = c.tags || []
@@ -59,6 +62,13 @@ function buildCardForm(c, saveAction, showDelete) {
   html += '      </div>'
   html += '      <div class="cd-left-section">'
   html += '        <label>Checklist</label>'
+  const clTotal = checklists.length
+  const clDone = checklists.filter(function(i) { return i.completed }).length
+  const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0
+  html += '        <div class="cd-cl-progress' + (clTotal > 0 && clDone === clTotal ? ' done' : '') + '">'
+  html += '          <div class="cd-cl-progress-bar" style="width:' + clPct + '%"></div>'
+  html += '          <span class="cd-cl-progress-text">' + clDone + '/' + clTotal + ' · ' + clPct + '%</span>'
+  html += '        </div>'
   html += '        <div id="cd-checklist">'
   for (let i = 0; i < checklists.length; i++) {
     const item = checklists[i]
@@ -135,7 +145,6 @@ function buildCardForm(c, saveAction, showDelete) {
   html += '      </div>'
 
   html += '      <div class="cd-right-footer">'
-  if (showDelete) html += '        <button class="btn-danger" onclick="deleteCard(\'' + c.id + '\')">Delete</button>'
   html += '        <div class="cd-right-footer-right">'
   html += '          <button class="btn-cancel" onclick="closeModal()">Cancel</button>'
   html += '          <button class="btn-confirm" onclick="' + saveAction + '">Save</button>'
@@ -161,6 +170,28 @@ export function setupModalKeyboard() {
     const target = e.target
     if (target.type === 'checkbox' && target.closest('#cd-checklist')) {
       target.closest('.cd-checklist-item').classList.toggle('cd-cl-done', target.checked)
+      const items = document.querySelectorAll('#cd-checklist .cd-checklist-item')
+      let done = 0
+      items.forEach(function(item) {
+        if (item.querySelector('input[type=checkbox]').checked) done++
+      })
+      const total = items.length
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0
+      const bar = document.getElementById('cd-cl-progress-bar')
+      const prog = document.getElementById('cd-cl-progress')
+      if (bar) bar.style.width = pct + '%'
+      if (prog) prog.classList.toggle('done', total > 0 && done === total)
+      const text = prog ? prog.querySelector('.cd-cl-progress-text') : null
+      if (text) text.textContent = done + '/' + total + ' · ' + pct + '%'
+      if (_editingCardId) {
+        document.querySelectorAll('[data-card-id="' + _editingCardId + '"]').forEach(function(el) {
+          var cp = el.querySelector('.card-cl-progress, .tl-bar-cl-progress, .tl-ucard-cl-progress')
+          if (!cp) return
+          var cf = cp.querySelector('.card-cl-progress-bar, .tl-bar-cl-progress-fill, .tl-ucard-cl-progress-fill')
+          if (cf) cf.style.width = pct + '%'
+          cp.classList.toggle('done', total > 0 && done === total)
+        })
+      }
       return
     }
     if (target.id === 'cd-member-select') {

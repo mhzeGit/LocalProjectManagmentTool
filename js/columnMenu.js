@@ -1,15 +1,26 @@
-export function toggleColumnMenu(id) {
+export function showColumnContextMenu(e, id) {
+  e.preventDefault()
+  e.stopPropagation()
+  closeAllColumnMenus()
   const menu = document.getElementById('colMenu-' + id)
   if (!menu) return
-  const isOpen = menu.classList.contains('open')
-  closeAllColumnMenus()
-  if (!isOpen) menu.classList.add('open')
+  menu.style.left = e.clientX + 'px'
+  menu.style.top = e.clientY + 'px'
+  menu.classList.add('open')
 }
 
 export function closeAllColumnMenus() {
-  document.querySelectorAll('.col-menu').forEach(m => m.classList.remove('open'))
+  document.querySelectorAll('.col-menu').forEach(m => {
+    m.classList.remove('open')
+    m.style.left = ''
+    m.style.top = ''
+  })
 }
 
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.col-menu-btn')) closeAllColumnMenus()
+  if (!e.target.closest('.col-menu')) closeAllColumnMenus()
+})
+
+document.addEventListener('contextmenu', function(e) {
+  if (!e.target.closest('.col-menu')) closeAllColumnMenus()
 })
