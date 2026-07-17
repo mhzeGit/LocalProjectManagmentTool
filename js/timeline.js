@@ -1,5 +1,6 @@
-import { state, findBoard } from './data.js'
+import { state, findBoard, findColumn, findCard, findCardColumn } from './data.js'
 import { escapeHtml } from './utils.js'
+import { openCardDetail } from './modal.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const PRIORITY_COLORS = {
@@ -10,6 +11,10 @@ const PRIORITY_COLORS = {
   urgent: '#ef4444'
 }
 const DAY_WIDTH = 36
+
+let _tlMinDate = null
+let _tlTotalWidth = 0
+let _resizing = null
 
 function daysBetween(a, b) {
   const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
@@ -23,10 +28,29 @@ function parseDate(str) {
   return new Date(y, m - 1, d)
 }
 
+function formatDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+}
+
 function formatShortDate(str) {
   if (!str) return ''
   const d = parseDate(str)
   return MONTHS[d.getMonth()] + ' ' + d.getDate()
+}
+
+function pixelToDate(px) {
+  const dayOffset = Math.round(px / DAY_WIDTH)
+  const d = new Date(_tlMinDate)
+  d.setDate(d.getDate() + dayOffset)
+  return d
+}
+
+function snapPx(px) {
+  return Math.round(px / DAY_WIDTH) * DAY_WIDTH
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v))
 }
 
 export function renderTimeline() {
@@ -47,46 +71,47 @@ export function renderTimeline() {
   const datedItems = allItems.filter(x => x.card.startDate || x.card.endDate)
   const undatedItems = allItems.filter(x => !x.card.startDate && !x.card.endDate)
 
-  let minDate, maxDate
   if (datedItems.length > 0) {
     const allDates = []
     for (const item of datedItems) {
       if (item.card.startDate) allDates.push(parseDate(item.card.startDate))
       if (item.card.endDate) allDates.push(parseDate(item.card.endDate))
     }
-    minDate = new Date(Math.min(...allDates))
-    maxDate = new Date(Math.max(...allDates))
-    minDate.setDate(minDate.getDate() - 7)
+    _tlMinDate = new Date(Math.min(...allDates))
+    const maxDate = new Date(Math.max(...allDates))
+    _tlMinDate.setDate(_tlMinDate.getDate() - 7)
     maxDate.setDate(maxDate.getDate() + 14)
+    _tlTotalWidth = Math.max(daysBetween(_tlMinDate, maxDate), 28) * DAY_WIDTH
   } else {
-    minDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    maxDate = new Date(now.getFullYear(), now.getMonth() + 3, 1)
+    _tlMinDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    _tlTotalWidth = Math.max(daysBetween(_tlMinDate, new Date(now.getFullYear(), now.getMonth() + 3, 1)), 28) * DAY_WIDTH
   }
 
-  const totalDays = Math.max(daysBetween(minDate, maxDate), 28)
-  const totalWidth = totalDays * DAY_WIDTH
+  const totalDays = _tlTotalWidth / DAY_WIDTH
+  const totalWidth = _tlTotalWidth
 
   const months = []
-  const mCursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1)
-  while (mCursor < maxDate) {
+  const mCursor = new Date(_tlMinDate.getFullYear(), _tlMinDate.getMonth(), 1)
+  const absMaxDate = new Date(_tlMinDate.getTime() + totalDays * 86400000)
+  while (mCursor < absMaxDate) {
     const mStart = new Date(mCursor)
     const mEnd = new Date(mCursor.getFullYear(), mCursor.getMonth() + 1, 1)
-    const left = Math.max(0, daysBetween(minDate, mStart) * DAY_WIDTH)
+    const left = Math.max(0, daysBetween(_tlMinDate, mStart) * DAY_WIDTH)
     const w = Math.min(daysBetween(mStart, mEnd) * DAY_WIDTH, totalWidth - left)
     if (w > 0) months.push({ name: MONTHS[mCursor.getMonth()] + ' ' + mCursor.getFullYear(), left, width: w })
     mCursor.setMonth(mCursor.getMonth() + 1)
   }
 
   const weekMarkers = []
-  const wCursor = new Date(minDate)
+  const wCursor = new Date(_tlMinDate)
   wCursor.setDate(wCursor.getDate() - wCursor.getDay())
-  while (wCursor <= maxDate) {
-    const left = daysBetween(minDate, wCursor) * DAY_WIDTH
+  while (wCursor <= absMaxDate) {
+    const left = daysBetween(_tlMinDate, wCursor) * DAY_WIDTH
     if (left > 0 && left < totalWidth) weekMarkers.push({ left })
     wCursor.setDate(wCursor.getDate() + 7)
   }
 
-  const todayLeft = daysBetween(minDate, now) * DAY_WIDTH
+  const todayLeft = daysBetween(_tlMinDate, now) * DAY_WIDTH
   const showToday = todayLeft >= 0 && todayLeft < totalWidth
 
   let hasDated = false
@@ -121,7 +146,7 @@ export function renderTimeline() {
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
     html += '  </div>'
-    html += '  <div class="tl-track" style="width:' + totalWidth + 'px">'
+    html += '  <div class="tl-track" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
 
     for (const item of colDated) {
       const c = item.card
@@ -130,23 +155,25 @@ export function renderTimeline() {
       if (!s && !e) continue
       const start = s || e
       const end = e || s
-      let barLeft = daysBetween(minDate, start) * DAY_WIDTH
-      let barWidth = Math.max(6, (daysBetween(start, end) + 1) * DAY_WIDTH)
+      let barLeft = daysBetween(_tlMinDate, start) * DAY_WIDTH
+      let barWidth = Math.max(DAY_WIDTH, (daysBetween(start, end) + 1) * DAY_WIDTH)
       if (barLeft < 0) { barWidth += barLeft; barLeft = 0 }
       if (barLeft + barWidth > totalWidth) barWidth = totalWidth - barLeft
-      if (barWidth <= 0) continue
+      if (barWidth <= DAY_WIDTH * 0.5) continue
 
       const color = PRIORITY_COLORS[c.priority] || PRIORITY_COLORS.medium
       const completed = c.completed ? ' tl-bar-done' : ''
       const barLabel = c.title.length > 25 ? c.title.slice(0, 24) + '\u2026' : c.title
 
-      html += '    <div class="tl-bar' + completed + '" style="left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color + '" onclick="openCardDetail(\'' + c.id + '\')" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
+      html += '    <div class="tl-bar' + completed + '" draggable="true" data-card-id="' + c.id + '" style="left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color + '" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
+      html += '      <div class="tl-bar-resize tl-bar-resize-l" data-resize="start"></div>'
       if (barWidth > 28) {
         html += '      <span class="tl-bar-title">' + escapeHtml(barLabel) + '</span>'
       }
       if (barWidth > 90 && c.startDate && c.endDate) {
         html += '      <span class="tl-bar-dates">' + formatShortDate(c.startDate) + ' - ' + formatShortDate(c.endDate) + '</span>'
       }
+      html += '      <div class="tl-bar-resize tl-bar-resize-r" data-resize="end"></div>'
       html += '    </div>'
     }
 
@@ -164,11 +191,11 @@ export function renderTimeline() {
       html += '    <span class="tl-row-name">Unscheduled</span>'
       html += '    <span class="tl-row-count">' + colUndated.length + '</span>'
       html += '  </div>'
-      html += '  <div class="tl-track" style="width:' + totalWidth + 'px">'
+      html += '  <div class="tl-track" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
       for (const item of colUndated) {
         const c = item.card
         const completed = c.completed ? ' tl-ucard-done' : ''
-        html += '    <div class="tl-ucard' + completed + '" onclick="openCardDetail(\'' + c.id + '\')" title="' + escapeHtml(c.title) + '">'
+        html += '    <div class="tl-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" title="' + escapeHtml(c.title) + '">'
         html += '      <span class="tl-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
         html += '      <span class="tl-ucard-title">' + escapeHtml(c.title) + '</span>'
         html += '    </div>'
@@ -185,4 +212,247 @@ export function renderTimeline() {
   html += '</div></div>'
 
   area.innerHTML = html
+  initTimelineDrag()
+}
+
+function initTimelineDrag() {
+  const area = document.getElementById('boardArea')
+  if (!area || area._tlDragDone) return
+  area._tlDragDone = true
+
+  area.addEventListener('dragstart', function(e) {
+    if (e.target.closest('.tl-bar-resize')) {
+      e.preventDefault()
+      return
+    }
+    const bar = e.target.closest('.tl-bar')
+    if (bar) {
+      e.dataTransfer.setData('text/x-tl-card', bar.dataset.cardId)
+      e.dataTransfer.effectAllowed = 'move'
+      bar.classList.add('dragging')
+      return
+    }
+    const ucard = e.target.closest('.tl-ucard')
+    if (ucard) {
+      e.dataTransfer.setData('text/x-tl-ucard', ucard.dataset.cardId)
+      e.dataTransfer.effectAllowed = 'move'
+      ucard.classList.add('dragging')
+    }
+  })
+
+  area.addEventListener('dragend', function(e) {
+    area.querySelectorAll('.dragging, .drag-over').forEach(function(el) {
+      el.classList.remove('dragging', 'drag-over')
+    })
+  })
+
+  area.addEventListener('dragover', function(e) {
+    const track = e.target.closest('.tl-track')
+    if (track && (e.dataTransfer.types.includes('text/x-tl-card') || e.dataTransfer.types.includes('text/x-tl-ucard'))) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
+        if (el !== track) el.classList.remove('drag-over')
+      })
+      track.classList.add('drag-over')
+    }
+  })
+
+  area.addEventListener('click', function(e) {
+    if (e.target.closest('.tl-bar-resize')) return
+    const bar = e.target.closest('.tl-bar')
+    if (bar && bar.dataset.cardId) {
+      openCardDetail(bar.dataset.cardId)
+      return
+    }
+    const ucard = e.target.closest('.tl-ucard')
+    if (ucard && ucard.dataset.cardId) {
+      openCardDetail(ucard.dataset.cardId)
+    }
+  })
+
+  area.addEventListener('dragleave', function(e) {
+    const track = e.target.closest('.tl-track')
+    if (track && !track.contains(e.relatedTarget)) {
+      track.classList.remove('drag-over')
+    }
+  })
+
+  area.addEventListener('drop', function(e) {
+    e.preventDefault()
+    area.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
+
+    const track = e.target.closest('.tl-track')
+    if (!track) return
+    const targetColId = track.dataset.colId
+    if (!targetColId) return
+
+    const cardId = e.dataTransfer.getData('text/x-tl-card')
+    if (cardId) {
+      handleDatedCardDrop(cardId, targetColId, e, track)
+      return
+    }
+
+    const ucardId = e.dataTransfer.getData('text/x-tl-ucard')
+    if (ucardId) {
+      handleUndatedCardDrop(ucardId, targetColId, e, track)
+      return
+    }
+  })
+
+  area.addEventListener('mousedown', function(e) {
+    const handle = e.target.closest('.tl-bar-resize')
+    if (!handle) return
+    e.preventDefault()
+    const bar = handle.closest('.tl-bar')
+    if (!bar) return
+    const cardId = bar.dataset.cardId
+    const dir = handle.dataset.resize
+    const track = bar.closest('.tl-track')
+    if (!track) return
+    const trackRect = track.getBoundingClientRect()
+    const barLeft = bar.offsetLeft
+    const barWidth = bar.offsetWidth
+
+    _resizing = {
+      cardId, dir,
+      startX: e.clientX,
+      barLeft, barWidth,
+      trackLeft: trackRect.left,
+      snapLeft: snapPx(barLeft),
+      snapRight: snapPx(barLeft + barWidth)
+    }
+    document.body.style.cursor = 'ew-resize'
+    document.body.style.userSelect = 'none'
+  })
+}
+
+document.addEventListener('mousemove', function(e) {
+  if (!_resizing) return
+  const { cardId, dir, startX, barLeft, barWidth, trackLeft, snapLeft: sLeft, snapRight: sRight } = _resizing
+  const bar = document.querySelector('.tl-bar[data-card-id="' + cardId + '"]')
+  if (!bar) return
+
+  const dx = e.clientX - startX
+  let newLeft, newWidth
+
+  if (dir === 'start') {
+    let rawLeft = barLeft + dx
+    let snapped = snapPx(rawLeft)
+    snapped = clamp(snapped, 0, sRight - DAY_WIDTH)
+    newLeft = snapped
+    newWidth = sRight - snapped
+  } else {
+    let rawRight = barLeft + barWidth + dx
+    let snapped = snapPx(rawRight)
+    snapped = clamp(snapped, sLeft + DAY_WIDTH, _tlTotalWidth)
+    newLeft = sLeft
+    newWidth = snapped - sLeft
+  }
+
+  bar.style.left = newLeft + 'px'
+  bar.style.width = newWidth + 'px'
+  bar.classList.add('resizing')
+})
+
+document.addEventListener('mouseup', function(e) {
+  if (!_resizing) return
+  const { cardId, dir } = _resizing
+
+  const bar = document.querySelector('.tl-bar[data-card-id="' + cardId + '"]')
+  if (bar) {
+    const track = bar.closest('.tl-track')
+    if (track) {
+      const newLeft = snapPx(bar.offsetLeft)
+      const newWidth = snapPx(bar.offsetLeft + bar.offsetWidth) - newLeft
+
+      const card = findCard(cardId)
+      if (card) {
+        if (dir === 'start') {
+          card.startDate = formatDate(pixelToDate(newLeft))
+          if (card.endDate) {
+            const endD = parseDate(card.endDate)
+            const startD = parseDate(card.startDate)
+            if (endD < startD) {
+              card.endDate = card.startDate
+            }
+          }
+        } else {
+          card.endDate = formatDate(pixelToDate(newLeft + newWidth - 1))
+          if (card.startDate) {
+            const startD = parseDate(card.startDate)
+            const endD = parseDate(card.endDate)
+            if (endD < startD) {
+              card.startDate = card.endDate
+            }
+          }
+        }
+        bar.classList.remove('resizing')
+        renderTimeline()
+      }
+    }
+  }
+
+  _resizing = null
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+})
+
+function handleDatedCardDrop(cardId, targetColId, e, track) {
+  const card = findCard(cardId)
+  if (!card) return
+  const sourceCol = findCardColumn(cardId)
+
+  if (sourceCol && sourceCol.id !== targetColId) {
+    const idx = sourceCol.cards.indexOf(card)
+    if (idx !== -1) sourceCol.cards.splice(idx, 1)
+    const targetCol = findColumn(targetColId)
+    if (targetCol) targetCol.cards.push(card)
+  }
+
+  const trackRect = track.getBoundingClientRect()
+  const x = e.clientX - trackRect.left
+  let newStartPx = snapPx(x)
+  newStartPx = clamp(newStartPx, 0, _tlTotalWidth - DAY_WIDTH)
+  const newStart = pixelToDate(newStartPx)
+
+  if (card.startDate && card.endDate) {
+    const oldStart = parseDate(card.startDate)
+    const oldEnd = parseDate(card.endDate)
+    const duration = daysBetween(oldStart, oldEnd)
+    card.startDate = formatDate(newStart)
+    const newEnd = new Date(newStart)
+    newEnd.setDate(newEnd.getDate() + duration)
+    card.endDate = formatDate(newEnd)
+  } else if (card.startDate) {
+    card.startDate = formatDate(newStart)
+  } else if (card.endDate) {
+    card.endDate = formatDate(newStart)
+  }
+
+  renderTimeline()
+}
+
+function handleUndatedCardDrop(cardId, targetColId, e, track) {
+  const card = findCard(cardId)
+  if (!card) return
+
+  const trackRect = track.getBoundingClientRect()
+  const x = e.clientX - trackRect.left
+  let newPx = snapPx(x)
+  newPx = clamp(newPx, 0, _tlTotalWidth - DAY_WIDTH)
+  const date = pixelToDate(newPx)
+  const dateStr = formatDate(date)
+  card.startDate = dateStr
+  card.endDate = dateStr
+
+  const sourceCol = findCardColumn(cardId)
+  if (sourceCol) {
+    const idx = sourceCol.cards.indexOf(card)
+    if (idx !== -1) sourceCol.cards.splice(idx, 1)
+  }
+  const targetCol = findColumn(targetColId)
+  if (targetCol) targetCol.cards.push(card)
+
+  renderTimeline()
 }

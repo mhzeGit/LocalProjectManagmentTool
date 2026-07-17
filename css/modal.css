@@ -60,8 +60,17 @@
 .cd-chip-add-btn { flex-shrink: 0; padding: 5px 12px; background: #2a2a3d; color: #ccc; border-radius: 6px; font-size: 15px; font-weight: 600; line-height: 1; }
 .cd-chip-add-btn:hover { background: #3a3a50; color: #fff; }
 
-#cd-checklist { margin-bottom: 6px; }
-.cd-checklist-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+#cd-checklist { margin-bottom: 6px; max-height: 200px; overflow-y: auto; }
+#cd-checklist::-webkit-scrollbar { width: 5px; }
+#cd-checklist::-webkit-scrollbar-track { background: transparent; }
+#cd-checklist::-webkit-scrollbar-thumb { background: #3a3a55; border-radius: 3px; }
+.cd-checklist-item { display: flex; align-items: center; gap: 6px; padding: 5px 0; }
+.cd-cl-drag-handle { flex-shrink: 0; cursor: grab; color: #555; font-size: 14px; line-height: 1; padding: 0 2px; user-select: none; }
+.cd-cl-drag-handle:hover { color: #888; }
+.cd-cl-dragging { opacity: .4; }
+.cd-cl-drop-before { border-top: 2px solid #4f46e5 !important; margin-top: -1px; }
+.cd-cl-drop-before + .cd-checklist-item { border-top-color: transparent; }
+.cd-cl-drop-after { border-bottom: 2px solid #4f46e5; }
 .cd-checklist-item + .cd-checklist-item { border-top: 1px solid #2a2a3d; }
 .cd-cl-checkbox { position: relative; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; margin: 0 !important; }
 .cd-cl-checkbox input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0 !important; padding: 0 !important; }

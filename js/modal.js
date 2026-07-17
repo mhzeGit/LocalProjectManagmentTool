@@ -63,7 +63,8 @@ function buildCardForm(c, saveAction, showDelete) {
   for (let i = 0; i < checklists.length; i++) {
     const item = checklists[i]
     const doneClass = item.completed ? ' cd-cl-done' : ''
-    html += '          <div class="cd-checklist-item' + doneClass + '">'
+    html += '          <div class="cd-checklist-item' + doneClass + '" draggable="true">'
+    html += '            <span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span>'
     html += '            <label class="cd-cl-checkbox">'
     html += '              <input type="checkbox"' + (item.completed ? ' checked' : '') + '>'
     html += '              <span class="cd-cl-checkmark"></span>'
@@ -206,8 +207,8 @@ export function setupModalKeyboard() {
     }
 
     if (action === 'add-checklist-item') {
-      const row = target.closest('.cd-chip-add-row')
-      const input = row?.querySelector('.cd-chip-input')
+      const row = target.closest('.cd-checklist-add')
+      const input = row?.querySelector('.cd-checklist-input')
       if (input) addChecklistItem(input)
       return
     }
@@ -244,6 +245,60 @@ export function setupModalKeyboard() {
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
     }
   })
+
+  let dragSrc = null
+  overlay.addEventListener('dragstart', function(e) {
+    const item = e.target.closest('.cd-checklist-item')
+    if (!item) return
+    dragSrc = item
+    item.classList.add('cd-cl-dragging')
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', '')
+  })
+
+  overlay.addEventListener('dragover', function(e) {
+    const item = e.target.closest('.cd-checklist-item')
+    if (!item || item === dragSrc) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const rect = item.getBoundingClientRect()
+    const mid = rect.top + rect.height / 2
+    item.classList.toggle('cd-cl-drop-before', e.clientY < mid)
+    item.classList.toggle('cd-cl-drop-after', e.clientY >= mid)
+  })
+
+  overlay.addEventListener('dragleave', function(e) {
+    const item = e.target.closest('.cd-checklist-item')
+    if (!item) return
+    const related = e.relatedTarget
+    if (related && item.contains(related)) return
+    item.classList.remove('cd-cl-drop-before', 'cd-cl-drop-after')
+  })
+
+  overlay.addEventListener('drop', function(e) {
+    e.preventDefault()
+    const target = e.target.closest('.cd-checklist-item')
+    if (!target || !dragSrc || target === dragSrc) return
+    const rect = target.getBoundingClientRect()
+    const mid = rect.top + rect.height / 2
+    const parent = target.parentElement
+    if (e.clientY < mid) {
+      parent.insertBefore(dragSrc, target)
+    } else {
+      parent.insertBefore(dragSrc, target.nextSibling)
+    }
+    target.classList.remove('cd-cl-drop-before', 'cd-cl-drop-after')
+    dragSrc.classList.remove('cd-cl-dragging')
+    dragSrc = null
+  })
+
+  overlay.addEventListener('dragend', function(e) {
+    const item = e.target.closest('.cd-checklist-item')
+    if (item) {
+      item.classList.remove('cd-cl-dragging', 'cd-cl-drop-before', 'cd-cl-drop-after')
+    }
+    dragSrc = null
+  })
 }
 
 function addChip(input, containerId) {
@@ -269,7 +324,8 @@ function addChecklistItem(input) {
   if (!container) return
   const item = document.createElement('div')
   item.className = 'cd-checklist-item'
-  item.innerHTML = '<label class="cd-cl-checkbox"><input type="checkbox"><span class="cd-cl-checkmark"></span></label><span class="cd-cl-text">' + escapeHtml(val) + '</span><button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
+  item.draggable = true
+  item.innerHTML = '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span><label class="cd-cl-checkbox"><input type="checkbox"><span class="cd-cl-checkmark"></span></label><span class="cd-cl-text">' + escapeHtml(val) + '</span><button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
   container.appendChild(item)
   input.value = ''
   input.focus()
