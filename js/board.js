@@ -15,11 +15,18 @@ export function switchView(view) {
 
 export function renderBoard() {
   const area = document.getElementById('boardArea')
+  const breadcrumb = document.getElementById('breadcrumb')
   const viewSwitcher = document.querySelector('.view-switcher')
 
   const b = state.selectedBoardId ? findBoard(state.selectedBoardId) : null
   const p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
   const w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
+
+  let bc = ''
+  if (w) bc += `<span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
+  if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
+  if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
+  breadcrumb.innerHTML = bc
 
   if (viewSwitcher) {
     viewSwitcher.style.display = b ? 'flex' : 'none'

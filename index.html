@@ -14,7 +14,7 @@
 
 <aside class="sidebar">
   <div class="sidebar-header">
-    <h1>Task Board</h1>
+    <span class="sidebar-title" id="sidebarTitle">Task Board</span>
   </div>
   <div class="sidebar-section" id="sidebarContent">
     <div class="sidebar-hint">Select a project to view boards</div>
@@ -24,12 +24,7 @@
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
-      <select id="workspaceSelect" class="topbar-select" onchange="onWorkspaceChange(this.value)">
-        <option value="">Select Workspace...</option>
-      </select>
-      <select id="projectSelect" class="topbar-select" onchange="onProjectChange(this.value)">
-        <option value="">Select Project...</option>
-      </select>
+      <span class="breadcrumb" id="breadcrumb"></span>
     </div>
     <div class="view-switcher">
       <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>

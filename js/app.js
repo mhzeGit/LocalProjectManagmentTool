@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, onWorkspaceChange, onProjectChange } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -24,8 +24,6 @@ Object.assign(window, {
   selectWorkspace,
   selectProject,
   selectBoard,
-  onWorkspaceChange,
-  onProjectChange,
   switchView,
   openModal,
   closeModal,

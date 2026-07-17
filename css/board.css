@@ -5,6 +5,10 @@
 .topbar-select:hover { border-color: #4f46e5; }
 .topbar-select:focus { outline: none; border-color: #4f46e5; }
 .topbar-select option { background: #1e1e2e; color: #ccc; }
+.breadcrumb { font-size: 13px; color: #999; }
+.breadcrumb span { margin: 0 4px; }
+.bc-link { cursor: pointer; color: #999; }
+.bc-link:hover { color: #e0e0e8; text-decoration: underline; }
 
 .view-switcher { display: flex; gap: 2px; background: #16161f; border-radius: 6px; padding: 2px; }
 .view-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; color: #888; border-radius: 4px; transition: background .15s, color .15s; }
