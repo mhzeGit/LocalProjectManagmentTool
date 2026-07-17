@@ -171,7 +171,8 @@ export function renderTimeline() {
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
     html += '  </div>'
-    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px">'
+    const gridStops = 'transparent 0px, transparent ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + DAY_WIDTH + 'px'
+    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px;background-image:repeating-linear-gradient(90deg,' + gridStops + ')">'
 
     for (const m of monthBoundaries) {
       html += '    <div class="tl-month-marker-body" style="left:' + m.left + 'px"></div>'
@@ -371,7 +372,8 @@ function initTimelineZoom() {
 
     const oldWidth = DAY_WIDTH
     const delta = e.deltaY > 0 ? -3 : 3
-    DAY_WIDTH = Math.max(16, Math.min(80, oldWidth + delta))
+    const factor = e.deltaY > 0 ? 0.88 : 1.12
+    DAY_WIDTH = Math.max(16, Math.min(200, Math.round(DAY_WIDTH * factor)))
     if (DAY_WIDTH === oldWidth) return
 
     const timelineEl = document.querySelector('.timeline')
