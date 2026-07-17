@@ -9,7 +9,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #16162a;
+  background: #1a1a26;
   border-bottom: 1px solid #2a2a40;
   min-height: 56px;
 }
@@ -19,11 +19,11 @@
   position: sticky;
   left: 0;
   z-index: 22;
-  background: #16162a;
+  background: #1a1a26;
   padding: 16px 16px 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #777;
+  color: #888;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-right: 1px solid #2a2a40;
@@ -44,7 +44,7 @@
   padding: 6px 10px 0;
   font-size: 13px;
   font-weight: 600;
-  color: #bbb;
+  color: #e0e0e8;
   box-sizing: border-box;
   overflow: hidden;
   white-space: nowrap;
@@ -131,12 +131,12 @@
 
 .tl-row {
   display: flex;
-  border-bottom: 1px solid #1e1e32;
+  border-bottom: 1px solid #2a2a40;
   transition: background 0.15s;
 }
 
 .tl-row:hover {
-  background: rgba(255, 255, 255, 0.015);
+  background: rgba(79, 70, 229, 0.03);
 }
 
 .tl-row-label {
@@ -144,7 +144,7 @@
   position: sticky;
   left: 0;
   z-index: 15;
-  background: #1a1a2e;
+  background: #1e1e2e;
   padding: 10px 16px;
   display: flex;
   align-items: center;
@@ -155,7 +155,7 @@
 }
 
 .tl-row:hover .tl-row-label {
-  background: #1e1e34;
+  background: #2a2a3d;
 }
 
 .tl-row-label {
@@ -181,22 +181,18 @@
 .tl-row-name {
   font-size: 14px;
   font-weight: 600;
-  color: #d0d0e0;
+  color: #e0e0e8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: text;
 }
 
-.tl-row-name:hover {
-  color: #e8e8f0;
-}
-
 .tl-row-count {
   font-size: 11px;
   font-weight: 600;
   color: #666;
-  background: #24243a;
+  background: #2a2a3d;
   padding: 1px 7px;
   border-radius: 10px;
   flex-shrink: 0;
@@ -311,23 +307,50 @@
 
 .tl-us {
   flex-shrink: 0;
-  border-top: 1px solid #2a2a40;
-  background: #141428;
-  padding: 8px 24px;
+  border: 1px solid #2a2a40;
+  border-width: 1px 1px 0;
+  background: #111118;
+}
+
+.tl-us-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tl-us-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #2a2a40;
+}
+
+.tl-us-body {
+  padding: 4px 24px 12px;
 }
 
 .tl-us-row {
   display: flex;
   align-items: flex-start;
   gap: 0;
-  padding: 4px 0;
+  padding: 8px 12px;
+  background: #1a1a26;
+  border-bottom: 1px solid #2a2a40;
+  border-radius: 6px;
+  margin-bottom: 4px;
 }
 
 .tl-us-label {
   flex: 0 0 200px;
   font-size: 12px;
   font-weight: 600;
-  color: #777;
+  color: #888;
   padding: 4px 16px 0 0;
   flex-shrink: 0;
   text-transform: uppercase;
@@ -371,10 +394,10 @@
   align-items: center;
   gap: 6px;
   padding: 3px 10px 3px 6px;
-  background: #202038;
+  background: #26263a;
   border-radius: 5px;
   cursor: grab;
-  border: 1px solid #2a2a44;
+  border: 1px solid #32324a;
   transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   flex-shrink: 0;
   max-width: 220px;
@@ -382,7 +405,7 @@
 }
 
 .tl-ucard:hover {
-  background: #2a2a48;
+  background: #2a2a40;
   border-color: #4f46e5;
 }
 
@@ -402,7 +425,7 @@
 .tl-ucard-title {
   font-size: 12px;
   font-weight: 500;
-  color: #ccc;
+  color: #e8e8f0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -442,15 +465,17 @@
   color: #888;
   cursor: pointer;
   box-sizing: border-box;
-  background: #1f1f38;
-  border-right: 1px solid #2a2a40;
-  border-top: 1px solid #2a2a40;
-  transition: background 0.1s, color 0.1s;
+  background: #1a1a26;
+  border: 1px dashed #3a3a55;
+  border-radius: 6px;
+  margin: 6px 0 12px;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 
 .tl-label-add:hover {
-  background: #2a2a48;
-  color: #a78bfa;
+  background: #2a2a3d;
+  color: #ddd;
+  border-color: #4f46e5;
 }
 
 .tl-ctx-menu {
@@ -494,7 +519,4 @@
   margin: 4px 0;
 }
 
-.tl-label-add:hover {
-  color: #a78bfa;
-  background: rgba(79, 70, 229, 0.04);
-}
+

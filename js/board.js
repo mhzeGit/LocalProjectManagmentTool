@@ -46,6 +46,7 @@ export function renderBoard() {
     html += '<div class="board-column" draggable="true" data-column-id="' + col.id + '">'
     html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
     html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
+    html += '  <span class="col-count">' + col.cards.length + '</span>'
     html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();copyColumn(\'' + col.id + '\')">Copy</button>'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();pasteColumn(\'' + col.id + '\')">Paste</button>'

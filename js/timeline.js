@@ -285,6 +285,8 @@ export function renderTimeline() {
   html += '</div></div>'
 
   html += '<div class="tl-us">'
+  html += '  <div class="tl-us-header">Unscheduled</div>'
+  html += '  <div class="tl-us-body">'
   for (const col of b.columns) {
     const colUndated = undatedItems.filter(x => x.columnId === col.id)
     html += '<div class="tl-us-row" data-col-id="' + col.id + '">'
@@ -307,6 +309,7 @@ export function renderTimeline() {
     html += '  </div>'
     html += '</div>'
   }
+  html += '  </div>'
   html += '</div>'
 
   const prevScroll = document.querySelector('.timeline')
