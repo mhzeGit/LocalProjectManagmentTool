@@ -1,4 +1,4 @@
-import { state, findBoard, findColumn, findCard, findCardColumn } from './data.js'
+import { state, findBoard, findColumn, findCard, findCardColumn, genId } from './data.js'
 import { escapeHtml } from './utils.js'
 import { openCardDetail } from './modal.js'
 
@@ -257,10 +257,6 @@ export function renderTimeline() {
     html += '</div>'
   }
 
-  if (!hasDated && undatedItems.length === 0 && b.columns.length > 0) {
-    html += '<div class="tl-empty-msg">Add dates to cards to see them on the timeline</div>'
-  }
-
   html += '<div class="tl-label-add" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</div>'
 
   html += '</div></div>'
@@ -363,6 +359,26 @@ function initTimelineDrag() {
     const track = e.target.closest('.tl-track')
     if (!track) return
     handleUndatedCardDrop(id, track.dataset.colId, e, track)
+  })
+
+  area.addEventListener('contextmenu', function(e) {
+    const track = e.target.closest('.tl-track')
+    if (!track) return
+    e.preventDefault()
+    const trackRect = track.getBoundingClientRect()
+    const x = e.clientX - trackRect.left
+    let newPx = snapPx(x)
+    newPx = clamp(newPx, 0, _tlTotalWidth - DAY_WIDTH)
+    const date = pixelToDate(newPx)
+    const dateStr = formatDate(date)
+    const endDate = new Date(date)
+    endDate.setDate(endDate.getDate() + 1)
+    const endDateStr = formatDate(endDate)
+    const col = findColumn(track.dataset.colId)
+    if (!col) return
+    const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: dateStr, endDate: endDateStr, priority: 'medium', tags: [], members: [], checklists: [] }
+    col.cards.push(card)
+    renderTimeline()
   })
 
   area.addEventListener('mousedown', function(e) {

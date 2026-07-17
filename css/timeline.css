@@ -411,9 +411,15 @@
   color: #888;
   cursor: pointer;
   box-sizing: border-box;
-  background: #1a1a2e;
+  background: #1f1f38;
   border-right: 1px solid #2a2a40;
+  border-top: 1px solid #2a2a40;
   transition: background 0.1s, color 0.1s;
+}
+
+.tl-label-add:hover {
+  background: #2a2a48;
+  color: #a78bfa;
 }
 
 .tl-label-add:hover {
