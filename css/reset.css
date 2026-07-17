@@ -1,0 +1,4 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; background: #111118; color: #d0d0d8; }
+button { cursor: pointer; border: none; background: none; font-size: inherit; }
+input, textarea { font-family: inherit; font-size: inherit; }
