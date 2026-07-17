@@ -182,9 +182,6 @@
   box-sizing: border-box;
 }
 
-.tl-row:last-child {
-  background: transparent;
-}
 
 
 
@@ -256,6 +253,8 @@
   transition: background 0.15s;
 }
 
+
+
 .tl-track-grid {
   background-image: repeating-linear-gradient(
     90deg,
@@ -265,7 +264,6 @@
     rgba(255, 255, 255, 0.025) 36px
   );
 }
-
 .tl-track-empty { height: 52px; }
 
 .tl-bar {
