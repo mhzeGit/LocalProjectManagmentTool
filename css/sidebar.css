@@ -20,8 +20,7 @@
 .nav-item .arrow.open { transform: rotate(90deg); }
 .nav-children { display: none; }
 .nav-children.open { display: block; }
-.nav-child { display: flex; align-items: center; gap: 4px; padding: 8px 16px 8px 36px; cursor: pointer; font-size: 13px; border-left: 3px solid transparent; border-bottom: 1px solid #2a2a40; transition: background .1s, border-color .1s; }
-.nav-child:last-child { border-bottom: none; }
+.nav-child { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; }
 .nav-child:hover { background: #2a2a40; color: #fff; }
-.nav-child.active { background: #32325a; color: #fff; border-left-color: #818cf8; border-bottom-color: #3a3a60; }
+.nav-child.active { background: #32325a; color: #fff; }
 .sidebar-hint { padding: 24px 16px; text-align: center; color: #666; font-size: 13px; }

@@ -161,7 +161,8 @@ function renderWorkspacePage(area, w) {
     html += '<div class="page-grid">'
     for (const p of w.projects) {
       const count = p.boards.length
-      html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')">'
+      const colorStyle = p.color ? 'border-top:5px solid ' + p.color + ';background:linear-gradient(180deg,' + p.color + '25, #1e1e2e 100%);' : ''
+      html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
       html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
       html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
       html += '</div>'
@@ -184,6 +185,8 @@ export function showWsCtxMenu(e, workspaceId) {
   document.body.appendChild(menu)
 }
 
+const PROJECT_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#78716c','#a1a1aa']
+
 export function showProjectCtxMenu(e, projectId) {
   e.preventDefault()
   document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
@@ -191,8 +194,17 @@ export function showProjectCtxMenu(e, projectId) {
   menu.className = 'tl-ctx-menu'
   menu.style.left = e.clientX + 'px'
   menu.style.top = e.clientY + 'px'
+
+  let colorSwatches = ''
+  for (const c of PROJECT_COLORS) {
+    colorSwatches += '<button class="ps-color-swatch" data-color="' + c + '" style="background:' + c + '" onclick="event.stopPropagation();setProjectColor(\'' + projectId + '\',\'' + c + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'
+  }
+  colorSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setProjectColor(\'' + projectId + '\',null);this.closest(\'.tl-ctx-menu\').remove()" title="None">✕</button>'
+
   menu.innerHTML =
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();startRenameProject(\'' + projectId + '\')">Rename</button>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>' +
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();copyProject(\'' + projectId + '\')">Duplicate</button>' +
     '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();archiveProject(\'' + projectId + '\')">Archive</button>'

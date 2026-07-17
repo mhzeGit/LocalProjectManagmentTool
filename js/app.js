@@ -6,7 +6,7 @@ import { switchView, showWsCtxMenu, showProjectCtxMenu } from './board.js'
 import { openModal, closeModal, openCardDetail } from './modal.js'
 import {
   createWorkspace, deleteWorkspace,
-  createProject, deleteProject, archiveProject, copyProject,
+  createProject, deleteProject,   archiveProject, copyProject, setProjectColor,
   createBoard, deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
   createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted,
@@ -36,6 +36,7 @@ Object.assign(window, {
   deleteProject,
   archiveProject,
   copyProject,
+  setProjectColor,
   createBoard,
   deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,

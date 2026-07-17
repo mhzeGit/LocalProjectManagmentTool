@@ -365,6 +365,16 @@ export function archiveProject(id) {
   }
 }
 
+export function setProjectColor(id, color) {
+  for (const w of data.workspaces) {
+    const p = w.projects.find(pj => pj.id === id)
+    if (!p) continue
+    p.color = color || null
+    render()
+    return
+  }
+}
+
 export function copyProject(id) {
   for (const w of data.workspaces) {
     const idx = w.projects.findIndex(p => p.id === id)
