@@ -4,6 +4,13 @@ import { renderBoard } from './board.js'
 import { initDragDrop } from './dragdrop.js'
 
 export function render() {
+  const sidebarEl = document.getElementById('sidebar')
+  if (state.selectedProjectId) {
+    sidebarEl.classList.remove('hidden')
+  } else {
+    sidebarEl.classList.add('hidden')
+  }
+
   const title = document.getElementById('sidebarTitle')
   if (state.selectedProjectId && state.selectedWorkspaceId) {
     const p = findProject(state.selectedProjectId)
@@ -31,7 +38,7 @@ export function render() {
     return
   }
 
-  let html = '<div class="section-title"><span>Task Boards</span><span class="btn-add-board" onclick="openModal(\'board\',\'' + p.id + '\')">+</span></div>'
+  let html = '<div class="section-title"><span>Task Boards</span><span class="btn-add-board" onclick="toggleAddBoardMenu(event,\'' + p.id + '\')">+</span></div>'
   for (const b of p.boards) {
     const active = state.selectedBoardId === b.id ? ' active' : ''
     html += `<div class="nav-child${active}" onclick="selectBoard('${b.id}')">

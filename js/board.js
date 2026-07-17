@@ -200,23 +200,6 @@ export function showProjectCtxMenu(e, projectId) {
   document.body.appendChild(menu)
 }
 
-function renderProjectPage(area, p) {
-  let html = '<div class="page-view">'
-  html += '<div class="page-header"><h2>Task Boards</h2><button class="btn-create" onclick="openModal(\'board\',\'' + p.id + '\')">+ New Board</button></div>'
-  if (p.boards.length === 0) {
-    html += '<div class="empty-state"><p>No boards yet</p></div>'
-  } else {
-    html += '<div class="page-grid">'
-    for (const b of p.boards) {
-      const colCount = b.columns.length
-      const cardCount = b.columns.reduce((sum, col) => sum + col.cards.length, 0)
-      html += '<div class="page-card" onclick="selectBoard(\'' + b.id + '\')">'
-      html += '<h3>' + b.name + '</h3>'
-      html += '<p class="count">' + colCount + ' column' + (colCount !== 1 ? 's' : '') + ' · ' + cardCount + ' card' + (cardCount !== 1 ? 's' : '') + '</p>'
-      html += '</div>'
-    }
-    html += '</div>'
-  }
-  html += '</div>'
-  area.innerHTML = html
+function renderProjectPage(area) {
+  area.innerHTML = '<div class="empty-state"><p>Select a board to view details</p></div>'
 }
