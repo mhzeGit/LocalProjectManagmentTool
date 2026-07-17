@@ -603,15 +603,42 @@ function initTimelineDrag() {
     const bar = e.target.closest('.tl-bar')
     if (!bar) return
     e.preventDefault()
+
+    const barRect = bar.getBoundingClientRect()
+    const ghostW = barRect.width
+    const ghostH = barRect.height
+    const ghostColor = bar.style.background || '#3b82f6'
+    const ghostTitle = (bar.querySelector('.tl-bar-title') || {}).textContent || ''
+
+    const ghost = document.createElement('div')
+    ghost.className = 'tl-bar-ghost'
+    ghost.style.cssText = 'position:fixed;z-index:99999;pointer-events:none;box-sizing:border-box;' +
+      'left:' + barRect.left + 'px;top:' + barRect.top + 'px;' +
+      'width:' + ghostW + 'px;height:' + ghostH + 'px;' +
+      'border-radius:6px;display:flex;align-items:center;padding:0 8px;' +
+      'background:' + ghostColor + ';cursor:grabbing;' +
+      'box-shadow:0 8px 28px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12);' +
+      'opacity:0.92;overflow:hidden;'
+    ghost.innerHTML = '<span style="font-size:12px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(ghostTitle) + '</span>'
+    document.body.appendChild(ghost)
+
+    bar.style.opacity = '0'
+    bar.style.pointerEvents = 'none'
+
     _moving = {
       cardId: bar.dataset.cardId,
+      bar: bar,
+      ghost: ghost,
       startX: e.clientX,
       startY: e.clientY,
+      ghostOffX: barRect.left - e.clientX,
+      ghostOffY: barRect.top - e.clientY,
       origLeft: bar.offsetLeft,
       origWidth: bar.offsetWidth,
       sourceColId: bar.closest('.tl-track')?.dataset.colId || '',
       targetColId: null,
-      targetUnscheduled: false
+      targetUnscheduled: false,
+      virtualLeft: null
     }
     document.body.style.cursor = 'grabbing'
     document.body.style.userSelect = 'none'
@@ -743,8 +770,8 @@ document.addEventListener('mousemove', function(e) {
 
   if (_moving) {
     e.preventDefault()
-    const bar = document.querySelector('.tl-bar[data-card-id="' + _moving.cardId + '"]')
-    if (!bar) return
+    const ghost = _moving.ghost
+    if (!ghost) return
 
     const timeline = document.querySelector('.timeline')
     if (timeline) {
@@ -762,10 +789,16 @@ document.addEventListener('mousemove', function(e) {
       }
     }
 
-    let newLeft = snapPx(_moving.origLeft + (e.clientX - _moving.startX))
-    newLeft = clamp(newLeft, 0, _tlTotalWidth - _moving.origWidth)
-    bar.style.left = newLeft + 'px'
-    bar.classList.add('moving')
+    ghost.style.left = (e.clientX + _moving.ghostOffX) + 'px'
+    ghost.style.top = (e.clientY + _moving.ghostOffY) + 'px'
+
+    if (timeline) {
+      const tlRect = timeline.getBoundingClientRect()
+      const xInTimeline = e.clientX - tlRect.left - 200 + timeline.scrollLeft
+      let virtualLeft = snapPx(xInTimeline)
+      virtualLeft = clamp(virtualLeft, 0, _tlTotalWidth - _moving.origWidth)
+      _moving.virtualLeft = virtualLeft
+    }
 
     const tracks = document.querySelectorAll('.tl-track')
     let targetTrack = null
@@ -778,6 +811,16 @@ document.addEventListener('mousemove', function(e) {
     }
     for (const t of tracks) {
       if (t !== targetTrack) t.classList.remove('drag-over')
+    }
+
+    const usArea = document.querySelector('.tl-us')
+    let isOverUnscheduledArea = false
+    if (usArea) {
+      const usRect = usArea.getBoundingClientRect()
+      if (e.clientX >= usRect.left && e.clientX <= usRect.right &&
+          e.clientY >= usRect.top && e.clientY <= usRect.bottom) {
+        isOverUnscheduledArea = true
+      }
     }
 
     const usRows = document.querySelectorAll('.tl-us-row')
@@ -793,6 +836,14 @@ document.addEventListener('mousemove', function(e) {
       if (r !== targetUsRow) r.classList.remove('drag-over-us')
     }
 
+    if (usArea) {
+      if (isOverUnscheduledArea && !targetTrack && !targetUsRow) {
+        usArea.classList.add('drag-over-us')
+      } else {
+        usArea.classList.remove('drag-over-us')
+      }
+    }
+
     if (targetTrack) {
       targetTrack.classList.add('drag-over')
       _moving.targetColId = targetTrack.dataset.colId
@@ -800,6 +851,9 @@ document.addEventListener('mousemove', function(e) {
     } else if (targetUsRow) {
       targetUsRow.classList.add('drag-over-us')
       _moving.targetColId = targetUsRow.dataset.colId
+      _moving.targetUnscheduled = true
+    } else if (isOverUnscheduledArea) {
+      _moving.targetColId = _moving.sourceColId
       _moving.targetUnscheduled = true
     } else {
       _moving.targetColId = null
@@ -816,10 +870,6 @@ document.addEventListener('mousemove', function(e) {
         }
         const targetCol = findColumn(_moving.targetColId)
         if (targetCol) targetCol.cards.push(card)
-        const targetTrack = document.querySelector('.tl-track[data-col-id="' + _moving.targetColId + '"]')
-        if (targetTrack && bar.parentNode !== targetTrack) {
-          targetTrack.appendChild(bar)
-        }
         _moving.sourceColId = _moving.targetColId
       }
     }
@@ -861,43 +911,48 @@ document.addEventListener('mouseup', function() {
   }
 
   if (_moving) {
-    const bar = document.querySelector('.tl-bar[data-card-id="' + _moving.cardId + '"]')
-    if (bar) {
-      const newLeft = snapPx(bar.offsetLeft)
-      const card = findCard(_moving.cardId)
-      if (card) {
+    if (_moving.ghost) _moving.ghost.remove()
+    if (_moving.bar) {
+      _moving.bar.style.opacity = ''
+      _moving.bar.style.pointerEvents = ''
+    }
+
+    const card = findCard(_moving.cardId)
+    if (card && _moving.virtualLeft !== null && (_moving.targetColId || _moving.targetUnscheduled)) {
+      if (_moving.targetUnscheduled) {
+        card.startDate = null
+        card.endDate = null
+      } else {
+        const newLeft = _moving.virtualLeft
         const s = parseDate(card.startDate) || parseDate(card.endDate)
         const e = parseDate(card.endDate) || parseDate(card.startDate)
-        const duration = daysBetween(s, e)
+        const duration = s && e ? daysBetween(s, e) : 1
         const newStart = pixelToDate(newLeft)
         card.startDate = formatDate(newStart)
         const newEnd = new Date(newStart)
         newEnd.setDate(newEnd.getDate() + duration)
         card.endDate = formatDate(newEnd)
-
-        if (_moving.targetColId && _moving.targetColId !== _moving.sourceColId) {
-          const sourceCol = findCardColumn(card.id)
-          if (sourceCol) {
-            const idx = sourceCol.cards.indexOf(card)
-            if (idx !== -1) sourceCol.cards.splice(idx, 1)
-          }
-          const targetCol = findColumn(_moving.targetColId)
-          if (targetCol) targetCol.cards.push(card)
-        }
-
-        if (_moving.targetUnscheduled) {
-          card.startDate = null
-          card.endDate = null
-        }
-
-        bar.classList.remove('moving')
-        renderTimeline()
       }
+
+      if (_moving.targetColId && _moving.targetColId !== _moving.sourceColId) {
+        const sourceCol = findCardColumn(card.id)
+        if (sourceCol) {
+          const idx = sourceCol.cards.indexOf(card)
+          if (idx !== -1) sourceCol.cards.splice(idx, 1)
+        }
+        const targetCol = findColumn(_moving.targetColId)
+        if (targetCol) targetCol.cards.push(card)
+      }
+
+      renderTimeline()
+    } else {
+      renderTimeline()
     }
+
     document.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
       el.classList.remove('drag-over')
     })
-    document.querySelectorAll('.tl-us-row.drag-over-us').forEach(function(el) {
+    document.querySelectorAll('.tl-us-row.drag-over-us, .tl-us.drag-over-us').forEach(function(el) {
       el.classList.remove('drag-over-us')
     })
     _moving = null
