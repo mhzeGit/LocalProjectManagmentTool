@@ -1,7 +1,12 @@
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.topbar { padding: 16px 24px; background: #1a1a26; border-bottom: 1px solid #2a2a3d; display: flex; align-items: center; gap: 12px; min-height: 56px; }
+.topbar { padding: 16px 24px; background: #1a1a26; border-bottom: 1px solid #2a2a3d; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
 .breadcrumb { font-size: 13px; color: #999; }
 .breadcrumb span { margin: 0 4px; }
+
+.view-switcher { display: flex; gap: 2px; background: #16161f; border-radius: 6px; padding: 2px; }
+.view-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; color: #888; border-radius: 4px; transition: background .15s, color .15s; }
+.view-btn:hover { color: #ddd; }
+.view-btn.active { background: #2a2a40; color: #e0e0e8; }
 
 .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; cursor: default; user-select: none; scrollbar-color: #3a3a55 #1a1a2a; scrollbar-width: thin; }
 .board-area.grabbing { cursor: grabbing; }

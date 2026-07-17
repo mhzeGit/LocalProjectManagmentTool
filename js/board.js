@@ -3,6 +3,14 @@ import { escapeHtml } from './utils.js'
 import { toggleColumnMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 
+export function switchView(view) {
+  state.selectedView = view
+  renderBoard()
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view)
+  })
+}
+
 export function renderBoard() {
   const area = document.getElementById('boardArea')
   const breadcrumb = document.getElementById('breadcrumb')
@@ -19,6 +27,15 @@ export function renderBoard() {
 
   if (!b) {
     area.innerHTML = '<div class="empty-state"><p>' + (w ? 'Select a board from the sidebar' : 'Select or create a workspace to get started') + '</p></div>'
+    return
+  }
+
+  if (state.selectedView === 'timeline') {
+    area.innerHTML = '<div class="empty-state"><p>Timeline view — coming soon</p></div>'
+    return
+  }
+  if (state.selectedView === 'calendar') {
+    area.innerHTML = '<div class="empty-state"><p>Calendar view — coming soon</p></div>'
     return
   }
 

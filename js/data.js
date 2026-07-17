@@ -28,6 +28,7 @@ export const state = {
   selectedWorkspaceId: 'w1',
   selectedProjectId: 'p1',
   selectedBoardId: 'b1',
+  selectedView: 'kanban',
 }
 
 export function findWorkspace(id) { return data.workspaces.find(w => w.id === id) }

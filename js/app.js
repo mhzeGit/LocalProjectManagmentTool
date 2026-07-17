@@ -3,6 +3,7 @@ import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
 import { selectWorkspace, selectProject, selectBoard } from './sidebar.js'
+import { switchView } from './board.js'
 import { openModal, closeModal } from './modal.js'
 import {
   createWorkspace, deleteWorkspace,
@@ -24,6 +25,7 @@ Object.assign(window, {
   selectWorkspace,
   selectProject,
   selectBoard,
+  switchView,
   openModal,
   closeModal,
   createWorkspace,
