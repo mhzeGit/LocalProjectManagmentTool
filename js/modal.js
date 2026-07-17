@@ -57,6 +57,27 @@ function buildCardForm(c, saveAction, showDelete) {
   html += '      <div class="cd-left-section cd-left-section-desc">'
   html += '        <textarea id="cd-desc" class="cd-desc-textarea" placeholder="Add a more detailed description…">' + escapeHtml(c.description || '') + '</textarea>'
   html += '      </div>'
+  html += '      <div class="cd-left-section">'
+  html += '        <label>Checklist</label>'
+  html += '        <div id="cd-checklist">'
+  for (let i = 0; i < checklists.length; i++) {
+    const item = checklists[i]
+    const doneClass = item.completed ? ' cd-cl-done' : ''
+    html += '          <div class="cd-checklist-item' + doneClass + '">'
+    html += '            <label class="cd-cl-checkbox">'
+    html += '              <input type="checkbox"' + (item.completed ? ' checked' : '') + '>'
+    html += '              <span class="cd-cl-checkmark"></span>'
+    html += '            </label>'
+  html += '            <span class="cd-cl-text">' + escapeHtml(item.text) + '</span>'
+  html += '            <button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
+  html += '          </div>'
+  }
+  html += '        </div>'
+  html += '        <div class="cd-checklist-add">'
+  html += '          <input class="cd-checklist-input" id="cd-checklist-input" placeholder="Add checklist item...">'
+  html += '          <button class="cd-checklist-add-btn" data-action="add-checklist-item">Add</button>'
+  html += '        </div>'
+  html += '      </div>'
   html += '    </div>'
 
   html += '    <div class="cd-right">'
@@ -110,28 +131,6 @@ function buildCardForm(c, saveAction, showDelete) {
     }
   }
   html += '        </select>'
-  html += '      </div>'
-
-  html += '      <div class="cd-field">'
-  html += '        <label>Checklist</label>'
-  html += '        <div id="cd-checklist">'
-  for (let i = 0; i < checklists.length; i++) {
-    const item = checklists[i]
-    const doneClass = item.completed ? ' cd-cl-done' : ''
-    html += '          <div class="cd-checklist-item' + doneClass + '">'
-    html += '            <label class="cd-cl-checkbox">'
-    html += '              <input type="checkbox"' + (item.completed ? ' checked' : '') + '>'
-    html += '              <span class="cd-cl-checkmark"></span>'
-    html += '            </label>'
-  html += '            <span class="cd-cl-text">' + escapeHtml(item.text) + '</span>'
-  html += '            <button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
-  html += '          </div>'
-  }
-  html += '        </div>'
-  html += '        <div class="cd-chip-add-row">'
-  html += '          <input class="cd-chip-input" id="cd-checklist-input" placeholder="Add checklist item...">'
-  html += '          <button class="cd-chip-add-btn" data-action="add-checklist-item">+</button>'
-  html += '        </div>'
   html += '      </div>'
 
   html += '      <div class="cd-right-footer">'

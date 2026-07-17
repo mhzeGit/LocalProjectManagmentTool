@@ -2,6 +2,7 @@ import { state, findBoard, findProject, findWorkspace } from './data.js'
 import { escapeHtml } from './utils.js'
 import { toggleColumnMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
+import { renderTimeline } from './timeline.js'
 
 export function switchView(view) {
   state.selectedView = view
@@ -31,7 +32,7 @@ export function renderBoard() {
   }
 
   if (state.selectedView === 'timeline') {
-    area.innerHTML = '<div class="empty-state"><p>Timeline view — coming soon</p></div>'
+    renderTimeline()
     return
   }
   if (state.selectedView === 'calendar') {

@@ -4,7 +4,7 @@ import { setInlineEditRender } from './inlineEdit.js'
 
 import { selectWorkspace, selectProject, selectBoard } from './sidebar.js'
 import { switchView } from './board.js'
-import { openModal, closeModal } from './modal.js'
+import { openModal, closeModal, openCardDetail } from './modal.js'
 import {
   createWorkspace, deleteWorkspace,
   createProject, deleteProject,
@@ -44,6 +44,7 @@ Object.assign(window, {
   startRenameColumn,
   startRenameCard,
   toggleColumnMenu,
+  openCardDetail,
 })
 
 render()
