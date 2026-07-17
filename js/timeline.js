@@ -172,14 +172,17 @@ export function renderTimeline() {
   for (const m of monthBoundaries) {
     html += '    <div class="tl-month-marker" style="left:' + m.left + 'px"></div>'
   }
+  if (showToday) {
+    html += '    <div class="tl-today-line" style="left:' + todayLeft + 'px"></div>'
+  }
   html += '  </div>'
   html += '</div>'
 
   html += '<div class="tl-body" style="width:' + (200 + totalWidth) + 'px">'
-  html += '<div class="tl-rows">'
   if (showToday) {
     html += '<div class="tl-today-line" style="left:' + (200 + todayLeft) + 'px"></div>'
   }
+  html += '<div class="tl-rows">'
 
   for (const col of b.columns) {
     const colDated = datedItems.filter(x => x.columnId === col.id)
@@ -284,7 +287,10 @@ export function renderTimeline() {
 
   html += '</div>'
 
-  html += '<div class="tl-label-add" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</div>'
+  html += '<div class="tl-row tl-row-add">'
+  html += '  <div class="tl-label-add" onclick="addColumnDirect(\'' + b.id + '\')">+ Add Row</div>'
+  html += '  <div class="tl-track-add" style="width:' + totalWidth + 'px"></div>'
+  html += '</div>'
 
   html += '</div></div>'
 

@@ -7,7 +7,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   flex-shrink: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
 }
 
 .tl-header {
@@ -16,8 +16,18 @@
   top: 0;
   z-index: 20;
   background: #1a1a26;
-  border-bottom: 1px solid #2a2a40;
   min-height: 32px;
+}
+
+.tl-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #2a2a40;
+  pointer-events: none;
 }
 
 .tl-label-col {
@@ -59,7 +69,7 @@
 
 .tl-day-label {
   position: absolute;
-  top: 10px;
+  top: 8px;
   font-size: 11px;
   font-weight: 600;
   color: #555;
@@ -68,6 +78,7 @@
   transform: translateX(-50%);
   pointer-events: none;
   font-variant-numeric: tabular-nums;
+  z-index: 6;
 }
 
 .tl-day-label-first {
@@ -125,6 +136,15 @@
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
 }
 
+.tl-scale .tl-today-line {
+  top: 26px;
+}
+
+.tl-body .tl-today-line {
+  z-index: 21;
+}
+
+
 
 
 .tl-body {
@@ -134,7 +154,6 @@
 
 .tl-rows {
   position: relative;
-  z-index: 1;
 }
 
 .tl-row {
@@ -152,7 +171,7 @@
   flex: 0 0 200px;
   position: sticky;
   left: 0;
-  z-index: 15;
+  z-index: 22;
   background: #1e1e2e;
   padding: 10px 16px;
   display: flex;
@@ -162,6 +181,13 @@
   min-height: 48px;
   box-sizing: border-box;
 }
+
+.tl-row:last-child {
+  border-bottom: none;
+  background: transparent;
+}
+
+
 
 .tl-row-label::after {
   content: '';
@@ -450,11 +476,24 @@
   font-size: 13px;
 }
 
+.tl-row-add {
+  display: flex;
+  background: transparent;
+  border-bottom: none;
+  margin: 0 0 12px;
+}
+
+.tl-label-add:hover {
+  background: #2a2a3d;
+  color: #ddd;
+  border-color: #4f46e5;
+}
+
 .tl-label-add {
+  flex: 0 0 200px;
   position: sticky;
   left: 0;
-  z-index: 15;
-  width: 200px;
+  z-index: 25;
   padding: 10px 16px;
   font-size: 13px;
   font-weight: 500;
@@ -462,16 +501,27 @@
   cursor: pointer;
   box-sizing: border-box;
   background: #1a1a26;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
   border: 1px dashed #3a3a55;
-  border-radius: 6px;
-  margin: 6px 0 12px;
+  border-top: none;
+  border-right: none;
+  border-radius: 0 0 0 8px;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 
-.tl-label-add:hover {
-  background: #2a2a3d;
-  color: #ddd;
-  border-color: #4f46e5;
+.tl-track-add {
+  flex-shrink: 0;
+  min-height: 48px;
+  background: #1a1a26;
+  position: relative;
+  z-index: 22;
+  border: 1px dashed #3a3a55;
+  border-top: none;
+  border-left: none;
+  border-radius: 0 0 8px 0;
 }
 
 .tl-ctx-menu {
