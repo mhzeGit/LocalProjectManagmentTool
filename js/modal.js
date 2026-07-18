@@ -1,6 +1,37 @@
 import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 
+const PRIORITY_BAR_CONFIG = {
+  none:   { filled: 0, color: '#6b7280' },
+  low:    { filled: 1, color: '#22c55e' },
+  medium: { filled: 2, color: '#3b82f6' },
+  high:   { filled: 3, color: '#f59e0b' },
+  urgent: { filled: 5, color: '#ef4444' },
+}
+
+const PRIORITY_FILLED_ORDER = [
+  { filled: 1, value: 'low' },
+  { filled: 2, value: 'medium' },
+  { filled: 3, value: 'high' },
+  { filled: 5, value: 'urgent' },
+]
+
+function renderPriorityPicker() {
+  const picker = document.getElementById('cd-priority-picker')
+  const hidden = document.getElementById('cd-priority')
+  const label = document.getElementById('cd-pp-label')
+  if (!picker || !hidden) return
+  const val = hidden.value || 'medium'
+  const cfg = PRIORITY_BAR_CONFIG[val] || PRIORITY_BAR_CONFIG.medium
+  let html = ''
+  for (let i = 0; i < 5; i++) {
+    const filled = i < cfg.filled ? ' filled' : ''
+    html += '<div class="cd-pp-bar' + filled + '" data-index="' + i + '" data-action="set-priority" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
+  }
+  picker.innerHTML = html
+  if (label) label.textContent = val.charAt(0).toUpperCase() + val.slice(1)
+}
+
 let _editingCardId = null
 
 export function openModal(type, parentId) {
@@ -24,6 +55,7 @@ export function openModal(type, parentId) {
   } else if (type === 'card') {
     title.textContent = 'Create Card'
     body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
+    renderPriorityPicker()
   } else if (type === 'document') {
     title.textContent = 'Create Document'
     body.innerHTML = '<label>Document Name</label><input id="modalInput" placeholder="e.g. Meeting Notes" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createDocument(\'' + parentId + '\')">Create</button></div>'
@@ -40,6 +72,7 @@ export function openCardDetail(cardId) {
   title.textContent = 'Edit Card'
   body.innerHTML = buildCardForm(c, 'saveCard(\'' + cardId + '\')', true)
   overlay.classList.add('open')
+  renderPriorityPicker()
   body.querySelector('.cd-title-input')?.focus()
 }
 
@@ -49,8 +82,6 @@ function buildCardForm(c, saveAction) {
   const tags = c.tags || []
   const members = c.members || []
   const checklists = c.checklists || []
-
-  const sel = (v) => c.priority === v || (!c.priority && v === 'medium') ? ' selected' : ''
 
   let html = ''
   html += '<div class="cd-scroll">'
@@ -98,13 +129,10 @@ function buildCardForm(c, saveAction) {
 
   html += '      <div class="cd-field">'
   html += '        <label>Priority</label>'
-  html += '        <select id="cd-priority" class="cd-select">'
-  html += '          <option value="none"' + sel('none') + '>None</option>'
-  html += '          <option value="low"' + sel('low') + '>Low</option>'
-  html += '          <option value="medium"' + sel('medium') + '>Medium</option>'
-  html += '          <option value="high"' + sel('high') + '>High</option>'
-  html += '          <option value="urgent"' + sel('urgent') + '>Urgent</option>'
-  html += '        </select>'
+  html += '        <input type="hidden" id="cd-priority" value="' + (c.priority || 'medium') + '">'
+  html += '        <div class="cd-priority-picker" id="cd-priority-picker"></div>'
+  const labelText = c.priority ? c.priority.charAt(0).toUpperCase() + c.priority.slice(1) : 'Medium'
+  html += '        <span class="cd-pp-label" id="cd-pp-label">' + labelText + '</span>'
   html += '      </div>'
 
   html += '      <div class="cd-field">'
@@ -320,6 +348,56 @@ export function setupModalKeyboard() {
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
     }
+  })
+
+  let _ppDragState = null
+
+  overlay.addEventListener('mousedown', function(e) {
+    if (!this.classList.contains('open')) return
+    if (e.button !== 0) return
+    const bar = e.target.closest('.cd-pp-bar')
+    if (!bar) return
+    const picker = bar.closest('.cd-priority-picker')
+    if (!picker) return
+    e.preventDefault()
+    const rect = picker.getBoundingClientRect()
+    const segmentWidth = rect.width / 5
+    const rawIndex = Math.floor((e.clientX - rect.left) / segmentWidth)
+    const index = Math.max(0, Math.min(4, rawIndex))
+    const filledCount = index + 1
+    let best = 'none'
+    for (const entry of PRIORITY_FILLED_ORDER) {
+      if (entry.filled <= filledCount) best = entry.value
+    }
+    const hidden = document.getElementById('cd-priority')
+    if (hidden) hidden.value = best
+    renderPriorityPicker()
+    _ppDragState = true
+  })
+
+  document.addEventListener('mousemove', function(e) {
+    if (!_ppDragState) return
+    const picker = document.getElementById('cd-priority-picker')
+    if (!picker) { _ppDragState = null; return }
+    const rect = picker.getBoundingClientRect()
+    const segmentWidth = rect.width / 5
+    const rawIndex = Math.floor((e.clientX - rect.left) / segmentWidth)
+    const index = Math.max(0, Math.min(4, rawIndex))
+    const filledCount = index + 1
+    let best = 'none'
+    for (const entry of PRIORITY_FILLED_ORDER) {
+      if (entry.filled <= filledCount) best = entry.value
+    }
+    const hidden = document.getElementById('cd-priority')
+    if (hidden && hidden.value !== best) {
+      hidden.value = best
+      renderPriorityPicker()
+    }
+  })
+
+  document.addEventListener('mouseup', function() {
+    if (!_ppDragState) return
+    _ppDragState = null
   })
 
   let dragSrc = null

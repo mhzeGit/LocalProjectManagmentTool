@@ -144,6 +144,8 @@
   --member-box-shadow: #555;
 
   --editor-btn-active-bg: #32325a;
+
+  --glow-multiplier: 1;
 }
 
 /* ─── Theme: Light ─── */

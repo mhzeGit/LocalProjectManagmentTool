@@ -419,3 +419,35 @@
 }
 .pref-settings-btn:hover { color: var(--text-primary); border-color: var(--accent); }
 .pref-settings-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* --- Glow settings --- */
+.pref-glow-setting {
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--bg-pref-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pref-glow-setting input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 6px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.pref-glow-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  line-height: 1;
+}
+.pref-glow-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 0 2px;
+}

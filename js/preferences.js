@@ -393,6 +393,17 @@ function renderGeneralTab(container) {
     html += '</label>'
   }
   html += '</div>'
+
+  const currentGlow = getGlowMultiplier()
+  html += '<div class="pref-section-title" style="margin-top:24px">Glow Intensity</div>'
+  html += '<div class="pref-glow-setting">'
+  html += '  <div class="pref-glow-value" id="pref-glow-display">' + currentGlow.toFixed(1) + 'x</div>'
+  html += '  <input type="range" id="pref-glow-slider" min="0" max="2" step="0.1" value="' + currentGlow + '" oninput="setGlowMultiplier(this.value)">'
+  html += '  <div class="pref-glow-labels">'
+  html += '    <span>0</span><span>1</span><span>2</span>'
+  html += '  </div>'
+  html += '</div>'
+
   container.innerHTML = html
 }
 
@@ -416,6 +427,28 @@ export function initTheme() {
 }
 
 window.setTheme = setTheme
+
+/* ─── Glow Multiplier ─── */
+
+export function getGlowMultiplier() {
+  const v = parseFloat(localStorage.getItem('kanboard_glow_multiplier'))
+  return isFinite(v) ? v : 1
+}
+
+function setGlowMultiplier(value) {
+  const num = parseFloat(value)
+  localStorage.setItem('kanboard_glow_multiplier', String(num))
+  document.documentElement.style.setProperty('--glow-multiplier', String(num))
+  const display = document.getElementById('pref-glow-display')
+  if (display) display.textContent = num.toFixed(1) + 'x'
+}
+
+export function initGlowMultiplier() {
+  const value = getGlowMultiplier()
+  document.documentElement.style.setProperty('--glow-multiplier', String(value))
+}
+
+window.setGlowMultiplier = setGlowMultiplier
 
 /* ─── Helpers ─── */
 

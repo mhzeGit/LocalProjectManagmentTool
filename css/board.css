@@ -17,6 +17,11 @@
 .view-btn.active { background: var(--bg-surface-hover); color: var(--text-primary); }
 
 .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; cursor: default; user-select: none; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); scrollbar-width: thin; }
+
+#boardIO { display: flex; align-items: center; gap: 6px; }
+#boardIO.hidden { display: none; }
+.btn-board-io { padding: 5px 12px; font-size: 11px; font-weight: 500; border: 1px solid var(--border-strong); background: var(--bg-surface-hover); color: var(--text-secondary); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
+.btn-board-io:hover { background: var(--accent-subtle); color: var(--text-primary); border-color: var(--accent); }
 .board-area.grabbing { cursor: grabbing; }
 .board-area::-webkit-scrollbar { height: 8px; }
 .board-area::-webkit-scrollbar-track { background: var(--scrollbar-track); }
@@ -54,10 +59,10 @@
 .card-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; color: var(--text-white); line-height: 1.5; }
 .card-cl-progress { height: 3px; border-radius: 2px; background: var(--bg-progress); margin-top: 8px; overflow: hidden; }
 .card-cl-progress-bar { height: 100%; border-radius: 2px; transition: width .2s, background .2s; }
-.card-priority { position: absolute; top: 10px; right: 12px; display: flex; align-items: flex-end; gap: 3px; height: 18px; }
-.card-priority-bar { width: 3px; height: 14px; border-radius: 1px; transition: opacity .15s; }
-.card-priority-bar.filled { opacity: 1; box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
-.card-priority-bar:not(.filled) { opacity: .15; }
+.card-priority { position: absolute; top: 8px; right: 10px; display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+.card-priority-bar { width: 4px; height: 12px; border-radius: 1px; }
+.card-priority-bar.filled { opacity: 1; }
+.card-priority-bar:not(.filled) { opacity: .12; }
 .card-actions { display: none; gap: 4px; margin-top: 8px; }
 .card:hover .card-actions { display: flex; }
 .card-actions button { font-size: 11px; color: var(--danger); }

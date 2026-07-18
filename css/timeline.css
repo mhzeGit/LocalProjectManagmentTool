@@ -133,7 +133,7 @@
   background: var(--danger);
   pointer-events: none;
   z-index: 5;
-  box-shadow: 0 0 6px var(--danger-border);
+  box-shadow: 0 0 calc(6px * var(--glow-multiplier)) var(--danger-border);
 }
 
 .tl-scale .tl-today-line {

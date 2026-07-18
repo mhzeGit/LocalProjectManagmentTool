@@ -1,4 +1,4 @@
-import { state, findBoard, findProject, findWorkspace, findDocument, getTagColor } from './data.js'
+import { state, findCard, findBoard, findProject, findWorkspace, findDocument, getTagColor } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
@@ -9,6 +9,7 @@ import { wasRightDragged } from './dragscroll.js'
 import { renderDocument, destroyEditor } from './document.js'
 import { renderDashboard } from './dashboard.js'
 import { updateMenuBar } from './menubar.js'
+import { exportBoardCSV, importBoardCSV } from './io.js'
 
 const PRIORITY_BAR_CONFIG = {
   none:   { filled: 0, color: '#6b7280' },
@@ -51,6 +52,15 @@ export function renderBoard() {
   }
 
   renderFilterBar()
+
+  const ioEl = document.getElementById('boardIO')
+  if (ioEl) {
+    if (b && w && !state.selectedDashboard && !state.selectedDocumentId && state.selectedView === 'kanban') {
+      ioEl.classList.remove('hidden')
+    } else {
+      ioEl.classList.add('hidden')
+    }
+  }
 
   const topbarEl = document.querySelector('.topbar')
 
@@ -161,10 +171,10 @@ export function renderBoard() {
       html += '  </div>'
       if (c.priority && c.priority !== 'none') {
         const cfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.none
-        html += '  <div class="card-priority">'
+        html += '  <div class="card-priority" data-card-id="' + c.id + '">'
         for (let i = 0; i < 5; i++) {
           const filled = i < cfg.filled ? ' filled' : ''
-          html += '<div class="card-priority-bar' + filled + '" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
+          html += '<div class="card-priority-bar' + filled + '" data-index="' + i + '" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
         }
         html += '  </div>'
       }
@@ -186,6 +196,36 @@ export function renderBoard() {
 
   if (!area._kanbanCtxDone) {
     area._kanbanCtxDone = true
+
+    area.addEventListener('mousedown', function(e) {
+      if (state.selectedView !== 'kanban' || e.button !== 0) return
+      const bar = e.target.closest('.card-priority-bar')
+      if (!bar) return
+      e.stopPropagation()
+      e.preventDefault()
+      const cardEl = bar.closest('.card')
+      if (!cardEl) return
+      const cardId = cardEl.dataset.cardId
+      if (!cardId) return
+      const index = parseInt(bar.dataset.index, 10)
+      const filledCount = index + 1
+      let best = 'low'
+      for (const entry of PRIORITY_FILLED_ORDER) {
+        if (entry.filled <= filledCount) best = entry.value
+      }
+      const card = findCard(cardId)
+      if (!card) return
+      card.priority = card.priority === best ? 'none' : best
+      if (window.__autoSave) window.__autoSave()
+      renderBoard()
+    })
+
+    area.addEventListener('click', function(e) {
+      if (e.target.closest('.card-priority-bar')) {
+        e.stopPropagation()
+      }
+    })
+
     area.addEventListener('contextmenu', function(e) {
       if (state.selectedView !== 'kanban') return
       if (wasRightDragged()) return
@@ -232,6 +272,7 @@ export function renderBoard() {
       }
     })
   }
+
 }
 
 function renderWorkspacePage(area, w) {

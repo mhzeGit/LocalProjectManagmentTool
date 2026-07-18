@@ -20,7 +20,7 @@ import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, c
 
 import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember } from './members.js'
 import { initFilterEvents, resetFilters, filterCards, getActiveFilterCount } from './filters.js'
-import { openPreferences, closePreferences, initTheme } from './preferences.js'
+import { openPreferences, closePreferences, initTheme, initGlowMultiplier } from './preferences.js'
 import { initPersistence, handleKeyDown, openFolder, closeFolder, getSaveMode } from './persistence.js'
 import { getCurrentWorkspace, state } from './data.js'
 import { initMenuBar } from './menubar.js'
@@ -29,6 +29,7 @@ import { exportBoardCSV, importBoardCSV } from './io.js'
 import './dragscroll.js'
 
 initTheme()
+initGlowMultiplier()
 setInlineEditRender(render)
 setupModalKeyboard()
 initSelfMember()
