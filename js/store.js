@@ -331,6 +331,21 @@ export function archiveCard(cardId) {
   render()
 }
 
+export function moveCardToBoardColumn(cardId, targetBoardId, targetColumnId) {
+  const card = findCard(cardId)
+  if (!card) return
+  const srcCol = findCardColumn(cardId)
+  if (!srcCol) return
+  const idx = srcCol.cards.indexOf(card)
+  if (idx === -1) return
+  srcCol.cards.splice(idx, 1)
+
+  const targetCol = findColumn(targetColumnId)
+  if (!targetCol) return
+  targetCol.cards.push(card)
+  render()
+}
+
 export function deleteCard(cardId) {
   if (!confirm('Delete this card?')) return
   const col = findCardColumn(cardId)
@@ -444,6 +459,11 @@ export function saveDocumentContent(documentId, html) {
 export function renameDocument(id, name) {
   const d = findDocument(id)
   if (d) { d.name = name; render() }
+}
+
+export function setDocumentPaperSize(id, paperSize) {
+  const d = findDocument(id)
+  if (d) { d.paperSize = paperSize }
 }
 
 export function copyProject(id) {

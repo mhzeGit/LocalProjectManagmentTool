@@ -5,6 +5,7 @@ import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
 import { renderCalendar } from './calendar.js'
+import { renderListView } from './listView.js'
 import { wasRightDragged } from './dragscroll.js'
 import { renderDocument, destroyEditor } from './document.js'
 import { renderDashboard } from './dashboard.js'
@@ -125,6 +126,11 @@ export function renderBoard() {
     renderCalendar()
     return
   }
+  if (state.selectedView === 'list') {
+    destroyEditor()
+    renderListView()
+    return
+  }
 
   const filterActive = getActiveFilterCount() > 0
   const filteredCardIds = filterActive ? filterBoardCards(b) : null
@@ -231,6 +237,25 @@ export function renderBoard() {
         ctxHtml += '<div class="tl-ctx-divider"></div>'
         ctxHtml += '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>'
         ctxHtml += '<div class="tl-ctx-divider"></div>'
+
+        const currentBoardId = state.selectedBoardId
+        const project = currentBoardId ? findProject(state.selectedProjectId) : null
+        if (project && project.boards.length > 1) {
+          let moveHtml = ''
+          for (const brd of project.boards) {
+            if (brd.id === currentBoardId || brd.columns.length === 0) continue
+            let colHtml = ''
+            for (const col of brd.columns) {
+              colHtml += '<button class="tl-ctx-item" onclick="event.stopPropagation();moveCardToBoardColumn(\'' + card.dataset.cardId + '\',\'' + brd.id + '\',\'' + col.id + '\');this.closest(\'.tl-ctx-menu\').remove()">' + escapeHtml(col.name) + '</button>'
+            }
+            moveHtml += '<div class="tl-ctx-item tl-ctx-sub-wrap move-board-item">' + escapeHtml(brd.name) + '<div class="move-col-submenu">' + colHtml + '</div></div>'
+          }
+          if (moveHtml) {
+            ctxHtml += '<div class="tl-ctx-item tl-ctx-sub-wrap">Move<div class="move-board-submenu">' + moveHtml + '</div></div>'
+            ctxHtml += '<div class="tl-ctx-divider"></div>'
+          }
+        }
+
         ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
         menu.innerHTML = ctxHtml
         if (colId) menu.dataset.colId = colId

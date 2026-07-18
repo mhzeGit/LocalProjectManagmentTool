@@ -1,9 +1,73 @@
 import { state, findDocument } from './data.js'
-import { saveDocumentContent } from './store.js'
+import { saveDocumentContent, setDocumentPaperSize } from './store.js'
 
 let _currentEditor = null
+let _resizeObserver = null
 
 const TIPTAP_VERSION = '2.6.6'
+
+const PAPER_CONFIG = {
+  free:   { label: 'Free' },
+  a4:     { label: 'A4',     ratioW: 210, ratioH: 297 },
+  letter: { label: 'Letter', ratioW: 216, ratioH: 279 },
+  legal:  { label: 'Legal',  ratioW: 216, ratioH: 356 },
+  a3:     { label: 'A3',     ratioW: 297, ratioH: 420 },
+  a5:     { label: 'A5',     ratioW: 148, ratioH: 210 },
+}
+
+const ZOOM_LEVELS = [
+  { label: '50%',  value: 0.5 },
+  { label: '75%',  value: 0.75 },
+  { label: '100%', value: 1.0 },
+  { label: '125%', value: 1.25 },
+  { label: '150%', value: 1.5 },
+  { label: '200%', value: 2.0 },
+]
+
+function applyPaperSize(paperEl, containerEl, size, zoom) {
+  if (size === 'free') {
+    paperEl.dataset.size = 'free'
+    paperEl.style.width = ''
+    paperEl.style.height = ''
+    return
+  }
+
+  const cfg = PAPER_CONFIG[size]
+  if (!cfg) return
+  paperEl.dataset.size = size
+
+  zoom = zoom || 1.0
+
+  const cw = containerEl.clientWidth
+  const ch = containerEl.clientHeight
+  let w = cw
+  let h = w * cfg.ratioH / cfg.ratioW
+
+  if (h > ch) {
+    h = ch
+    w = h * cfg.ratioW / cfg.ratioH
+  }
+
+  w *= zoom
+  h *= zoom
+
+  paperEl.style.width = Math.floor(w) + 'px'
+  paperEl.style.height = Math.floor(h) + 'px'
+}
+
+function setupResizeObserver(paperEl, containerEl, getState) {
+  if (_resizeObserver) {
+    _resizeObserver.disconnect()
+    _resizeObserver = null
+  }
+  _resizeObserver = new ResizeObserver(function() {
+    const state = getState()
+    if (state.size && state.size !== 'free') {
+      applyPaperSize(paperEl, containerEl, state.size, state.zoom)
+    }
+  })
+  _resizeObserver.observe(containerEl)
+}
 
 export async function renderDocument(documentId) {
   const area = document.getElementById('boardArea')
@@ -13,6 +77,10 @@ export async function renderDocument(documentId) {
   if (_currentEditor) {
     _currentEditor.destroy()
     _currentEditor = null
+  }
+  if (_resizeObserver) {
+    _resizeObserver.disconnect()
+    _resizeObserver = null
   }
 
   let html = '<div class="document-editor">'
@@ -62,8 +130,23 @@ export async function renderDocument(documentId) {
   html += '      <button class="editor-btn" data-cmd="table" title="Table">⊞</button>'
   html += '      <button class="editor-btn" data-cmd="horizontalRule" title="Horizontal Rule">—</button>'
   html += '    </div>'
+  html += '    <div class="editor-toolbar-sep"></div>'
+  html += '    <div class="editor-toolbar-group">'
+  html += '      <select class="paper-size-select" id="paperSize-' + doc.id + '" title="Paper Size">'
+  for (const key in PAPER_CONFIG) {
+    html += '        <option value="' + key + '">' + PAPER_CONFIG[key].label + '</option>'
+  }
+  html += '      </select>'
+  html += '      <select class="paper-zoom-select" id="paperZoom-' + doc.id + '" title="Zoom">'
+  for (const z of ZOOM_LEVELS) {
+    html += '        <option value="' + z.value + '">' + z.label + '</option>'
+  }
+  html += '      </select>'
+  html += '    </div>'
   html += '  </div>'
-  html += '  <div class="editor-content" id="editor-' + doc.id + '"></div>'
+  html += '  <div class="editor-content" id="editor-container-' + doc.id + '">'
+  html += '    <div class="document-paper" id="editor-' + doc.id + '"></div>'
+  html += '  </div>'
   html += '</div>'
   area.innerHTML = html
 
@@ -174,6 +257,43 @@ export async function renderDocument(documentId) {
       updateToolbarState(toolbar, _currentEditor)
     })
   }
+
+  const containerEl = document.getElementById('editor-container-' + doc.id)
+  const paperEl = document.getElementById('editor-' + doc.id)
+  const paperSelect = document.getElementById('paperSize-' + doc.id)
+  const zoomSelect = document.getElementById('paperZoom-' + doc.id)
+  const initialSize = doc.paperSize || 'free'
+  const initialZoom = doc.paperZoom || 1.0
+  if (paperSelect) paperSelect.value = initialSize
+  if (zoomSelect) zoomSelect.value = String(initialZoom)
+  if (containerEl && paperEl) {
+    applyPaperSize(paperEl, containerEl, initialSize, initialZoom)
+    setupResizeObserver(paperEl, containerEl, function() {
+      return {
+        size: paperSelect ? paperSelect.value : 'free',
+        zoom: zoomSelect ? parseFloat(zoomSelect.value) : 1.0
+      }
+    })
+  }
+  if (paperSelect && containerEl && paperEl) {
+    paperSelect.addEventListener('change', function() {
+      const size = this.value
+      doc.paperSize = size
+      const zoom = zoomSelect ? parseFloat(zoomSelect.value) : 1.0
+      applyPaperSize(paperEl, containerEl, size, zoom)
+      setDocumentPaperSize(doc.id, size)
+      if (window.__autoSave) window.__autoSave()
+    })
+  }
+  if (zoomSelect && containerEl && paperEl) {
+    zoomSelect.addEventListener('change', function() {
+      const zoom = parseFloat(this.value)
+      const size = paperSelect ? paperSelect.value : 'free'
+      doc.paperZoom = zoom
+      applyPaperSize(paperEl, containerEl, size, zoom)
+      if (window.__autoSave) window.__autoSave()
+    })
+  }
 }
 
 function updateToolbarState(toolbar, editor) {
@@ -207,5 +327,9 @@ export function destroyEditor() {
   if (_currentEditor) {
     _currentEditor.destroy()
     _currentEditor = null
+  }
+  if (_resizeObserver) {
+    _resizeObserver.disconnect()
+    _resizeObserver = null
   }
 }

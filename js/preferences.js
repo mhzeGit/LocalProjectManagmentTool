@@ -1,5 +1,6 @@
 import { state, genId, getCurrentWorkspace, PREDEFINED_COLORS } from './data.js'
 import { render } from './sidebar.js'
+import { saveAvatarFile, deleteAvatarFile, loadAvatarBlobUrl, getResolvedAvatar, clearAvatarFromCache } from './persistence.js'
 
 let activeCategoryId = 'colors'
 let _prefEditingMemberId = null
@@ -130,16 +131,38 @@ function renderMembersTab(container) {
   html += '<div class="pref-members-header">Manage who has access to this workspace. Members can be assigned to cards.</div>'
 
   if (editing) {
-    html += '<div class="pref-member-add-form">'
+    html += '<div class="pref-member-add-form pref-member-add-form-edit">'
+    html += '  <div class="pref-avatar-edit-section">'
+    var editAvatarUrl = getResolvedAvatar(editing)
+    if (editAvatarUrl) {
+      html += '    <img class="pref-avatar-preview-img" src="' + editAvatarUrl + '" id="pref-edit-avatar-preview">'
+    } else {
+      html += '    <div class="pref-avatar-preview-img pref-avatar-preview-placeholder" id="pref-edit-avatar-preview">' + getInitials(editing.name) + '</div>'
+    }
+    html += '    <div class="pref-avatar-upload-area">'
+    html += '      <input type="file" id="pref-member-edit-avatar-file" accept="image/*" onchange="prefEditAvatarFileChanged(event)">'
+    html += '      <label for="pref-member-edit-avatar-file" class="pref-avatar-upload-label">Choose Photo</label>'
+    if (editing.avatar) {
+      html += '      <button class="pref-avatar-remove-btn" onclick="prefRemoveMemberAvatar(\'' + editing.id + '\')" title="Remove avatar">\u2715</button>'
+    }
+    html += '    </div>'
+    html += '  </div>'
     html += '  <input id="pref-member-edit-name" class="pref-member-edit-input" value="' + escapeHtml(editing.name) + '" placeholder="Username" autofocus>'
-    html += '  <input id="pref-member-edit-avatar" value="' + escapeHtml(editing.avatar) + '" placeholder="Avatar URL (optional)">'
-    html += '  <button class="pref-member-add-btn" onclick="prefSaveMemberEdit()">Save</button>'
-    html += '  <button class="pref-color-add-btn" style="background:#2a2a3d" onclick="prefCancelMemberEdit()">Cancel</button>'
+    html += '  <div class="pref-member-edit-buttons">'
+    html += '    <button class="pref-member-add-btn" onclick="prefSaveMemberEdit()">Save</button>'
+    html += '    <button class="pref-color-add-btn" style="background:#2a2a3d" onclick="prefCancelMemberEdit()">Cancel</button>'
+    html += '  </div>'
     html += '</div>'
   } else {
     html += '<div class="pref-member-add-form">'
+    html += '  <div class="pref-avatar-edit-section">'
+    html += '    <div class="pref-avatar-preview-img pref-avatar-preview-placeholder" id="pref-new-avatar-preview">\ud83d\udc64</div>'
+    html += '    <div class="pref-avatar-upload-area">'
+    html += '      <input type="file" id="pref-new-member-avatar-file" accept="image/*" onchange="prefNewAvatarFileChanged(event)">'
+    html += '      <label for="pref-new-member-avatar-file" class="pref-avatar-upload-label">Choose Photo</label>'
+    html += '    </div>'
+    html += '  </div>'
     html += '  <input id="pref-new-member-name" placeholder="Username" autofocus>'
-    html += '  <input id="pref-new-member-avatar" placeholder="Avatar URL (optional)">'
     html += '  <button class="pref-member-add-btn" onclick="prefAddMember()">+ Add</button>'
     html += '</div>'
   }
@@ -149,9 +172,10 @@ function renderMembersTab(container) {
   } else {
     for (const m of members) {
       const isSelf = m.id === selfId
+      var mAvatarUrl = getResolvedAvatar(m)
       html += '<div class="pref-member-item' + (isSelf ? ' pref-member-self' : '') + '">'
-      if (m.avatar) {
-        html += '  <img class="pref-member-avatar" src="' + m.avatar + '" alt="">'
+      if (mAvatarUrl) {
+        html += '  <img class="pref-member-avatar" src="' + mAvatarUrl + '" alt="">'
       } else {
         html += '  <span class="pref-member-avatar">' + getInitials(m.name) + '</span>'
       }
@@ -184,43 +208,109 @@ function renderMembersTab(container) {
   }
 }
 
-window.prefAddMember = function() {
+var _prefNewAvatarFile = null
+var _prefEditAvatarFile = null
+
+window.prefNewAvatarFileChanged = function(e) {
+  _prefNewAvatarFile = e.target.files && e.target.files[0] || null
+  var preview = document.getElementById('pref-new-avatar-preview')
+  if (preview && _prefNewAvatarFile) {
+    var reader = new FileReader()
+    reader.onload = function(ev) {
+      preview.innerHTML = '<img class="pref-avatar-preview-img" src="' + ev.target.result + '">'
+      preview.className = 'pref-avatar-preview-img'
+    }
+    reader.readAsDataURL(_prefNewAvatarFile)
+  }
+}
+
+window.prefEditAvatarFileChanged = function(e) {
+  _prefEditAvatarFile = e.target.files && e.target.files[0] || null
+  var preview = document.getElementById('pref-edit-avatar-preview')
+  if (preview && _prefEditAvatarFile) {
+    var reader = new FileReader()
+    reader.onload = function(ev) {
+      preview.innerHTML = '<img class="pref-avatar-preview-img" src="' + ev.target.result + '">'
+      preview.className = 'pref-avatar-preview-img'
+    }
+    reader.readAsDataURL(_prefEditAvatarFile)
+  }
+}
+
+window.prefAddMember = async function() {
   const w = getCurrentWorkspace()
   if (!w) return
   const nameInput = document.getElementById('pref-new-member-name')
-  const avatarInput = document.getElementById('pref-new-member-avatar')
   const name = nameInput ? nameInput.value.trim() : ''
   if (!name) return
-  const avatar = avatarInput ? avatarInput.value.trim() : ''
-  w.members.push({ id: genId(), name, avatar })
+  const memberId = genId()
+  let avatar = ''
+  if (_prefNewAvatarFile) {
+    const filename = await saveAvatarFile(memberId, _prefNewAvatarFile)
+    if (filename) {
+      avatar = filename
+      await loadAvatarBlobUrl(memberId, filename)
+    }
+    _prefNewAvatarFile = null
+  }
+  w.members.push({ id: memberId, name, avatar })
   renderMembersTab(document.getElementById('pref-content'))
   render()
 }
 
 window.prefStartEditMember = function(id) {
   _prefEditingMemberId = id
+  _prefEditAvatarFile = null
   renderMembersTab(document.getElementById('pref-content'))
 }
 
 window.prefCancelMemberEdit = function() {
   _prefEditingMemberId = null
+  _prefEditAvatarFile = null
   renderMembersTab(document.getElementById('pref-content'))
 }
 
-window.prefSaveMemberEdit = function() {
+window.prefSaveMemberEdit = async function() {
   if (!_prefEditingMemberId) return
   const w = getCurrentWorkspace()
   if (!w) return
   const m = w.members.find(mem => mem.id === _prefEditingMemberId)
   if (!m) return
   const nameInput = document.getElementById('pref-member-edit-name')
-  const avatarInput = document.getElementById('pref-member-edit-avatar')
   const name = nameInput ? nameInput.value.trim() : ''
   if (!name) return
   m.name = name
-  m.avatar = avatarInput ? avatarInput.value.trim() : ''
+  if (_prefEditAvatarFile) {
+    if (m.avatar && m.avatar.indexOf('://') === -1 && m.avatar.indexOf('data:') !== 0) {
+      deleteAvatarFile(m.avatar)
+    }
+    clearAvatarFromCache(m.id)
+    const filename = await saveAvatarFile(m.id, _prefEditAvatarFile)
+    if (filename) {
+      m.avatar = filename
+      await loadAvatarBlobUrl(m.id, filename)
+    }
+    _prefEditAvatarFile = null
+  }
   _prefEditingMemberId = null
   renderMembersTab(document.getElementById('pref-content'))
+  render()
+}
+
+window.prefRemoveMemberAvatar = function(id) {
+  const w = getCurrentWorkspace()
+  if (!w) return
+  const m = w.members.find(mem => mem.id === id)
+  if (!m) return
+  if (m.avatar && m.avatar.indexOf('://') === -1 && m.avatar.indexOf('data:') !== 0) {
+    deleteAvatarFile(m.avatar)
+  }
+  clearAvatarFromCache(id)
+  m.avatar = ''
+  _prefEditAvatarFile = null
+  if (_prefEditingMemberId === id) {
+    renderMembersTab(document.getElementById('pref-content'))
+  }
   render()
 }
 
@@ -229,6 +319,11 @@ window.prefRemoveMember = function(id) {
   if (!w) return
   const idx = w.members.findIndex(m => m.id === id)
   if (idx === -1) return
+  const m = w.members[idx]
+  if (m.avatar && m.avatar.indexOf('://') === -1 && m.avatar.indexOf('data:') !== 0) {
+    deleteAvatarFile(m.avatar)
+  }
+  clearAvatarFromCache(id)
   w.members.splice(idx, 1)
   if (state.selfMemberId === id) {
     state.selfMemberId = null

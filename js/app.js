@@ -9,9 +9,9 @@ import {
   createProject, deleteProject,   archiveProject, copyProject, setProjectColor,
   createBoard, deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
-  createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor,
+  createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor, moveCardToBoardColumn,
   addProjectDirect, addCardDirect, addColumnDirect,
-  createDocument, deleteDocument
+  createDocument, deleteDocument, setDocumentPaperSize
 } from './store.js'
 import { startRenameColumn, startRenameCard, startRenameProject, startRenameDocument } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
@@ -73,11 +73,13 @@ Object.assign(window, {
   getCopiedCard,
   toggleCardCompleted,
   setCardColor,
+  moveCardToBoardColumn,
   addProjectDirect,
   addCardDirect,
   addColumnDirect,
   createDocument,
   deleteDocument,
+  setDocumentPaperSize,
   startRenameColumn,
   startRenameCard,
   startRenameProject,

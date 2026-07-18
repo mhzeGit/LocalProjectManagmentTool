@@ -403,6 +403,78 @@
 .pref-theme-preview { display: flex; gap: 4px; align-items: center; }
 .pref-theme-swatch { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); }
 
+/* --- Avatar Upload --- */
+.pref-avatar-edit-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.pref-avatar-preview-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.pref-avatar-preview-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: var(--member-avatar-bg);
+  color: var(--member-avatar-color);
+}
+
+.pref-avatar-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pref-avatar-upload-area input[type="file"] {
+  display: none;
+}
+
+.pref-avatar-upload-label {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--accent);
+  color: var(--text-white);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.pref-avatar-upload-label:hover { background: var(--accent-hover); }
+
+.pref-avatar-remove-btn {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pref-avatar-remove-btn:hover { background: var(--danger); color: var(--text-white); }
+
+.pref-member-add-form-edit {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.pref-member-edit-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 /* --- Settings icon in topbar --- */
 .pref-settings-btn {
   background: none;

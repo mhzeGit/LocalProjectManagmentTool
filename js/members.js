@@ -1,5 +1,6 @@
 import { state, genId, getCurrentWorkspace } from './data.js'
 import { render } from './sidebar.js'
+import { getResolvedAvatar, deleteAvatarFile, clearAvatarFromCache } from './persistence.js'
 
 const LS_KEY = 'kanboard_self_member'
 
@@ -60,6 +61,11 @@ export function removeMember(memberId) {
   if (!w) return
   const idx = w.members.findIndex(m => m.id === memberId)
   if (idx === -1) return
+  const member = w.members[idx]
+  if (member.avatar && member.avatar.indexOf('://') === -1 && member.avatar.indexOf('data:') !== 0) {
+    deleteAvatarFile(member.avatar)
+  }
+  clearAvatarFromCache(memberId)
   w.members.splice(idx, 1)
   if (state.selfMemberId === memberId) {
     state.selfMemberId = null
@@ -97,15 +103,14 @@ export function renderMemberBar() {
     const m = sorted[i]
     const isSelf = m.id === selfId
     const z = total - i
-    if (m.avatar) {
-      html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" style="z-index:' + z + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
-      html += '  <img class="mb-avatar" src="' + m.avatar + '">'
-      html += '</div>'
+    var avatarUrl = m.avatar ? getResolvedAvatar(m) : null
+    html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" style="z-index:' + z + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
+    if (avatarUrl) {
+      html += '  <img class="mb-avatar" src="' + avatarUrl + '">'
     } else {
-      html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" style="z-index:' + z + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
       html += '  <span class="mb-avatar mb-avatar-initials">' + getInitials(m.name) + '</span>'
-      html += '</div>'
     }
+    html += '</div>'
   }
   html += '</div>'
 

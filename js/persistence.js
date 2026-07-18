@@ -216,7 +216,9 @@ function saveAllToFolder(handle) {
         var dFilename = 'document_' + doc.id + '.json'
         promises.push(writeFile(handle, dFilename, {
           type: 'document', id: doc.id, name: doc.name,
-          content: doc.content || '', projectId: p.id
+          content: doc.content || '', projectId: p.id,
+          paperSize: doc.paperSize || null,
+          paperZoom: doc.paperZoom || null
         }))
         manifest.files.documents.push(dFilename)
       }
@@ -387,7 +389,7 @@ function reconstructData(allData, stateData) {
         var dId = pMeta.documents[di]
         var dMeta = allData.documents[dId]
         if (!dMeta) continue
-        newP.documents.push({ id: dMeta.id, name: dMeta.name, content: dMeta.content || '' })
+        newP.documents.push({ id: dMeta.id, name: dMeta.name, content: dMeta.content || '', paperSize: dMeta.paperSize || null, paperZoom: dMeta.paperZoom || null })
       }
 
       newWs.projects.push(newP)
@@ -543,6 +545,8 @@ export function openFolder() {
       return readJSON(_folderHandle, 'manifest.json').then(function(manifest) {
         if (manifest) _lastSavedTimestamp = manifest.lastSaved
         return applyLoadedData(result)
+      }).then(function() {
+        return preloadMemberAvatars((result.data.workspaces.reduce(function(acc, w) { return acc.concat(w.members || []) }, [])))
       })
     }
   }).then(function() {
@@ -560,6 +564,7 @@ export function openFolder() {
 
 export function closeFolder() {
   stopPolling()
+  clearAllAvatarBlobUrls()
   _folderHandle = null
   _lastSavedTimestamp = null
   _dirty = false
@@ -573,9 +578,7 @@ export function closeFolder() {
   showNotification('Folder closed - data is now in-memory only')
 }
 
-export function getSaveMode() {
-  return _saveMode
-}
+
 
 export function initPersistence() {
   if (_initialized) return Promise.resolve()
@@ -601,6 +604,8 @@ export function initPersistence() {
         if (result) {
           _saveMode = 'file'
           return applyLoadedData(result).then(function() {
+            return preloadMemberAvatars(result.data.workspaces.reduce(function(acc, w) { return acc.concat(w.members || []) }, []))
+          }).then(function() {
             startPolling()
           })
         }
@@ -626,3 +631,73 @@ window.openFolder = openFolder
 window.saveNow = saveNow
 
 window.__autoSave = markDirty
+
+/* --- Avatar file management --- */
+
+const _avatarBlobCache = {}
+
+export async function saveAvatarFile(memberId, file) {
+  if (!_folderHandle) return null
+  var ext = (file.type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '')
+  var filename = 'avatar_' + memberId + '.' + ext
+  var fileHandle = await _folderHandle.getFileHandle(filename, { create: true })
+  var writable = await fileHandle.createWritable()
+  await writable.write(file)
+  await writable.close()
+  return filename
+}
+
+export async function deleteAvatarFile(filename) {
+  if (!_folderHandle || !filename) return
+  try { await _folderHandle.removeEntry(filename) } catch (e) { /* ignore */ }
+}
+
+export async function loadAvatarBlobUrl(memberId, filename) {
+  if (!_folderHandle || !filename) return null
+  try {
+    var fileHandle = await _folderHandle.getFileHandle(filename)
+    var file = await fileHandle.getFile()
+    var url = URL.createObjectURL(file)
+    _avatarBlobCache[memberId] = url
+    return url
+  } catch (e) { return null }
+}
+
+export function getResolvedAvatar(member) {
+  if (!member || !member.avatar) return null
+  if (member.avatar.indexOf('://') !== -1 || member.avatar.indexOf('data:') === 0) {
+    return member.avatar
+  }
+  return _avatarBlobCache[member.id] || null
+}
+
+function clearAllAvatarBlobUrls() {
+  var ids = Object.keys(_avatarBlobCache)
+  for (var i = 0; i < ids.length; i++) {
+    URL.revokeObjectURL(_avatarBlobCache[ids[i]])
+    delete _avatarBlobCache[ids[i]]
+  }
+}
+
+export function clearAvatarFromCache(memberId) {
+  if (_avatarBlobCache[memberId]) {
+    URL.revokeObjectURL(_avatarBlobCache[memberId])
+    delete _avatarBlobCache[memberId]
+  }
+}
+
+export async function preloadMemberAvatars(members) {
+  if (!_folderHandle) return
+  var promises = []
+  for (var i = 0; i < members.length; i++) {
+    var m = members[i]
+    if (m.avatar && m.avatar.indexOf('://') === -1 && m.avatar.indexOf('data:') !== 0) {
+      promises.push(loadAvatarBlobUrl(m.id, m.avatar).catch(function() {}))
+    }
+  }
+  await Promise.all(promises)
+}
+
+export function getSaveMode() {
+  return _saveMode
+}
