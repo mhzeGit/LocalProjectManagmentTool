@@ -219,26 +219,28 @@ function initCalendarDrag() {
     if (!spanCard) return
 
     const handle = e.target.closest('.cal-span-resize')
-    const gc = spanCard.style.gridColumn || ''
-    const parts = gc.split('/')
-    if (parts.length < 2) return
-
-    const startCol = parseInt(parts[0])
-    const endCol = parseInt(parts[1])
-
     if (handle) {
       e.preventDefault()
-      const gr = spanCard.style.gridRow || '1'
-      const origRow = parseInt(gr)
+      const card = findCard(spanCard.dataset.cardId)
+      if (!card) return
+      const s = parseDate(card.startDate) || new Date(_calGridStartDate)
+      const ed = parseDate(card.endDate) || s
+      const startOff = daysBetween(_calGridStartDate, s)
+      const endOff = daysBetween(_calGridStartDate, ed)
+      const sCol = (startOff % 7) + 1
+      const sRow = Math.floor(startOff / 7) + 1
+      const eColLast = (endOff % 7) + 1
+      const eRow = Math.floor(endOff / 7) + 1
       _resizing = {
         cardId: spanCard.dataset.cardId,
         dir: handle.dataset.side,
         startX: e.clientX,
         startY: e.clientY,
         el: spanCard,
-        origStartCol: startCol,
-        origEndCol: endCol,
-        origRow: origRow,
+        origStartCol: sCol,
+        origEndCol: eColLast + 1,
+        origRow: sRow,
+        origEndRow: eRow,
         clones: []
       }
       document.body.style.cursor = 'ew-resize'
@@ -247,12 +249,17 @@ function initCalendarDrag() {
     }
 
     e.preventDefault()
+    var c2 = findCard(spanCard.dataset.cardId)
+    var dur = 1
+    if (c2 && c2.startDate && c2.endDate) {
+      dur = daysBetween(parseDate(c2.startDate), parseDate(c2.endDate)) + 1
+    }
     _moving = {
       cardId: spanCard.dataset.cardId,
       startX: e.clientX,
       startY: e.clientY,
       el: spanCard,
-      durCols: endCol - startCol
+      durCols: dur
     }
     document.body.style.cursor = 'grabbing'
     document.body.style.userSelect = 'none'
@@ -316,77 +323,81 @@ document.addEventListener('mousemove', function(e) {
   if (_resizing && _resizing.el) {
     e.preventDefault()
 
-    for (var ci = 0; ci < _resizing.clones.length; ci++) {
+    for (let ci = 0; ci < _resizing.clones.length; ci++) {
       if (_resizing.clones[ci].parentNode) _resizing.clones[ci].parentNode.removeChild(_resizing.clones[ci])
     }
     _resizing.clones = []
 
-    var mouseCol = Math.floor((e.clientX - rect.left) / cellW) + 1
-    var mouseRow = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
+    let mouseCol = Math.floor((e.clientX - rect.left) / cellW) + 1
+    let mouseRow = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
     mouseCol = Math.max(1, Math.min(mouseCol, 7))
 
+    let anchorCol = _resizing.dir === 'start' ? _resizing.origEndCol - 1 : _resizing.origStartCol
+    let anchorRow = _resizing.dir === 'start' ? _resizing.origEndRow : _resizing.origRow
+    let anchorIdx = (anchorRow - 1) * 7 + (anchorCol - 1)
+    let mouseIdx = (mouseRow - 1) * 7 + (mouseCol - 1)
+
     if (_resizing.dir === 'start') {
-      if (mouseRow > _resizing.origRow) mouseRow = _resizing.origRow
-      if (mouseCol > _resizing.origEndCol - 1) mouseCol = _resizing.origEndCol - 1
+      if (mouseIdx >= anchorIdx) {
+        mouseCol = anchorCol; mouseRow = anchorRow; mouseIdx = anchorIdx
+      }
     } else {
-      if (mouseRow < _resizing.origRow) mouseRow = _resizing.origRow
-      if (mouseCol < _resizing.origStartCol) mouseCol = _resizing.origStartCol
+      if (mouseIdx <= anchorIdx) {
+        mouseCol = anchorCol; mouseRow = anchorRow; mouseIdx = anchorIdx
+      }
     }
 
-    var s = _resizing.origStartCol
-    var e2 = _resizing.origEndCol
-    if (mouseRow !== _resizing.origRow) {
-      if (_resizing.dir === 'start') {
+    let s = anchorCol
+    let e2 = anchorCol + 1
+    if (_resizing.dir === 'start') {
+      if (mouseRow === anchorRow) {
+        s = Math.max(1, Math.min(mouseCol, _resizing.origEndCol - 1))
+      } else {
         s = 1
-        var rowLo = mouseRow
-        var rowHi = _resizing.origRow
-        for (var rr = rowLo; rr <= rowHi; rr++) {
-          if (rr === _resizing.origRow) continue
-          var segStart = rr === rowLo ? mouseCol : 1
-          var segEnd = rr === rowHi ? _resizing.origEndCol : 8
-          var cl = _resizing.el.cloneNode(true)
+        for (let rr = mouseRow; rr <= anchorRow; rr++) {
+          if (rr === anchorRow) continue
+          let ss = rr === mouseRow ? mouseCol : 1
+          let se = rr === anchorRow ? _resizing.origEndCol : 8
+          let cl = _resizing.el.cloneNode(true)
           cl.classList.add('cal-span-clone')
           cl.style.pointerEvents = 'none'
-          cl.style.gridColumn = segStart + '/' + segEnd
+          cl.style.gridColumn = ss + '/' + se
           cl.style.gridRow = String(rr)
           _resizing.el.parentNode.appendChild(cl)
           _resizing.clones.push(cl)
         }
+      }
+      _resizing.el.style.gridColumn = s + '/' + _resizing.origEndCol
+    } else {
+      if (mouseRow === anchorRow) {
+        e2 = Math.max(anchorCol + 1, mouseCol + 1)
       } else {
         e2 = 8
-        var rowLo2 = _resizing.origRow
-        var rowHi2 = mouseRow
-        for (var rr2 = rowLo2; rr2 <= rowHi2; rr2++) {
-          if (rr2 === _resizing.origRow) continue
-          var segStart2 = rr2 === rowLo2 ? _resizing.origStartCol : 1
-          var segEnd2 = rr2 === rowHi2 ? mouseCol + 1 : 8
-          var cl2 = _resizing.el.cloneNode(true)
+        for (let rr = anchorRow; rr <= mouseRow; rr++) {
+          if (rr === anchorRow) continue
+          let ss2 = rr === anchorRow ? _resizing.origStartCol : 1
+          let se2 = rr === mouseRow ? mouseCol + 1 : 8
+          let cl2 = _resizing.el.cloneNode(true)
           cl2.classList.add('cal-span-clone')
           cl2.style.pointerEvents = 'none'
-          cl2.style.gridColumn = segStart2 + '/' + segEnd2
-          cl2.style.gridRow = String(rr2)
+          cl2.style.gridColumn = ss2 + '/' + se2
+          cl2.style.gridRow = String(rr)
           _resizing.el.parentNode.appendChild(cl2)
           _resizing.clones.push(cl2)
         }
       }
-    } else {
-      if (_resizing.dir === 'start') { s = Math.max(1, Math.min(mouseCol, e2 - 1)) }
-      else { e2 = Math.max(s + 1, mouseCol + 1) }
+      _resizing.el.style.gridColumn = _resizing.origStartCol + '/' + e2
     }
-    _resizing.el.style.gridColumn = s + '/' + e2
+
     _resizing._mouseCol = mouseCol
     _resizing._mouseRow = mouseRow
 
-    var dsCol, dsRow, deCol, deRow
-    if (_resizing.dir === 'start') {
-      dsCol = mouseCol; dsRow = mouseRow
-      deCol = _resizing.origEndCol - 1; deRow = _resizing.origRow
-    } else {
-      dsCol = _resizing.origStartCol; dsRow = _resizing.origRow
-      deCol = mouseCol; deRow = mouseRow
-    }
+    let dsCol = _resizing.dir === 'start' ? mouseCol : _resizing.origStartCol
+    let dsRow = _resizing.dir === 'start' ? mouseRow : _resizing.origRow
+    let deCol = _resizing.dir === 'start' ? _resizing.origEndCol - 1 : mouseCol
+    let deRow = _resizing.dir === 'start' ? _resizing.origEndRow : mouseRow
     updateCardDates(_resizing.el, dsCol, dsRow, deCol, deRow)
-    for (var ci2 = 0; ci2 < _resizing.clones.length; ci2++) {
+    for (let ci2 = 0; ci2 < _resizing.clones.length; ci2++) {
       updateCardDates(_resizing.clones[ci2], dsCol, dsRow, deCol, deRow)
     }
     return
@@ -423,18 +434,19 @@ document.addEventListener('mouseup', function(ev) {
     var card = findCard(_resizing.cardId)
     if (card) {
       var mRow = _resizing._mouseRow != null ? _resizing._mouseRow : _resizing.origRow
-      var mCol = _resizing._mouseCol != null ? _resizing._mouseCol : (_resizing.dir === 'start' ? _resizing.origStartCol : _resizing.origEndCol - 1)
+      var mCol = _resizing._mouseCol != null ? _resizing._mouseCol : _resizing.origStartCol
+      var startIdx2 = (_resizing.origRow - 1) * 7 + (_resizing.origStartCol - 1)
+      var endIdx2 = (_resizing.origEndRow - 1) * 7 + (_resizing.origEndCol - 2)
+      var mouseIdx2 = (mRow - 1) * 7 + (mCol - 1)
       if (_resizing.dir === 'start') {
-        if (mRow > _resizing.origRow) mRow = _resizing.origRow
-        if (mCol > _resizing.origEndCol - 1) mCol = _resizing.origEndCol - 1
+        if (mouseIdx2 >= endIdx2) mouseIdx2 = endIdx2
+        card.startDate = formatDate(cellIndexToDate(mouseIdx2))
+        card.endDate = formatDate(cellIndexToDate(endIdx2))
       } else {
-        if (mRow < _resizing.origRow) mRow = _resizing.origRow
-        if (mCol < _resizing.origStartCol) mCol = _resizing.origStartCol
+        if (mouseIdx2 <= startIdx2) mouseIdx2 = startIdx2
+        card.startDate = formatDate(cellIndexToDate(startIdx2))
+        card.endDate = formatDate(cellIndexToDate(mouseIdx2))
       }
-      var sIdx2 = (_resizing.dir === 'start' ? (mRow - 1) * 7 + (mCol - 1) : (_resizing.origRow - 1) * 7 + (_resizing.origStartCol - 1))
-      var eIdx2 = (_resizing.dir === 'start' ? (_resizing.origRow - 1) * 7 + (_resizing.origEndCol - 2) : (mRow - 1) * 7 + (mCol - 1))
-      card.startDate = formatDate(cellIndexToDate(Math.min(sIdx2, eIdx2)))
-      card.endDate = formatDate(cellIndexToDate(Math.max(sIdx2, eIdx2)))
     }
     if (_resizing.el) _resizing.el.style.opacity = ''
     _resizing = null
