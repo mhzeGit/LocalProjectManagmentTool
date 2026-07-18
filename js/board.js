@@ -1,8 +1,9 @@
 import { state, findBoard, findProject, findWorkspace, findDocument } from './data.js'
-import { escapeHtml, getProgressColor } from './utils.js'
+import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
+import { renderCalendar } from './calendar.js'
 import { wasRightDragged } from './dragscroll.js'
 import { renderDocument, destroyEditor } from './document.js'
 
@@ -66,7 +67,7 @@ export function renderBoard() {
   }
   if (state.selectedView === 'calendar') {
     destroyEditor()
-    area.innerHTML = '<div class="empty-state"><p>Calendar view — coming soon</p></div>'
+    renderCalendar()
     return
   }
 
@@ -94,10 +95,11 @@ export function renderBoard() {
       html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
       if (c.description) html += '    <div class="card-desc">' + escapeHtml(c.description) + '</div>'
       if (c.checklists && c.checklists.length > 0) {
-        const completedCount = c.checklists.filter(function(item) { return item.completed }).length
-        const pct = Math.round((completedCount / c.checklists.length) * 100)
-        const done = completedCount === c.checklists.length ? ' done' : ''
-        html += '    <div class="card-cl-progress' + done + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
+        const total = countChecklistItems(c.checklists)
+        const done = countCompletedChecklistItems(c.checklists)
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0
+        const allDone = total > 0 && done === total ? ' done' : ''
+        html += '    <div class="card-cl-progress' + allDone + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
       }
       html += '  </div>'
       html += '</div>'

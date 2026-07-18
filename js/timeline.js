@@ -1,5 +1,5 @@
 import { state, findBoard, findColumn, findCard, findCardColumn, genId } from './data.js'
-import { escapeHtml, getProgressColor } from './utils.js'
+import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
 
@@ -269,9 +269,10 @@ export function renderTimeline() {
       }
       html += '      <div class="tl-bar-resize tl-bar-resize-r" data-resize="end"></div>'
       if (c.checklists && c.checklists.length > 0) {
-        const clDone = c.checklists.filter(function(i) { return i.completed }).length
-        const clPct = Math.round((clDone / c.checklists.length) * 100)
-        const clAllDone = clDone === c.checklists.length ? ' done' : ''
+        const clTotal = countChecklistItems(c.checklists)
+        const clDone = countCompletedChecklistItems(c.checklists)
+        const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0
+        const clAllDone = clTotal > 0 && clDone === clTotal ? ' done' : ''
         html += '      <div class="tl-bar-cl-progress' + clAllDone + '"><div class="tl-bar-cl-progress-fill" style="width:' + clPct + '%;background:' + getProgressColor(clPct) + '"></div></div>'
       }
       html += '    </div>'
@@ -309,9 +310,10 @@ export function renderTimeline() {
       html += '      <span class="tl-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
       html += '      <span class="tl-ucard-title">' + escapeHtml(c.title) + '</span>'
       if (c.checklists && c.checklists.length > 0) {
-        const clDone = c.checklists.filter(function(i) { return i.completed }).length
-        const clPct = Math.round((clDone / c.checklists.length) * 100)
-        const clAllDone = clDone === c.checklists.length ? ' done' : ''
+        const clTotal = countChecklistItems(c.checklists)
+        const clDone = countCompletedChecklistItems(c.checklists)
+        const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0
+        const clAllDone = clTotal > 0 && clDone === clTotal ? ' done' : ''
         html += '      <div class="tl-ucard-cl-progress' + clAllDone + '"><div class="tl-ucard-cl-progress-fill" style="width:' + clPct + '%;background:' + getProgressColor(clPct) + '"></div></div>'
       }
       html += '    </div>'

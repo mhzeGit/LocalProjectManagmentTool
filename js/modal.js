@@ -1,5 +1,5 @@
-import { findCard, PREDEFINED_MEMBERS } from './data.js'
-import { escapeHtml, getProgressColor } from './utils.js'
+import { state, findCard, findWorkspace } from './data.js'
+import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 
 let _editingCardId = null
 
@@ -65,8 +65,8 @@ function buildCardForm(c, saveAction) {
   html += '      </div>'
   html += '      <div class="cd-left-section">'
   html += '        <label>Checklist</label>'
-  const clTotal = checklists.length
-  const clDone = checklists.filter(function(i) { return i.completed }).length
+  const clTotal = countChecklistItems(checklists)
+  const clDone = countCompletedChecklistItems(checklists)
   const clPct = clTotal > 0 ? Math.round((clDone / clTotal) * 100) : 0
   html += '        <div id="cd-cl-progress" class="cd-cl-progress' + (clTotal > 0 && clDone === clTotal ? ' done' : '') + '">'
   html += '          <div id="cd-cl-progress-bar" class="cd-cl-progress-bar" style="width:' + clPct + '%;background:' + getProgressColor(clPct) + '"></div>'
@@ -74,17 +74,7 @@ function buildCardForm(c, saveAction) {
   html += '        </div>'
   html += '        <div id="cd-checklist">'
   for (let i = 0; i < checklists.length; i++) {
-    const item = checklists[i]
-    const doneClass = item.completed ? ' cd-cl-done' : ''
-    html += '          <div class="cd-checklist-item' + doneClass + '" draggable="true">'
-    html += '            <span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span>'
-    html += '            <label class="cd-cl-checkbox">'
-    html += '              <input type="checkbox"' + (item.completed ? ' checked' : '') + '>'
-    html += '              <span class="cd-cl-checkmark"></span>'
-    html += '            </label>'
-  html += '            <span class="cd-cl-text">' + escapeHtml(item.text) + '</span>'
-  html += '            <button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
-  html += '          </div>'
+    html += renderChecklistItem(checklists[i], 0, i === 0)
   }
   html += '        </div>'
   html += '        <div class="cd-checklist-add">'
@@ -139,9 +129,10 @@ function buildCardForm(c, saveAction) {
   html += '        </div>'
   html += '        <select id="cd-member-select" class="cd-select cd-member-select">'
   html += '          <option value="">Select member…</option>'
-  for (const pm of PREDEFINED_MEMBERS) {
-    if (!members.includes(pm)) {
-      html += '          <option value="' + escapeHtml(pm) + '">' + escapeHtml(pm) + '</option>'
+  const wsMembers = getWorkspaceMembersForCard()
+  for (const m of wsMembers) {
+    if (!members.includes(m.name)) {
+      html += '          <option value="' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</option>'
     }
   }
   html += '        </select>'
@@ -161,6 +152,41 @@ function buildCardForm(c, saveAction) {
   return html
 }
 
+function renderChecklistItem(item, depth, isFirst) {
+  const hasChildren = item.items && item.items.length > 0
+  const leafCount = countChecklistItems(hasChildren ? item.items : [])
+  const leafDone = countCompletedChecklistItems(hasChildren ? item.items : [])
+  const allDone = hasChildren ? leafCount > 0 && leafDone === leafCount : item.completed
+  const doneClass = allDone ? ' cd-cl-done' : ''
+  const indent = depth * 24
+  let html = '<div class="cd-checklist-item' + doneClass + '" draggable="true" style="padding-left:' + indent + 'px">'
+  html += '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span>'
+  if (hasChildren) {
+    html += '<label class="cd-cl-checkbox">'
+    html += '  <input type="checkbox" disabled' + (allDone ? ' checked' : '') + '>'
+    html += '  <span class="cd-cl-checkmark"></span>'
+    html += '</label>'
+  } else {
+    html += '<label class="cd-cl-checkbox">'
+    html += '  <input type="checkbox"' + (item.completed ? ' checked' : '') + '>'
+    html += '  <span class="cd-cl-checkmark"></span>'
+    html += '</label>'
+  }
+  html += '<span class="cd-cl-text">' + escapeHtml(item.text) + '</span>'
+  html += '<button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button>'
+  html += '<button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button>'
+  html += '<button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
+  if (hasChildren) {
+    html += '<div class="cd-cl-children">'
+    for (let i = 0; i < item.items.length; i++) {
+      html += renderChecklistItem(item.items[i], depth + 1, i === 0)
+    }
+    html += '</div>'
+  }
+  html += '</div>'
+  return html
+}
+
 export function closeModal() {
   document.getElementById('modal').classList.remove('open')
 }
@@ -172,7 +198,12 @@ export function setupModalKeyboard() {
     if (!this.classList.contains('open')) return
     const target = e.target
     if (target.type === 'checkbox' && target.closest('#cd-checklist')) {
-      target.closest('.cd-checklist-item').classList.toggle('cd-cl-done', target.checked)
+      const item = target.closest('.cd-checklist-item')
+      const childrenContainer = item.querySelector(':scope > .cd-cl-children')
+      if (!childrenContainer) {
+        item.classList.toggle('cd-cl-done', target.checked)
+      }
+      propagateChecklistUp(item)
       updateChecklistProgress()
       return
     }
@@ -207,7 +238,13 @@ export function setupModalKeyboard() {
     }
 
     if (action === 'remove-checklist-item') {
-      target.closest('.cd-checklist-item').remove()
+      const item = target.closest('.cd-checklist-item')
+      const parentContainer = item.parentElement
+      item.remove()
+      if (parentContainer && parentContainer.classList.contains('cd-cl-children')) {
+        const grandparent = parentContainer.closest('.cd-checklist-item')
+        if (grandparent) propagateChecklistUp(grandparent)
+      }
       updateChecklistProgress()
       return
     }
@@ -224,6 +261,18 @@ export function setupModalKeyboard() {
       const row = target.closest('.cd-checklist-add')
       const input = row?.querySelector('.cd-checklist-input')
       if (input) addChecklistItem(input)
+      return
+    }
+
+    if (action === 'nest-item') {
+      const item = target.closest('.cd-checklist-item')
+      if (item) nestChecklistItem(item)
+      return
+    }
+
+    if (action === 'unparent-item') {
+      const item = target.closest('.cd-checklist-item')
+      if (item) unparentChecklistItem(item)
       return
     }
   })
@@ -276,9 +325,10 @@ export function setupModalKeyboard() {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
     const rect = item.getBoundingClientRect()
-    const mid = rect.top + rect.height / 2
-    item.classList.toggle('cd-cl-drop-before', e.clientY < mid)
-    item.classList.toggle('cd-cl-drop-after', e.clientY >= mid)
+    const yRatio = (e.clientY - rect.top) / rect.height
+    item.classList.toggle('cd-cl-drop-before', yRatio < 0.25)
+    item.classList.toggle('cd-cl-drop-nest', yRatio >= 0.25 && yRatio < 0.75)
+    item.classList.toggle('cd-cl-drop-after', yRatio >= 0.75)
   })
 
   overlay.addEventListener('dragleave', function(e) {
@@ -286,7 +336,7 @@ export function setupModalKeyboard() {
     if (!item) return
     const related = e.relatedTarget
     if (related && item.contains(related)) return
-    item.classList.remove('cd-cl-drop-before', 'cd-cl-drop-after')
+    item.classList.remove('cd-cl-drop-before', 'cd-cl-drop-nest', 'cd-cl-drop-after')
   })
 
   overlay.addEventListener('drop', function(e) {
@@ -294,22 +344,41 @@ export function setupModalKeyboard() {
     const target = e.target.closest('.cd-checklist-item')
     if (!target || !dragSrc || target === dragSrc) return
     const rect = target.getBoundingClientRect()
-    const mid = rect.top + rect.height / 2
-    const parent = target.parentElement
-    if (e.clientY < mid) {
-      parent.insertBefore(dragSrc, target)
+    const yRatio = (e.clientY - rect.top) / rect.height
+    const oldParent = dragSrc.parentElement
+    if (yRatio < 0.25) {
+      target.parentElement.insertBefore(dragSrc, target)
+    } else if (yRatio < 0.75) {
+      let childrenContainer = target.querySelector(':scope > .cd-cl-children')
+      if (!childrenContainer) {
+        childrenContainer = document.createElement('div')
+        childrenContainer.className = 'cd-cl-children'
+        target.appendChild(childrenContainer)
+      }
+      childrenContainer.appendChild(dragSrc)
+      propagateChecklistUp(target)
     } else {
-      parent.insertBefore(dragSrc, target.nextSibling)
+      target.parentElement.insertBefore(dragSrc, target.nextSibling)
     }
-    target.classList.remove('cd-cl-drop-before', 'cd-cl-drop-after')
+    target.classList.remove('cd-cl-drop-before', 'cd-cl-drop-nest', 'cd-cl-drop-after')
     dragSrc.classList.remove('cd-cl-dragging')
+    if (oldParent !== dragSrc.parentElement) {
+      if (oldParent.classList.contains('cd-cl-children')) {
+        const gp = oldParent.closest('.cd-checklist-item')
+        if (gp) propagateChecklistUp(gp)
+        if (oldParent.children.length === 0) oldParent.remove()
+      }
+    } else if (oldParent.classList.contains('cd-cl-children')) {
+      const gp = oldParent.closest('.cd-checklist-item')
+      if (gp) propagateChecklistUp(gp)
+    }
     dragSrc = null
   })
 
   overlay.addEventListener('dragend', function(e) {
     const item = e.target.closest('.cd-checklist-item')
     if (item) {
-      item.classList.remove('cd-cl-dragging', 'cd-cl-drop-before', 'cd-cl-drop-after')
+      item.classList.remove('cd-cl-dragging', 'cd-cl-drop-before', 'cd-cl-drop-nest', 'cd-cl-drop-after')
     }
     dragSrc = null
   })
@@ -331,13 +400,40 @@ function addChip(input, containerId) {
   input.focus()
 }
 
+function countChecklistLeafEls(container) {
+  let count = 0
+  for (const child of container.children) {
+    if (!child.classList.contains('cd-checklist-item')) continue
+    const childrenContainer = child.querySelector(':scope > .cd-cl-children')
+    if (childrenContainer && childrenContainer.children.length > 0) {
+      count += countChecklistLeafEls(childrenContainer)
+    } else {
+      count++
+    }
+  }
+  return count
+}
+
+function countCheckedChecklistLeafEls(container) {
+  let count = 0
+  for (const child of container.children) {
+    if (!child.classList.contains('cd-checklist-item')) continue
+    const childrenContainer = child.querySelector(':scope > .cd-cl-children')
+    if (childrenContainer && childrenContainer.children.length > 0) {
+      count += countCheckedChecklistLeafEls(childrenContainer)
+    } else {
+      const cb = child.querySelector('input[type="checkbox"]')
+      if (cb && cb.checked) count++
+    }
+  }
+  return count
+}
+
 function updateChecklistProgress() {
-  const items = document.querySelectorAll('#cd-checklist .cd-checklist-item')
-  let done = 0
-  items.forEach(function(item) {
-    if (item.querySelector('input[type=checkbox]').checked) done++
-  })
-  const total = items.length
+  const container = document.getElementById('cd-checklist')
+  if (!container) return
+  const total = countChecklistLeafEls(container)
+  const done = countCheckedChecklistLeafEls(container)
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   const color = getProgressColor(pct)
   const bar = document.getElementById('cd-cl-progress-bar')
@@ -348,13 +444,74 @@ function updateChecklistProgress() {
   if (text) text.textContent = done + '/' + total + ' · ' + pct + '%'
   if (_editingCardId) {
     document.querySelectorAll('[data-card-id="' + _editingCardId + '"]').forEach(function(el) {
-      var cp = el.querySelector('.card-cl-progress, .tl-bar-cl-progress, .tl-ucard-cl-progress')
+      var cp = el.querySelector('.card-cl-progress, .tl-bar-cl-progress, .tl-ucard-cl-progress, .cal-card-cl-progress, .cal-span-cl-progress, .cal-ucard-cl-progress')
       if (!cp) return
-      var cf = cp.querySelector('.card-cl-progress-bar, .tl-bar-cl-progress-fill, .tl-ucard-cl-progress-fill')
+      var cf = cp.querySelector('.card-cl-progress-bar, .tl-bar-cl-progress-fill, .tl-ucard-cl-progress-fill, .cal-card-cl-progress-fill, .cal-span-cl-progress-fill, .cal-ucard-cl-progress-fill')
       if (cf) { cf.style.width = pct + '%'; cf.style.background = color }
       cp.classList.toggle('done', total > 0 && done === total)
     })
   }
+}
+
+function propagateChecklistUp(item) {
+  const childrenContainer = item.querySelector(':scope > .cd-cl-children')
+  if (childrenContainer) {
+    const leafCount = countChecklistLeafEls(childrenContainer)
+    const leafDone = countCheckedChecklistLeafEls(childrenContainer)
+    const allDone = leafCount > 0 && leafDone === leafCount
+    const cb = item.querySelector('input[type="checkbox"]')
+    if (cb) {
+      cb.checked = allDone
+      cb.indeterminate = leafDone > 0 && leafDone < leafCount
+    }
+    item.classList.toggle('cd-cl-done', allDone)
+  }
+  const parent = item.parentElement
+  if (parent && parent.classList.contains('cd-cl-children')) {
+    const grandparent = parent.closest('.cd-checklist-item')
+    if (grandparent) propagateChecklistUp(grandparent)
+  }
+}
+
+function nestChecklistItem(item) {
+  const prev = item.previousElementSibling
+  if (!prev || !prev.classList.contains('cd-checklist-item')) return
+  let childrenContainer = prev.querySelector(':scope > .cd-cl-children')
+  if (!childrenContainer) {
+    childrenContainer = document.createElement('div')
+    childrenContainer.className = 'cd-cl-children'
+    prev.appendChild(childrenContainer)
+  }
+  childrenContainer.appendChild(item)
+  const prevCb = prev.querySelector('input[type="checkbox"]')
+  if (prevCb) prevCb.checked = false
+  propagateChecklistUp(prev)
+  updateChecklistProgress()
+}
+
+function unparentChecklistItem(item) {
+  const parent = item.parentElement
+  if (!parent || !parent.classList.contains('cd-cl-children')) return
+  const grandparent = parent.closest('.cd-checklist-item')
+  if (!grandparent) return
+  const container = grandparent.parentElement
+  if (!container) return
+  container.insertBefore(item, grandparent.nextSibling)
+  if (parent.children.length === 0) {
+    parent.remove()
+  }
+  const gpCb = grandparent.querySelector('input[type="checkbox"]')
+  if (gpCb) {
+    gpCb.checked = false
+    gpCb.indeterminate = false
+  }
+  grandparent.classList.remove('cd-cl-done')
+  const cb = item.querySelector('input[type="checkbox"]')
+  if (cb) {
+    cb.indeterminate = false
+  }
+  propagateChecklistUp(grandparent)
+  updateChecklistProgress()
 }
 
 function addChecklistItem(input) {
@@ -365,7 +522,7 @@ function addChecklistItem(input) {
   const item = document.createElement('div')
   item.className = 'cd-checklist-item'
   item.draggable = true
-  item.innerHTML = '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span><label class="cd-cl-checkbox"><input type="checkbox"><span class="cd-cl-checkmark"></span></label><span class="cd-cl-text">' + escapeHtml(val) + '</span><button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
+  item.innerHTML = '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span><label class="cd-cl-checkbox"><input type="checkbox"><span class="cd-cl-checkmark"></span></label><span class="cd-cl-text">' + escapeHtml(val) + '</span><button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button><button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button><button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
   container.appendChild(item)
   input.value = ''
   input.focus()
@@ -391,9 +548,15 @@ function refreshMemberSelect() {
     if (text) used.add(text)
   })
   select.innerHTML = '<option value="">Select member…</option>'
-  for (const pm of PREDEFINED_MEMBERS) {
-    if (!used.has(pm)) {
-      select.innerHTML += '<option value="' + escapeHtml(pm) + '">' + escapeHtml(pm) + '</option>'
+  const wsMembers = getWorkspaceMembersForCard()
+  for (const m of wsMembers) {
+    if (!used.has(m.name)) {
+      select.innerHTML += '<option value="' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</option>'
     }
   }
+}
+
+function getWorkspaceMembersForCard() {
+  const w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
+  return w ? w.members || [] : []
 }

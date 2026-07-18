@@ -16,10 +16,15 @@ import {
 import { startRenameColumn, startRenameCard, startRenameProject, startRenameDocument } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
 
+import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, calendarCopyCard, calendarDuplicateCard, calendarArchiveCard, calendarPasteCard } from './calendar.js'
+
+import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember, openMemberManager } from './members.js'
+
 import './dragscroll.js'
 
 setInlineEditRender(render)
 setupModalKeyboard()
+initSelfMember()
 
 Object.assign(window, {
   selectWorkspace,
@@ -63,6 +68,21 @@ Object.assign(window, {
   startRenameDocument,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
   openCardDetail,
+  calendarPrevMonth,
+  calendarNextMonth,
+  calendarToday,
+  calendarAddCard,
+  calendarCopyCard,
+  calendarDuplicateCard,
+  calendarArchiveCard,
+  calendarPasteCard,
+  renderMemberBar,
+  setSelfMember,
+  getSelfMember,
+  addMember,
+  editMember,
+  removeMember,
+  openMemberManager,
 })
 
 render()

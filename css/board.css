@@ -1,5 +1,6 @@
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .topbar { padding: 16px 24px; background: #1a1a26; border-bottom: 1px solid #2a2a3d; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
 .topbar-select { padding: 6px 10px; background: #1e1e2e; color: #ccc; border: 1px solid #2a2a40; border-radius: 4px; font-size: 13px; cursor: pointer; }
 .topbar-select:hover { border-color: #4f46e5; }

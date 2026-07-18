@@ -2,6 +2,7 @@ import { state, findProject } from './data.js'
 import { openModal } from './modal.js'
 import { renderBoard, renderDocumentView } from './board.js'
 import { initDragDrop } from './dragdrop.js'
+import { renderMemberBar } from './members.js'
 
 export function render() {
   const sidebarEl = document.getElementById('sidebar')
@@ -28,6 +29,7 @@ export function render() {
   if (!state.selectedProjectId) {
     sidebar.innerHTML = '<div class="sidebar-hint">Select a project to view boards</div>'
     renderBoard()
+    renderMemberBar()
     return
   }
 
@@ -35,6 +37,7 @@ export function render() {
   if (!p) {
     sidebar.innerHTML = ''
     renderBoard()
+    renderMemberBar()
     return
   }
 
@@ -58,6 +61,7 @@ export function render() {
   sidebar.innerHTML = html
   renderBoard()
   initDragDrop(render)
+  renderMemberBar()
 }
 
 export function selectWorkspace(id) {

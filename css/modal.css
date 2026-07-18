@@ -42,14 +42,16 @@
 
 /* Right column — metadata */
 .cd-right { display: flex; flex-direction: column; gap: 14px; }
-.cd-right .cd-field { margin-bottom: 0; }
+.cd-right .cd-field { display: flex; flex-direction: column; gap: 2px; margin-bottom: 0; }
+.cd-right .cd-field label { margin-bottom: 0; }
 .cd-date-row { display: flex; gap: 8px; }
-.cd-date-row .cd-field { flex: 1; min-width: 0; }
+.cd-date-row .cd-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .cd-date-input { margin-bottom: 0 !important; }
 .cd-select { width: 100%; padding: 6px 10px; border: 1px solid #33334a; border-radius: 6px; background: #12121e; color: #d0d0e0; font-size: 13px; outline: none; margin-bottom: 0; cursor: pointer; appearance: auto; }
 .cd-select:focus { border-color: #4f46e5; }
 
-.cd-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; margin-bottom: 6px; }
+.cd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cd-right .cd-field .cd-chips { margin-bottom: 0; }
 .cd-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; line-height: 1.4; }
 .cd-tag { background: #2d2d50; color: #a78bfa; }
 .cd-member { background: #1e3a3a; color: #5eead4; }
@@ -63,18 +65,17 @@
 .cd-cl-progress { height: 4px; border-radius: 2px; background: #2a2a40; margin-bottom: 8px; overflow: hidden; position: relative; }
 .cd-cl-progress-bar { height: 100%; border-radius: 2px; transition: width .2s, background .2s; }
 .cd-cl-progress-text { font-size: 11px; color: #888; position: absolute; right: 0; top: -16px; font-variant-numeric: tabular-nums; }
-#cd-checklist { margin-bottom: 6px; max-height: 200px; overflow-y: auto; }
-#cd-checklist::-webkit-scrollbar { width: 5px; }
-#cd-checklist::-webkit-scrollbar-track { background: transparent; }
-#cd-checklist::-webkit-scrollbar-thumb { background: #3a3a55; border-radius: 3px; }
-.cd-checklist-item { display: flex; align-items: center; gap: 6px; padding: 5px 0; }
+#cd-checklist { margin-bottom: 6px; }
+.cd-checklist-item { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0; }
 .cd-cl-drag-handle { flex-shrink: 0; cursor: grab; color: #555; font-size: 14px; line-height: 1; padding: 0 2px; user-select: none; }
 .cd-cl-drag-handle:hover { color: #888; }
 .cd-cl-dragging { opacity: .4; }
 .cd-cl-drop-before { border-top: 2px solid #4f46e5 !important; margin-top: -1px; }
 .cd-cl-drop-before + .cd-checklist-item { border-top-color: transparent; }
 .cd-cl-drop-after { border-bottom: 2px solid #4f46e5; }
+.cd-cl-drop-nest { background: rgba(79,70,229,.12); border-radius: 4px; }
 .cd-checklist-item + .cd-checklist-item { border-top: 1px solid #2a2a3d; }
+.cd-cl-children .cd-checklist-item + .cd-checklist-item { border-top-color: transparent; }
 .cd-cl-checkbox { position: relative; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; margin: 0 !important; }
 .cd-cl-checkbox input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0 !important; padding: 0 !important; }
 .cd-cl-checkmark { position: absolute; inset: 0; border: 2px solid #555; border-radius: 3px; transition: background .15s, border-color .15s; }
@@ -82,9 +83,18 @@
 .cd-cl-checkbox input:checked + .cd-cl-checkmark { background: #4f46e5; border-color: #4f46e5; }
 .cd-cl-checkbox input:checked + .cd-cl-checkmark::after { opacity: 1; }
 .cd-cl-text { flex: 1; font-size: 13px; color: #d0d0e0; min-width: 0; word-break: break-word; }
-.cd-cl-done .cd-cl-text { text-decoration: line-through; color: #666; }
+.cd-cl-done > .cd-cl-text { text-decoration: line-through; color: #666; }
 .cd-cl-remove { flex-shrink: 0; background: none; border: none; color: #666; font-size: 16px; cursor: pointer; padding: 2px 4px; border-radius: 4px; line-height: 1; }
 .cd-cl-remove:hover { color: #ef4444; background: rgba(239,68,68,.1); }
+
+.cd-cl-nest, .cd-cl-unparent { flex-shrink: 0; background: none; border: none; color: #555; font-size: 14px; cursor: pointer; padding: 2px 4px; border-radius: 4px; line-height: 1; }
+.cd-cl-nest:hover, .cd-cl-unparent:hover { color: #4f46e5; background: rgba(79,70,229,.12); }
+
+.cd-cl-children { flex: 0 0 100%; border-left: 1px solid #2a2a40; padding-left: 4px; margin-top: 2px; margin-bottom: 2px; }
+.cd-cl-children .cd-cl-children { margin-left: 0; }
+
+.cd-cl-checkbox input:indeterminate + .cd-cl-checkmark { background: #4f46e5; border-color: #4f46e5; }
+.cd-cl-checkbox input:indeterminate + .cd-cl-checkmark::after { opacity: 1; left: 2px; top: 1px; width: 8px; height: 8px; border: none; background: #fff; border-radius: 1px; transform: none; }
 
 .cd-checklist-add { margin-top: 6px; }
 .cd-checklist-input { width: 100%; padding: 6px 10px; border: 1px solid #33334a; border-radius: 6px; background: #12121e; color: #d0d0e0; font-size: 13px; outline: none; margin-bottom: 6px !important; }

@@ -9,7 +9,9 @@
   <link rel="stylesheet" href="css/board.css">
   <link rel="stylesheet" href="css/modal.css">
   <link rel="stylesheet" href="css/timeline.css">
+  <link rel="stylesheet" href="css/calendar.css">
   <link rel="stylesheet" href="css/document.css">
+  <link rel="stylesheet" href="css/members.css">
 </head>
 <body>
 
@@ -27,10 +29,13 @@
     <div class="topbar-left">
       <span class="breadcrumb" id="breadcrumb"></span>
     </div>
-    <div class="view-switcher">
-      <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
-      <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
-      <button class="view-btn" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
+    <div class="topbar-right">
+      <div class="view-switcher">
+        <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
+        <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
+        <button class="view-btn" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
+      </div>
+      <div id="memberBar"></div>
     </div>
   </div>
   <div class="board-area" id="boardArea">

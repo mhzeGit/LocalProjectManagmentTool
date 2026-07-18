@@ -2,6 +2,11 @@ export const data = {
   workspaces: [
     {
       id: 'w1', name: 'Template Workspace',
+      members: [
+        { id: 'm1', name: 'Alice', avatar: '' },
+        { id: 'm2', name: 'Bob', avatar: '' },
+        { id: 'm3', name: 'Charlie', avatar: '' },
+      ],
       projects: [
         {
           id: 'p1', name: 'Template Project',
@@ -27,7 +32,7 @@ export const data = {
 let uid = 100
 export function genId() { return 'id' + (++uid) }
 
-export const PREDEFINED_MEMBERS = ['Alice', 'Bob', 'Charlie']
+export const PREDEFINED_MEMBERS = []
 
 export const state = {
   selectedWorkspaceId: 'w1',
@@ -35,6 +40,11 @@ export const state = {
   selectedBoardId: null,
   selectedDocumentId: 'd1',
   selectedView: 'kanban',
+  selfMemberId: null,
+}
+
+export function getCurrentWorkspace() {
+  return state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
 }
 
 export function findWorkspace(id) { return data.workspaces.find(w => w.id === id) }

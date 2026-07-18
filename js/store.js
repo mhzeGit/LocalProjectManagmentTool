@@ -5,7 +5,7 @@ import { closeModal } from './modal.js'
 export function createWorkspace() {
   const name = document.getElementById('modalInput').value.trim()
   if (!name) return
-  data.workspaces.push({ id: genId(), name, projects: [] })
+  data.workspaces.push({ id: genId(), name, members: [], projects: [] })
   closeModal()
   state.selectedWorkspaceId = data.workspaces[data.workspaces.length - 1].id
   state.selectedProjectId = null
@@ -232,14 +232,31 @@ function collectCardForm() {
   })
 
   const checklists = []
-  document.querySelectorAll('#cd-checklist .cd-checklist-item').forEach(el => {
-    const textEl = el.querySelector('.cd-cl-text')
-    const cb = el.querySelector('input[type="checkbox"]')
-    if (textEl && cb) {
-      const text = textEl.textContent.trim()
-      if (text) checklists.push({ text, completed: cb.checked })
+  function collectChildren(container) {
+    const items = []
+    for (let i = 0; i < container.children.length; i++) {
+      const child = container.children[i]
+      if (!child.matches('.cd-checklist-item')) continue
+      const textEl = child.querySelector(':scope > .cd-cl-text')
+      const cb = child.querySelector(':scope > .cd-cl-checkbox input[type="checkbox"]')
+      const childrenEl = child.querySelector(':scope > .cd-cl-children')
+      if (textEl && cb) {
+        const text = textEl.textContent.trim()
+        if (text) {
+          const item = { text, completed: cb.checked }
+          if (childrenEl && childrenEl.children.length > 0) {
+            item.items = collectChildren(childrenEl)
+          }
+          items.push(item)
+        }
+      }
     }
-  })
+    return items
+  }
+  const clContainer = document.getElementById('cd-checklist')
+  if (clContainer) {
+    checklists.push(...collectChildren(clContainer))
+  }
 
   return { title, description, startDate, endDate, priority, tags, members, checklists }
 }
