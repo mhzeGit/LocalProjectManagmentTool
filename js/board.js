@@ -44,7 +44,10 @@ export function renderBoard() {
 
   renderFilterBar()
 
+  const topbarEl = document.querySelector('.topbar')
+
   if (!w) {
+    if (topbarEl) topbarEl.style.display = 'none'
     destroyEditor()
     area.innerHTML =
       '<div class="onboarding">' +
@@ -60,6 +63,8 @@ export function renderBoard() {
       '</div>'
     return
   }
+
+  if (topbarEl) topbarEl.style.display = ''
 
   if (w && !p) {
     destroyEditor()
