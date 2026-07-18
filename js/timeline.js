@@ -10,7 +10,12 @@ const PRIORITY_COLORS = {
   low: '#22c55e',
   medium: '#3b82f6',
   high: '#f59e0b',
-  urgent: '#ef4444'
+  urgent: '#ef4444',
+  '1': '#22c55e',
+  '2': '#84cc16',
+  '3': '#f97316',
+  '4': '#f43f5e',
+  '5': '#ef4444'
 }
 let DAY_WIDTH = 108
 
@@ -712,7 +717,7 @@ document.addEventListener('click', function(e) {
         const existing = menu.dataset.cardId ? findCard(menu.dataset.cardId) : null
         const date = existing ? parseDate(existing.startDate) || parseDate(existing.endDate) || new Date() : pixelToDate(newPx)
         const endDate = existing ? parseDate(existing.endDate) || parseDate(existing.startDate) || new Date(date.getTime() + 86400000) : new Date(date.getTime() + 86400000)
-        const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: 'medium', tags: [], members: [], checklists: [] }
+        const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: '3', tags: [], members: [], checklists: [] }
         col.cards.push(card)
         renderTimeline()
       } else if (action === 'copy') {

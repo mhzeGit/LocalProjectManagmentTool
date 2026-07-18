@@ -1,4 +1,4 @@
-import { state, findCard, findBoard, findProject, findWorkspace, findDocument, getTagColor } from './data.js'
+import { state, findBoard, findProject, findWorkspace, findDocument, getTagColor } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
@@ -12,11 +12,16 @@ import { updateMenuBar } from './menubar.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
 
 const PRIORITY_BAR_CONFIG = {
-  none:   { filled: 0, color: '#6b7280' },
+  none:   { filled: 3, color: '#f97316' },
   low:    { filled: 1, color: '#22c55e' },
-  medium: { filled: 2, color: '#3b82f6' },
-  high:   { filled: 3, color: '#f59e0b' },
+  medium: { filled: 3, color: '#f97316' },
+  high:   { filled: 5, color: '#ef4444' },
   urgent: { filled: 5, color: '#ef4444' },
+  '1':    { filled: 1, color: '#22c55e' },
+  '2':    { filled: 2, color: '#84cc16' },
+  '3':    { filled: 3, color: '#f97316' },
+  '4':    { filled: 4, color: '#f43f5e' },
+  '5':    { filled: 5, color: '#ef4444' },
 }
 
 export function switchView(view) {
@@ -169,12 +174,12 @@ export function renderBoard() {
         html += '    <div class="card-cl-progress' + allDone + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
       }
       html += '  </div>'
-      if (c.priority && c.priority !== 'none') {
-        const cfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.none
-        html += '  <div class="card-priority" data-card-id="' + c.id + '">'
+      {
+        const cfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.medium
+        html += '  <div class="card-priority">'
         for (let i = 0; i < 5; i++) {
           const filled = i < cfg.filled ? ' filled' : ''
-          html += '<div class="card-priority-bar' + filled + '" data-index="' + i + '" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
+          html += '<div class="card-priority-bar' + filled + '" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
         }
         html += '  </div>'
       }
@@ -196,35 +201,6 @@ export function renderBoard() {
 
   if (!area._kanbanCtxDone) {
     area._kanbanCtxDone = true
-
-    area.addEventListener('mousedown', function(e) {
-      if (state.selectedView !== 'kanban' || e.button !== 0) return
-      const bar = e.target.closest('.card-priority-bar')
-      if (!bar) return
-      e.stopPropagation()
-      e.preventDefault()
-      const cardEl = bar.closest('.card')
-      if (!cardEl) return
-      const cardId = cardEl.dataset.cardId
-      if (!cardId) return
-      const index = parseInt(bar.dataset.index, 10)
-      const filledCount = index + 1
-      let best = 'low'
-      for (const entry of PRIORITY_FILLED_ORDER) {
-        if (entry.filled <= filledCount) best = entry.value
-      }
-      const card = findCard(cardId)
-      if (!card) return
-      card.priority = card.priority === best ? 'none' : best
-      if (window.__autoSave) window.__autoSave()
-      renderBoard()
-    })
-
-    area.addEventListener('click', function(e) {
-      if (e.target.closest('.card-priority-bar')) {
-        e.stopPropagation()
-      }
-    })
 
     area.addEventListener('contextmenu', function(e) {
       if (state.selectedView !== 'kanban') return

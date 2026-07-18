@@ -220,7 +220,7 @@ function collectCardForm() {
   const description = document.getElementById('cd-desc')?.value?.trim() || ''
   const startDate = document.getElementById('cd-start')?.value || null
   const endDate = document.getElementById('cd-end')?.value || null
-  const priority = document.getElementById('cd-priority')?.value || 'medium'
+  const priority = document.getElementById('cd-priority')?.value || '3'
 
   const tags = []
   document.querySelectorAll('#cd-tags .cd-chip[data-type="tag"]').forEach(el => {
@@ -359,7 +359,7 @@ export function addProjectDirect(workspaceId) {
 export function addCardDirect(columnId) {
   const col = findColumn(columnId)
   if (!col) return
-  const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] }
+  const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [] }
   col.cards.push(card)
   render()
   requestAnimationFrame(() => {

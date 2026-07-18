@@ -3,11 +3,11 @@ import { escapeHtml } from './utils.js'
 import { render } from './sidebar.js'
 
 const PRIORITIES = [
-  { value: 'none', label: 'None', color: '#6b7280' },
-  { value: 'low', label: 'Low', color: '#22c55e' },
-  { value: 'medium', label: 'Medium', color: '#3b82f6' },
-  { value: 'high', label: 'High', color: '#f59e0b' },
-  { value: 'urgent', label: 'Urgent', color: '#ef4444' },
+  { value: '1', label: '1', color: '#22c55e' },
+  { value: '2', label: '2', color: '#84cc16' },
+  { value: '3', label: '3', color: '#f97316' },
+  { value: '4', label: '4', color: '#f43f5e' },
+  { value: '5', label: '5', color: '#ef4444' },
 ]
 
 function getAvailableMembers() {

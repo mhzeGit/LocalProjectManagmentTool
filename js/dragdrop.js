@@ -327,7 +327,6 @@ export function initDragDrop(renderFn) {
         insertBeforeEl = placeholder.nextElementSibling
         if (insertBeforeEl && !insertBeforeEl.classList.contains('card')) insertBeforeEl = null
       }
-      board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
 
       let insertIdx = targetCol.cards.length
       if (insertBeforeEl && insertBeforeEl.dataset.cardId) {
@@ -346,16 +345,21 @@ export function initDragDrop(renderFn) {
       if (sourceCol.id === targetCol.id) {
         const cardEl = document.querySelector('.card[data-card-id="' + cardId + '"]')
         if (cardEl && cardEl.parentNode === targetZone) {
-          cardEl.classList.remove('dragging', 'dragging-collapsed')
-          const cards = targetZone.querySelectorAll('.card')
+          const otherCards = Array.from(targetZone.querySelectorAll('.card')).filter(function(el) { return el !== cardEl })
           const oldRects = new Map()
-          cards.forEach(function(el) {
-            if (el !== cardEl) oldRects.set(el, el.getBoundingClientRect())
-          })
+          otherCards.forEach(function(el) { oldRects.set(el, el.getBoundingClientRect()) })
+
+          if (placeholder && placeholder.parentNode === targetZone) placeholder.remove()
+
           const targetNext = insertBeforeEl && insertBeforeEl !== cardEl ? insertBeforeEl : null
           targetZone.insertBefore(cardEl, targetNext)
-          cards.forEach(function(el) {
-            if (el === cardEl) return
+
+          cardEl.style.transition = 'none'
+          cardEl.style.opacity = '1'
+          cardEl.classList.remove('dragging', 'dragging-collapsed')
+          void cardEl.offsetHeight
+
+          otherCards.forEach(function(el) {
             const oldRect = oldRects.get(el)
             if (oldRect) {
               const newRect = el.getBoundingClientRect()
@@ -367,20 +371,18 @@ export function initDragDrop(renderFn) {
               }
             }
           })
-          requestAnimationFrame(function() {
-            requestAnimationFrame(function() {
-              cards.forEach(function(el) {
-                if (el === cardEl) return
-                if (el.style.transform && el.style.transform !== 'none') {
-                  el.style.transition = 'transform 0.28s cubic-bezier(0.25, 0.8, 0.25, 1)'
-                  el.style.transform = 'translate(0, 0)'
-                }
-              })
-            })
+
+          void cardEl.offsetHeight
+          otherCards.forEach(function(el) {
+            if (el.style.transform && el.style.transform !== 'none') {
+              el.style.transition = 'transform 0.28s cubic-bezier(0.25, 0.8, 0.25, 1)'
+              el.style.transform = 'translate(0, 0)'
+            }
           })
         }
         if (window.__autoSave) window.__autoSave()
       } else {
+        board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
         if (_renderFn) _renderFn()
         if (window.__autoSave) window.__autoSave()
       }

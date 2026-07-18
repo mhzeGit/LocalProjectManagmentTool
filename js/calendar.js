@@ -11,7 +11,12 @@ const PRIORITY_COLORS = {
   low: '#22c55e',
   medium: '#3b82f6',
   high: '#f59e0b',
-  urgent: '#ef4444'
+  urgent: '#ef4444',
+  '1': '#22c55e',
+  '2': '#84cc16',
+  '3': '#f97316',
+  '4': '#f43f5e',
+  '5': '#ef4444'
 }
 
 let _calMonth = null
@@ -113,7 +118,7 @@ export function calendarAddCard(dateStr) {
     completed: false,
     startDate: formatDate(date),
     endDate: formatDate(endDate),
-    priority: 'medium',
+    priority: '3',
     tags: [],
     members: [],
     checklists: []

@@ -164,7 +164,7 @@ function saveAllToFolder(handle) {
               type: 'card', id: cd.id, title: cd.title,
               description: cd.description || '', completed: cd.completed || false,
               startDate: cd.startDate || null, endDate: cd.endDate || null,
-              priority: cd.priority || 'medium', tags: cd.tags || [],
+              priority: cd.priority || '3', tags: cd.tags || [],
               members: cd.members || [], checklists: cd.checklists || [],
               columnId: c.id
             }))
@@ -179,7 +179,7 @@ function saveAllToFolder(handle) {
             type: 'card', id: ac.id, title: ac.title,
             description: ac.description || '', completed: ac.completed || false,
             startDate: ac.startDate || null, endDate: ac.endDate || null,
-            priority: ac.priority || 'medium', tags: ac.tags || [],
+            priority: ac.priority || '3', tags: ac.tags || [],
             members: ac.members || [], checklists: ac.checklists || [],
             archived: true, boardId: b.id
           }))
@@ -202,7 +202,7 @@ function saveAllToFolder(handle) {
               type: 'card', id: axcd.id, title: axcd.title,
               description: axcd.description || '', completed: axcd.completed || false,
               startDate: axcd.startDate || null, endDate: axcd.endDate || null,
-              priority: axcd.priority || 'medium', tags: axcd.tags || [],
+              priority: axcd.priority || '3', tags: axcd.tags || [],
               members: axcd.members || [], checklists: axcd.checklists || [],
               archived: true, columnId: axc.id
             }))
@@ -328,7 +328,7 @@ function reconstructData(allData, stateData) {
               completed: cdMeta.completed || false,
               startDate: cdMeta.startDate || null,
               endDate: cdMeta.endDate || null,
-              priority: cdMeta.priority || 'medium',
+              priority: cdMeta.priority || '3',
               tags: cdMeta.tags || [],
               members: cdMeta.members || [],
               checklists: cdMeta.checklists || []
@@ -370,7 +370,7 @@ function reconstructData(allData, stateData) {
               completed: cdMeta.completed || false,
               startDate: cdMeta.startDate || null,
               endDate: cdMeta.endDate || null,
-              priority: cdMeta.priority || 'medium',
+              priority: cdMeta.priority || '3',
               tags: cdMeta.tags || [],
               members: cdMeta.members || [],
               checklists: cdMeta.checklists || []

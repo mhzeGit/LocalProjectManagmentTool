@@ -2,18 +2,24 @@ import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor } from '.
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 
 const PRIORITY_BAR_CONFIG = {
-  none:   { filled: 0, color: '#6b7280' },
+  none:   { filled: 3, color: '#f97316' },
   low:    { filled: 1, color: '#22c55e' },
-  medium: { filled: 2, color: '#3b82f6' },
-  high:   { filled: 3, color: '#f59e0b' },
+  medium: { filled: 3, color: '#f97316' },
+  high:   { filled: 5, color: '#ef4444' },
   urgent: { filled: 5, color: '#ef4444' },
+  '1':    { filled: 1, color: '#22c55e' },
+  '2':    { filled: 2, color: '#84cc16' },
+  '3':    { filled: 3, color: '#f97316' },
+  '4':    { filled: 4, color: '#f43f5e' },
+  '5':    { filled: 5, color: '#ef4444' },
 }
 
 const PRIORITY_FILLED_ORDER = [
-  { filled: 1, value: 'low' },
-  { filled: 2, value: 'medium' },
-  { filled: 3, value: 'high' },
-  { filled: 5, value: 'urgent' },
+  { filled: 1, value: '1' },
+  { filled: 2, value: '2' },
+  { filled: 3, value: '3' },
+  { filled: 4, value: '4' },
+  { filled: 5, value: '5' },
 ]
 
 function applyPriorityValue(value) {
@@ -31,7 +37,8 @@ function applyPriorityValue(value) {
     bars[i].style.background = cfg.color
     bars[i].style.color = cfg.color
   }
-  if (label) label.textContent = value.charAt(0).toUpperCase() + value.slice(1)
+  const displayVal = (value && value !== 'none') ? value : '3'
+  if (label) label.textContent = displayVal
 }
 
 function setPriorityFromClientX(clientX, picker) {
@@ -59,7 +66,7 @@ function renderPriorityPicker() {
   const hidden = document.getElementById('cd-priority')
   const label = document.getElementById('cd-pp-label')
   if (!picker || !hidden) return
-  const val = hidden.value || 'medium'
+  const val = hidden.value || '3'
   const cfg = PRIORITY_BAR_CONFIG[val] || PRIORITY_BAR_CONFIG.medium
   let html = ''
   for (let i = 0; i < 5; i++) {
@@ -67,7 +74,8 @@ function renderPriorityPicker() {
     html += '<div class="cd-pp-bar' + filled + '" data-index="' + i + '" data-action="set-priority" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
   }
   picker.innerHTML = html
-  if (label) label.textContent = val.charAt(0).toUpperCase() + val.slice(1)
+  const displayVal = (val && val !== 'none') ? val : '3'
+  if (label) label.textContent = displayVal
 }
 
 let _editingCardId = null
@@ -92,7 +100,7 @@ export function openModal(type, parentId) {
     body.innerHTML = '<label>Column Name</label><input id="modalInput" placeholder="e.g. In Review" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createColumn(\'' + parentId + '\')">Add</button></div>'
   } else if (type === 'card') {
     title.textContent = 'Create Card'
-    body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: 'medium', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
+    body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
     renderPriorityPicker()
   } else if (type === 'document') {
     title.textContent = 'Create Document'
@@ -167,10 +175,12 @@ function buildCardForm(c, saveAction) {
 
   html += '      <div class="cd-field">'
   html += '        <label>Priority</label>'
-  html += '        <input type="hidden" id="cd-priority" value="' + (c.priority || 'medium') + '">'
-  html += '        <div class="cd-priority-picker" id="cd-priority-picker"></div>'
-  const labelText = c.priority ? c.priority.charAt(0).toUpperCase() + c.priority.slice(1) : 'Medium'
-  html += '        <span class="cd-pp-label" id="cd-pp-label">' + labelText + '</span>'
+  const initPriority = (c.priority && c.priority !== 'none') ? c.priority : '3'
+  html += '        <input type="hidden" id="cd-priority" value="' + initPriority + '">'
+  html += '        <div class="cd-priority-row">'
+  html += '          <div class="cd-priority-picker" id="cd-priority-picker"></div>'
+  html += '          <span class="cd-pp-label" id="cd-pp-label">' + initPriority + '</span>'
+  html += '        </div>'
   html += '      </div>'
 
   html += '      <div class="cd-field">'
