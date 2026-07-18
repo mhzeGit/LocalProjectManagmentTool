@@ -91,7 +91,7 @@
   --tl-bar-resize-hover: rgba(255, 255, 255, 0.18);
   --tl-bar-resize-active: rgba(255, 255, 255, 0.3);
   --tl-bar-done-text: rgba(255, 255, 255, 0.5);
-  --tl-bar-cl-progress: rgba(0, 0, 0, 0.3);
+  --tl-bar-cl-progress: rgba(0, 0, 0, 0.5);
   --tl-drag-over: rgba(79, 70, 229, 0.12);
   --tl-drag-over-us: rgba(79, 70, 229, 0.18);
   --tl-preview-bg: rgba(79, 70, 229, 0.13);
@@ -240,7 +240,7 @@
   --tl-bar-resize-hover: rgba(0, 0, 0, 0.08);
   --tl-bar-resize-active: rgba(0, 0, 0, 0.15);
   --tl-bar-done-text: rgba(0, 0, 0, 0.35);
-  --tl-bar-cl-progress: rgba(0, 0, 0, 0.15);
+  --tl-bar-cl-progress: rgba(0, 0, 0, 0.35);
   --tl-drag-over: rgba(79, 70, 229, 0.1);
   --tl-drag-over-us: rgba(79, 70, 229, 0.12);
   --tl-preview-bg: rgba(79, 70, 229, 0.08);
@@ -387,7 +387,7 @@
   --tl-bar-resize-hover: rgba(255, 255, 255, 0.1);
   --tl-bar-resize-active: rgba(255, 255, 255, 0.2);
   --tl-bar-done-text: rgba(255, 255, 255, 0.35);
-  --tl-bar-cl-progress: rgba(0, 0, 0, 0.35);
+  --tl-bar-cl-progress: rgba(0, 0, 0, 0.55);
   --tl-drag-over: rgba(120, 120, 168, 0.12);
   --tl-drag-over-us: rgba(120, 120, 168, 0.18);
   --tl-preview-bg: rgba(120, 120, 168, 0.13);

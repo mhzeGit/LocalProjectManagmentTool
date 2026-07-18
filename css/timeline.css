@@ -298,6 +298,29 @@
   border-color: var(--accent);
 }
 
+.tl-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.08) 1px, transparent 3px);
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+}
+.tl-bar[style*="--card-color"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--card-color);
+  opacity: 0.20;
+  pointer-events: none;
+}
 .tl-bar-done { opacity: 0.55; }
 .tl-bar-done .tl-bar-title { text-decoration: line-through; color: var(--tl-bar-done-text); }
 
@@ -417,6 +440,7 @@
 }
 
 .tl-ucard {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -429,6 +453,29 @@
   flex-shrink: 0;
   max-width: 220px;
   touch-action: none;
+}
+.tl-ucard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.08) 1px, transparent 3px);
+  border-radius: 5px 5px 0 0;
+  pointer-events: none;
+}
+.tl-ucard[style*="--card-color"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--card-color);
+  opacity: 0.18;
+  pointer-events: none;
 }
 
 .tl-ucard:hover {

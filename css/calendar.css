@@ -225,6 +225,7 @@
 }
 
 .cal-ucard {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -237,6 +238,29 @@
   flex-shrink: 0;
   max-width: 200px;
   touch-action: none;
+}
+.cal-ucard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.08) 1px, transparent 3px);
+  border-radius: 4px 4px 0 0;
+  pointer-events: none;
+}
+.cal-ucard[style*="--card-color"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--card-color);
+  opacity: 0.18;
+  pointer-events: none;
 }
 
 .cal-ucard:hover {
@@ -306,6 +330,29 @@
   pointer-events: auto;
   box-sizing: border-box;
   position: relative;
+}
+.cal-span-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.08) 1px, transparent 3px);
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+}
+.cal-span-card[style*="--card-color"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--card-color);
+  opacity: 0.20;
+  pointer-events: none;
 }
 
 .cal-span-card:hover {

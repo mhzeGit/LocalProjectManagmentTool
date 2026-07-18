@@ -695,10 +695,10 @@ export function renderCalendar() {
       dateStr = formatShortDate(c.endDate)
     }
 
-    const calSpanBg = c.color || 'var(--bg-card)'
+    const calSpanColorStyle = c.color ? '--card-color:' + c.color + ';' : ''
     const lane = seg.lane || 0
     const marginTop = 26 + lane * 30
-    html += '<div class="cal-span-card' + completed + '" data-card-id="' + c.id + '" style="grid-column:' + seg.colStart + '/' + seg.colEnd + ';grid-row:' + seg.row + ';margin-top:' + marginTop + 'px;background:' + calSpanBg + '" title="' + escapeHtml(c.title) + '">'
+    html += '<div class="cal-span-card' + completed + '" data-card-id="' + c.id + '" style="grid-column:' + seg.colStart + '/' + seg.colEnd + ';grid-row:' + seg.row + ';margin-top:' + marginTop + 'px;background:var(--bg-card);' + calSpanColorStyle + '" title="' + escapeHtml(c.title) + '">'
     html += '    <div class="cal-span-resize cal-span-resize-l" data-side="start"></div>'
     html += '    <span class="cal-span-title">' + escapeHtml(c.title) + '</span>'
     if (dateStr) {
@@ -730,7 +730,7 @@ export function renderCalendar() {
       for (const item of colUndated) {
         const c = item.card
         const completed = c.completed ? ' cal-ucard-done' : ''
-        const calUcardColorStyle = c.color ? 'border-left:3px solid ' + c.color + ';' : ''
+        const calUcardColorStyle = c.color ? '--card-color:' + c.color + ';' : ''
         html += '        <div class="cal-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" style="' + calUcardColorStyle + '">'
         html += '          <span class="cal-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
         html += '          <span class="cal-ucard-title">' + escapeHtml(c.title) + '</span>'

@@ -42,8 +42,8 @@
 .column-footer { padding: 4px 8px 8px; }
 .btn-add-card { display: flex; align-items: center; gap: 4px; width: 100%; padding: 6px 8px; border-radius: 6px; color: var(--text-dim); font-size: 13px; }
 .btn-add-card:hover { background: var(--bg-surface-hover); color: var(--text-secondary); }
-.card { position: relative; background: var(--bg-card); border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow-sm); cursor: pointer; border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; transition: opacity .15s; }
-.card:hover { box-shadow: 0 2px 10px var(--shadow-md); border-color: var(--accent); }
+.card { position: relative; background: var(--bg-card); border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08); cursor: pointer; border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; transition: opacity .15s; }
+.card:hover { box-shadow: 0 2px 10px var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.08); border-color: var(--accent); }
 .card.completed { opacity: .55; }
 .card.completed .card-title { text-decoration: line-through; color: var(--text-dim); }
 .card-check { flex-shrink: 0; padding: 2px 0; cursor: pointer; }
@@ -69,17 +69,6 @@
 .card-actions button:hover { text-decoration: underline; }
 .card[style*="--card-color"] { border-left: 4px solid var(--card-color); }
 .card[style*="--card-color"]:hover { border-color: var(--card-color); }
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 6px 6px 0 0;
-  pointer-events: none;
-}
 .card { will-change: transform; }
 
 .card[style*="--card-color"]::after {
