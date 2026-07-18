@@ -1,5 +1,10 @@
 import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { getResolvedAvatar } from './persistence.js'
+
+function getInitials(name) {
+  return name.split(/\s+/).map(s => s[0]).join('').toUpperCase().slice(0, 2) || '?'
+}
 
 const PRIORITY_BAR_CONFIG = {
   none:   { filled: 3, color: '#f97316' },
@@ -128,6 +133,8 @@ function buildCardForm(c, saveAction) {
   const tags = c.tags || []
   const members = c.members || []
   const checklists = c.checklists || []
+  const wsTags = getWorkspaceTags()
+  const wsMembers = getWorkspaceMembersForCard()
 
   let html = ''
   html += '<div class="cd-scroll">'
@@ -191,33 +198,58 @@ function buildCardForm(c, saveAction) {
     html += '          <span class="cd-chip cd-tag" data-type="tag" data-value="' + escapeHtml(t) + '"><span class="cd-tag-dot" style="background:' + color + '"></span>' + escapeHtml(t) + '<span class="cd-chip-remove" data-action="remove-chip">×</span></span>'
   }
   html += '        </div>'
-  html += '        <select id="cd-tag-select" class="cd-select cd-tag-select">'
-  html += '          <option value="">Select tag\u2026</option>'
-  const wsTags = getWorkspaceTags()
+  html += '        <div class="cd-dropdown" id="cd-tag-dropdown">'
+  html += '          <button class="cd-dropdown-trigger" type="button">'
+  html += '            <span class="cd-dropdown-placeholder">Select tag\u2026</span>'
+  html += '            <span class="cd-dropdown-arrow">\u25BE</span>'
+  html += '          </button>'
+  html += '          <div class="cd-dropdown-menu" id="cd-tag-menu">'
   for (const t of wsTags) {
     if (!tags.includes(t.name)) {
-      html += '          <option value="' + escapeHtml(t.name) + '">' + escapeHtml(t.name) + '</option>'
+      html += '            <div class="cd-dropdown-option" data-value="' + escapeHtml(t.name) + '"><span class="cd-dropdown-option-tag-dot" style="background:' + t.color + '"></span><span class="cd-dropdown-option-text">' + escapeHtml(t.name) + '</span></div>'
     }
   }
-  html += '        </select>'
+  html += '          </div>'
+  html += '        </div>'
   html += '      </div>'
 
   html += '      <div class="cd-field">'
   html += '        <label>Members</label>'
   html += '        <div class="cd-chips" id="cd-members">'
   for (const m of members) {
-    html += '          <span class="cd-chip cd-member" data-type="member">' + escapeHtml(m) + '<span class="cd-chip-remove" data-action="remove-chip">×</span></span>'
+    const mo = wsMembers.find(wm => wm.name === m)
+    let avatarHtml = ''
+    if (mo) {
+      const avatarUrl = getResolvedAvatar(mo)
+      if (avatarUrl) {
+        avatarHtml = '<img class="cd-chip-avatar" src="' + avatarUrl + '">'
+      } else {
+        avatarHtml = '<span class="cd-chip-avatar cd-chip-avatar-initials">' + getInitials(m) + '</span>'
+      }
+    }
+    html += '          <span class="cd-chip cd-member" data-type="member" data-value="' + escapeHtml(m) + '">' + avatarHtml + escapeHtml(m) + '<span class="cd-chip-remove" data-action="remove-chip">×</span></span>'
   }
   html += '        </div>'
-  html += '        <select id="cd-member-select" class="cd-select cd-member-select">'
-  html += '          <option value="">Select member…</option>'
-  const wsMembers = getWorkspaceMembersForCard()
+  html += '        <div class="cd-dropdown" id="cd-member-dropdown">'
+  html += '          <button class="cd-dropdown-trigger" type="button">'
+  html += '            <span class="cd-dropdown-placeholder">Select member\u2026</span>'
+  html += '            <span class="cd-dropdown-arrow">\u25BE</span>'
+  html += '          </button>'
+  html += '          <div class="cd-dropdown-menu" id="cd-member-menu">'
   for (const m of wsMembers) {
     if (!members.includes(m.name)) {
-      html += '          <option value="' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</option>'
+      const avatarUrl = getResolvedAvatar(m)
+      let avatarHtml = ''
+      if (avatarUrl) {
+        avatarHtml = '<img class="cd-dropdown-option-avatar" src="' + avatarUrl + '">'
+      } else {
+        avatarHtml = '<span class="cd-dropdown-option-avatar cd-dropdown-option-avatar-initials">' + getInitials(m.name) + '</span>'
+      }
+      html += '            <div class="cd-dropdown-option" data-value="' + escapeHtml(m.name) + '">' + avatarHtml + '<span class="cd-dropdown-option-text">' + escapeHtml(m.name) + '</span></div>'
     }
   }
-  html += '        </select>'
+  html += '          </div>'
+  html += '        </div>'
   html += '      </div>'
 
   html += '      <div class="cd-field">'
@@ -300,20 +332,7 @@ export function setupModalKeyboard() {
       updateChecklistProgress()
       return
     }
-    if (target.id === 'cd-member-select') {
-      const name = target.value.trim()
-      if (!name) return
-      addMemberChip(name)
-      target.value = ''
-      refreshMemberSelect()
-    }
-    if (target.id === 'cd-tag-select') {
-      const name = target.value.trim()
-      if (!name) return
-      addTagChip(name)
-      target.value = ''
-      refreshTagSelect()
-    }
+
   })
 
   overlay.addEventListener('click', function(e) {
@@ -329,6 +348,40 @@ export function setupModalKeyboard() {
       })
       return
     }
+
+    if (target.closest('.cd-dropdown-trigger')) {
+      const dd = target.closest('.cd-dropdown')
+      if (dd.classList.contains('open')) {
+        closeAllDropdowns()
+      } else {
+        closeAllDropdowns()
+        dd.classList.add('open')
+      }
+      return
+    }
+
+    if (target.closest('.cd-dropdown-option')) {
+      const opt = target.closest('.cd-dropdown-option')
+      const dd = opt.closest('.cd-dropdown')
+      if (dd && opt.dataset.value) {
+        if (dd.id === 'cd-member-dropdown') {
+          addMemberChip(opt.dataset.value)
+          refreshMemberSelect()
+        } else if (dd.id === 'cd-tag-dropdown') {
+          addTagChip(opt.dataset.value)
+          refreshTagSelect()
+        }
+      }
+      closeAllDropdowns()
+      return
+    }
+
+    if (target.closest('.cd-dropdown-menu')) {
+      closeAllDropdowns()
+      return
+    }
+
+    closeAllDropdowns()
 
     if (!action) {
       if (e.target === this) {
@@ -674,23 +727,44 @@ function addMemberChip(name) {
   const chip = document.createElement('span')
   chip.className = 'cd-chip cd-member'
   chip.dataset.type = 'member'
-  chip.innerHTML = escapeHtml(name) + '<span class="cd-chip-remove" data-action="remove-chip">×</span>'
+  chip.dataset.value = name
+  const wsMembers = getWorkspaceMembersForCard()
+  const mo = wsMembers.find(m => m.name === name)
+  let avatarHtml = ''
+  if (mo) {
+    const avatarUrl = getResolvedAvatar(mo)
+    if (avatarUrl) {
+      avatarHtml = '<img class="cd-chip-avatar" src="' + avatarUrl + '">'
+    } else {
+      avatarHtml = '<span class="cd-chip-avatar cd-chip-avatar-initials">' + getInitials(name) + '</span>'
+    }
+  }
+  chip.innerHTML = avatarHtml + escapeHtml(name) + '<span class="cd-chip-remove" data-action="remove-chip">×</span>'
   container.appendChild(chip)
 }
 
 function refreshMemberSelect() {
-  const select = document.getElementById('cd-member-select')
-  if (!select) return
+  const menu = document.getElementById('cd-member-menu')
+  if (!menu) return
   const used = new Set()
   document.querySelectorAll('#cd-members .cd-chip[data-type="member"]').forEach(el => {
-    const text = el.childNodes[0]?.nodeValue?.trim()
+    const text = el.dataset.value || el.childNodes[0]?.nodeValue?.trim()
     if (text) used.add(text)
   })
-  select.innerHTML = '<option value="">Select member…</option>'
+  menu.innerHTML = ''
   const wsMembers = getWorkspaceMembersForCard()
   for (const m of wsMembers) {
     if (!used.has(m.name)) {
-      select.innerHTML += '<option value="' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</option>'
+      const opt = document.createElement('div')
+      opt.className = 'cd-dropdown-option'
+      opt.dataset.value = m.name
+      const avatarUrl = getResolvedAvatar(m)
+      if (avatarUrl) {
+        opt.innerHTML = '<img class="cd-dropdown-option-avatar" src="' + avatarUrl + '"><span class="cd-dropdown-option-text">' + escapeHtml(m.name) + '</span>'
+      } else {
+        opt.innerHTML = '<span class="cd-dropdown-option-avatar cd-dropdown-option-avatar-initials">' + getInitials(m.name) + '</span><span class="cd-dropdown-option-text">' + escapeHtml(m.name) + '</span>'
+      }
+      menu.appendChild(opt)
     }
   }
 }
@@ -713,18 +787,26 @@ function addTagChip(name) {
 }
 
 function refreshTagSelect() {
-  const select = document.getElementById('cd-tag-select')
-  if (!select) return
+  const menu = document.getElementById('cd-tag-menu')
+  if (!menu) return
   const used = new Set()
   document.querySelectorAll('#cd-tags .cd-chip[data-type="tag"]').forEach(el => {
     const text = el.dataset.value || el.childNodes[0]?.nodeValue?.trim()
     if (text) used.add(text)
   })
-  select.innerHTML = '<option value="">Select tag\u2026</option>'
+  menu.innerHTML = ''
   const wsTags = getWorkspaceTags()
   for (const t of wsTags) {
     if (!used.has(t.name)) {
-      select.innerHTML += '<option value="' + escapeHtml(t.name) + '">' + escapeHtml(t.name) + '</option>'
+      const opt = document.createElement('div')
+      opt.className = 'cd-dropdown-option'
+      opt.dataset.value = t.name
+      opt.innerHTML = '<span class="cd-dropdown-option-tag-dot" style="background:' + t.color + '"></span><span class="cd-dropdown-option-text">' + escapeHtml(t.name) + '</span>'
+      menu.appendChild(opt)
     }
   }
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('#modal.open .cd-dropdown.open').forEach(el => el.classList.remove('open'))
 }

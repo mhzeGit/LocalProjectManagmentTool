@@ -123,6 +123,33 @@
 .cd-color-swatch-none:hover { border-color: var(--danger); color: var(--danger); }
 .cd-color-swatch-none.cd-color-swatch-selected { border-color: var(--danger) !important; box-shadow: 0 0 0 2px var(--bg-panel), 0 0 0 4px var(--danger); }
 
+/* Custom dropdown (replaces native select for members & tags) */
+.cd-dropdown { position: relative; margin-top: 4px; }
+.cd-dropdown-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 6px 10px; border: 1px solid var(--border-input); border-radius: 6px; background: var(--bg-input); color: var(--text-placeholder); font-size: 13px; cursor: pointer; text-align: left; outline: none; }
+.cd-dropdown-trigger:hover { border-color: var(--accent); }
+.cd-dropdown-trigger:focus { border-color: var(--accent); }
+.cd-dropdown.open .cd-dropdown-trigger { border-color: var(--accent); }
+.cd-dropdown-arrow { font-size: 12px; color: var(--text-muted); margin-left: 8px; transition: transform .15s; }
+.cd-dropdown.open .cd-dropdown-arrow { transform: rotate(180deg); }
+.cd-dropdown-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 10; max-height: 200px; overflow-y: auto; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px var(--shadow-lg); }
+.cd-dropdown.open .cd-dropdown-menu { display: block; }
+.cd-dropdown-menu::-webkit-scrollbar { width: 6px; }
+.cd-dropdown-menu::-webkit-scrollbar-track { background: transparent; }
+.cd-dropdown-menu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+.cd-dropdown-option { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; color: var(--text-primary); transition: background .1s; }
+.cd-dropdown-option:first-child { border-radius: 8px 8px 0 0; }
+.cd-dropdown-option:last-child { border-radius: 0 0 8px 8px; }
+.cd-dropdown-option:only-child { border-radius: 8px; }
+.cd-dropdown-option:hover { background: var(--bg-surface-hover); }
+.cd-dropdown-option-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-dropdown-option-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cd-dropdown-option-avatar-initials { display: inline-flex; align-items: center; justify-content: center; background: var(--member-avatar-bg, #e2e8f0); color: var(--member-avatar-color, #64748b); font-size: 10px; font-weight: 600; }
+.cd-dropdown-option-tag-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+
+/* Avatar in member chips */
+.cd-chip-avatar { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cd-chip-avatar-initials { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--member-avatar-bg, #e2e8f0); color: var(--member-avatar-color, #64748b); font-size: 8px; font-weight: 600; flex-shrink: 0; }
+
 /* Card form footer (bottom-right, always visible) */
 .cd-form-footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0 0; flex-shrink: 0; }
 .cd-form-footer button { padding: 7px 14px; border-radius: 6px; font-size: 13px; }

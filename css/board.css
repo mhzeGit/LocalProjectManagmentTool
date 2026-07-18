@@ -181,7 +181,7 @@
 .lv-sort-dir { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border-strong); background: var(--bg-surface-hover); }
 .lv-sort-dir:hover { border-color: var(--accent); color: var(--text-primary); }
 .lv-sort-icon { display: block; }
-.lv-header { display: grid; grid-template-columns: 32px 16px 2fr 1fr 80px 1fr 100px 100px 100px 1fr; gap: 0; background: var(--bg-panel-alt); border: 1px solid var(--border); border-radius: 8px 8px 0 0; border-bottom: none; }
+.lv-header { display: grid; grid-template-columns: 32px 16px 2fr 1fr 80px 1fr 100px 100px 100px 1fr; gap: 0; background: var(--bg-strong); border: 1px solid var(--border); border-radius: 8px 8px 0 0; border-bottom: none; }
 .lv-cell { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px; }
 .lv-header .lv-cell { padding: 10px 12px; }
 .lv-row .lv-cell { padding: 12px; }
@@ -190,8 +190,8 @@
 .lv-cell-check { justify-content: center; }
 .lv-cell-color { padding: 0; justify-content: center; }
 .lv-body { border: 1px solid var(--border); border-radius: 0 0 8px 8px; overflow: hidden; background: var(--bg-panel); }
-.lv-row { display: grid; grid-template-columns: 32px 16px 2fr 1fr 80px 1fr 100px 100px 100px 1fr; gap: 0; cursor: pointer; background: var(--bg-card); border-radius: 6px; margin: 0 8px 6px; border: 1px solid var(--border); box-shadow: 0 1px 3px var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08); transition: opacity .15s, box-shadow .15s, border-color .15s; }
-.lv-row:first-child { margin-top: 8px; }
+.lv-row { display: grid; grid-template-columns: 32px 16px 2fr 1fr 80px 1fr 100px 100px 100px 1fr; gap: 0; cursor: pointer; background: var(--bg-card); border-radius: 6px; margin: 0 4px 4px; border: 1px solid var(--border); box-shadow: 0 1px 3px var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08); transition: opacity .15s, box-shadow .15s, border-color .15s; }
+.lv-row:first-child { margin-top: 4px; }
 .lv-row:hover { box-shadow: 0 2px 10px var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.08); border-color: var(--accent); }
 .lv-row-done { opacity: .55; }
 .lv-row-done .lv-title-text { text-decoration: line-through; color: var(--text-dim); }
