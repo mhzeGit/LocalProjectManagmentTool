@@ -236,7 +236,7 @@ export function renderTimeline() {
     const laneBarH = 28
     const laneGap = 4
     const trackPadV = numLanes > 1 ? 6 : Math.floor((52 - laneBarH) / 2)
-    const trackHeight = Math.max(52, trackPadV * 2 + numLanes * laneBarH + (numLanes - 1) * laneGap)
+    const trackHeight = Math.max(52, trackPadV * 2 + (numLanes + 1) * laneBarH + numLanes * laneGap)
 
     html += '<div class="tl-row" data-col-id="' + col.id + '">'
     html += '  <div class="tl-row-label" draggable="true" data-col-id="' + col.id + '" style="min-height:' + trackHeight + 'px">'
@@ -270,10 +270,7 @@ export function renderTimeline() {
       const completed = c.completed ? ' tl-bar-done' : ''
       const barLabel = c.title.length > 25 ? c.title.slice(0, 24) + '\u2026' : c.title
 
-      let barStyle = 'left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color
-      if (numLanes > 1) {
-        barStyle += ';top:' + barTop + 'px;height:' + laneBarH + 'px;transform:none'
-      }
+      let barStyle = 'left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color + ';top:' + barTop + 'px;height:' + laneBarH + 'px;transform:none'
       html += '    <div class="tl-bar' + completed + '" data-card-id="' + c.id + '" style="' + barStyle + '" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
       html += '      <div class="tl-bar-resize tl-bar-resize-l" data-resize="start"></div>'
       if (barWidth > 28) {

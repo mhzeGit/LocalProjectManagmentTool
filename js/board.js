@@ -60,7 +60,7 @@ export function renderBoard() {
 
   const ioEl = document.getElementById('boardIO')
   if (ioEl) {
-    if (b && w && !state.selectedDashboard && !state.selectedDocumentId && state.selectedView === 'kanban') {
+    if (b && w && !state.selectedDashboard && !state.selectedDocumentId) {
       ioEl.classList.remove('hidden')
     } else {
       ioEl.classList.add('hidden')
