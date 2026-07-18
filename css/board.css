@@ -1,5 +1,5 @@
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.topbar { padding: 16px 24px; background: var(--bg-topbar); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
+.topbar { padding: 8px 24px; background: var(--bg-topbar); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
 .topbar-select { padding: 6px 10px; background: var(--bg-panel-alt); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; cursor: pointer; }
@@ -20,7 +20,7 @@
 
 #boardIO { display: flex; align-items: center; gap: 6px; }
 #boardIO.hidden { display: none; }
-.btn-board-io { padding: 5px 12px; font-size: 11px; font-weight: 500; border: 1px solid var(--border-strong); background: var(--bg-surface-hover); color: var(--text-secondary); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
+.btn-board-io { display: flex; align-items: center; justify-content: center; padding: 6px; font-size: 11px; font-weight: 500; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-surface-hover); color: var(--text-secondary); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
 .btn-board-io:hover { background: var(--accent-subtle); color: var(--text-primary); border-color: var(--accent); }
 .board-area.grabbing { cursor: grabbing; }
 .board-area::-webkit-scrollbar { height: 8px; }
