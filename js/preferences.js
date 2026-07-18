@@ -10,10 +10,21 @@ const categories = [
   { id: 'general', label: 'General', icon: '\u2699\ufe0f', render: renderGeneralTab },
 ]
 
-export function openPreferences() {
+document.getElementById('preferences-overlay')?.addEventListener('click', function(e) {
+  if (e.target === this) closePreferences()
+})
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('preferences-overlay')
+    if (overlay && overlay.classList.contains('open')) closePreferences()
+  }
+})
+
+export function openPreferences(categoryId) {
   const overlay = document.getElementById('preferences-overlay')
   overlay.classList.add('open')
-  activeCategoryId = categories[0].id
+  activeCategoryId = categoryId && categories.find(c => c.id === categoryId) ? categoryId : categories[0].id
   _prefEditingMemberId = null
   renderPreferences()
 }

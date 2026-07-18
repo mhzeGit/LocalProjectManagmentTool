@@ -223,8 +223,6 @@ export function setupModalKeyboard() {
 
     if (!action) {
       if (e.target === this) {
-        const mmContainer = this.querySelector('.mm-container')
-        if (mmContainer) { closeModal(); return }
         const confirmBtn = this.querySelector('.btn-confirm')
         if (confirmBtn) { confirmBtn.click() }
         else { closeModal() }

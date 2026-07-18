@@ -355,6 +355,16 @@
   transition: width .2s, background .2s;
 }
 
+.cal-span-clone {
+  z-index: 1;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.cal-span-clone .cal-span-resize {
+  display: none;
+}
+
 .cal-span-resize {
   position: absolute;
   top: 0;

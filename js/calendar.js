@@ -206,8 +206,7 @@ function initCalendarDrag() {
         origStartCol: startCol,
         origEndCol: endCol,
         origRow: origRow,
-        mouseCol: null,
-        mouseRow: null
+        clones: []
       }
       document.body.style.cursor = 'ew-resize'
       document.body.style.userSelect = 'none'
@@ -283,21 +282,66 @@ document.addEventListener('mousemove', function(e) {
 
   if (_resizing && _resizing.el) {
     e.preventDefault()
-    const mouseCol = Math.floor((e.clientX - rect.left) / cellW) + 1
-    const mouseRow = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
-    _resizing.mouseCol = mouseCol
-    _resizing.mouseRow = mouseRow
+
+    for (var ci = 0; ci < _resizing.clones.length; ci++) {
+      if (_resizing.clones[ci].parentNode) _resizing.clones[ci].parentNode.removeChild(_resizing.clones[ci])
+    }
+    _resizing.clones = []
+
+    var mouseCol = Math.floor((e.clientX - rect.left) / cellW) + 1
+    var mouseRow = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
+    mouseCol = Math.max(1, Math.min(mouseCol, 7))
+
+    if (_resizing.dir === 'start' && mouseRow > _resizing.origRow) {
+      mouseRow = _resizing.origRow
+    }
+    if (_resizing.dir === 'end' && mouseRow < _resizing.origRow) {
+      mouseRow = _resizing.origRow
+    }
 
     var s = _resizing.origStartCol
     var e2 = _resizing.origEndCol
-    var r = _resizing.origRow
-    if (mouseRow !== r) {
-      if (_resizing.dir === 'start') { s = 1 } else { e2 = 8 }
+    if (mouseRow !== _resizing.origRow) {
+      if (_resizing.dir === 'start') {
+        s = 1
+        var rowLo = mouseRow
+        var rowHi = _resizing.origRow
+        for (var rr = rowLo; rr <= rowHi; rr++) {
+          if (rr === _resizing.origRow) continue
+          var segStart = rr === rowLo ? mouseCol : 1
+          var segEnd = rr === rowHi ? _resizing.origEndCol : 8
+          var cl = _resizing.el.cloneNode(true)
+          cl.classList.add('cal-span-clone')
+          cl.style.pointerEvents = 'none'
+          cl.style.gridColumn = segStart + '/' + segEnd
+          cl.style.gridRow = String(rr)
+          _resizing.el.parentNode.appendChild(cl)
+          _resizing.clones.push(cl)
+        }
+      } else {
+        e2 = 8
+        var rowLo2 = _resizing.origRow
+        var rowHi2 = mouseRow
+        for (var rr2 = rowLo2; rr2 <= rowHi2; rr2++) {
+          if (rr2 === _resizing.origRow) continue
+          var segStart2 = rr2 === rowLo2 ? _resizing.origStartCol : 1
+          var segEnd2 = rr2 === rowHi2 ? mouseCol + 1 : 8
+          var cl2 = _resizing.el.cloneNode(true)
+          cl2.classList.add('cal-span-clone')
+          cl2.style.pointerEvents = 'none'
+          cl2.style.gridColumn = segStart2 + '/' + segEnd2
+          cl2.style.gridRow = String(rr2)
+          _resizing.el.parentNode.appendChild(cl2)
+          _resizing.clones.push(cl2)
+        }
+      }
     } else {
       if (_resizing.dir === 'start') { s = Math.max(1, Math.min(mouseCol, e2 - 1)) }
       else { e2 = Math.max(s + 1, mouseCol + 1) }
     }
     _resizing.el.style.gridColumn = s + '/' + e2
+    _resizing._mouseCol = mouseCol
+    _resizing._mouseRow = mouseRow
     return
   }
 
@@ -317,6 +361,9 @@ document.addEventListener('mouseup', function(ev) {
   if (state.selectedView !== 'calendar') return
 
   if (_resizing) {
+    for (var ci = 0; ci < _resizing.clones.length; ci++) {
+      if (_resizing.clones[ci].parentNode) _resizing.clones[ci].parentNode.removeChild(_resizing.clones[ci])
+    }
     const moved = Math.abs(ev.clientX - _resizing.startX) > 3
     if (!moved || !_resizing.el) {
       if (_resizing.el) { _resizing.el.style.opacity = '' }
@@ -327,8 +374,10 @@ document.addEventListener('mouseup', function(ev) {
     }
     var card = findCard(_resizing.cardId)
     if (card) {
-      var mRow = _resizing.mouseRow != null ? _resizing.mouseRow : _resizing.origRow
-      var mCol = _resizing.mouseCol != null ? _resizing.mouseCol : (_resizing.dir === 'start' ? _resizing.origStartCol : _resizing.origEndCol - 1)
+      var mRow = _resizing._mouseRow != null ? _resizing._mouseRow : _resizing.origRow
+      var mCol = _resizing._mouseCol != null ? _resizing._mouseCol : (_resizing.dir === 'start' ? _resizing.origStartCol : _resizing.origEndCol - 1)
+      if (_resizing.dir === 'start' && mRow > _resizing.origRow) mRow = _resizing.origRow
+      if (_resizing.dir === 'end' && mRow < _resizing.origRow) mRow = _resizing.origRow
       var sIdx, eIdx
       if (_resizing.dir === 'start') {
         sIdx = (mRow - 1) * 7 + (mCol - 1)

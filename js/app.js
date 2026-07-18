@@ -18,7 +18,7 @@ import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } fro
 
 import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, calendarCopyCard, calendarDuplicateCard, calendarArchiveCard, calendarPasteCard } from './calendar.js'
 
-import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember, openMemberManager } from './members.js'
+import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember } from './members.js'
 import { openPreferences, closePreferences } from './preferences.js'
 import { initPersistence, handleKeyDown } from './persistence.js'
 
@@ -87,7 +87,6 @@ Object.assign(window, {
   addMember,
   editMember,
   removeMember,
-  openMemberManager,
   openPreferences,
   closePreferences,
 })

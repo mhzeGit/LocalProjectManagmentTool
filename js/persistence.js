@@ -446,6 +446,7 @@ function applyLoadedData(result, message) {
 }
 
 export function markDirty() {
+
   if (_saveMode !== 'file' || !_folderHandle) return
   _dirty = true
   if (_saveTimer) return
