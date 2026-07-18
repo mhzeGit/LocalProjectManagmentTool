@@ -87,14 +87,17 @@ export function renderMemberBar() {
   })
 
   let html = '<div class="mb-avatars" style="cursor:pointer" onclick="openPreferences(\'members\')">'
-  for (const m of sorted) {
+  const total = sorted.length
+  for (let i = 0; i < total; i++) {
+    const m = sorted[i]
     const isSelf = m.id === selfId
+    const z = total - i
     if (m.avatar) {
-      html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
+      html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" style="z-index:' + z + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
       html += '  <img class="mb-avatar" src="' + m.avatar + '">'
       html += '</div>'
     } else {
-      html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
+      html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" style="z-index:' + z + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
       html += '  <span class="mb-avatar mb-avatar-initials">' + getInitials(m.name) + '</span>'
       html += '</div>'
     }

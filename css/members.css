@@ -2,6 +2,7 @@
 #memberBar { display: flex; align-items: center; gap: 4px; }
 
 .mb-avatars { display: flex; align-items: center; }
+.mb-avatars { display: flex; align-items: center; }
 .mb-avatars .mb-avatar-wrap + .mb-avatar-wrap { margin-left: -14px; }
 
 .mb-avatar-wrap {
