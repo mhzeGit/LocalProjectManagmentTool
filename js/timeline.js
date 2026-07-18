@@ -266,11 +266,10 @@ export function renderTimeline() {
       const lane = laneMap[c.id] ?? 0
       const barTop = trackPadV + lane * (laneBarH + laneGap)
 
-      const color = PRIORITY_COLORS[c.priority] || PRIORITY_COLORS.medium
       const completed = c.completed ? ' tl-bar-done' : ''
       const barLabel = c.title.length > 25 ? c.title.slice(0, 24) + '\u2026' : c.title
 
-      const cardColor = c.color || color
+      const cardColor = c.color || 'var(--bg-card)'
       let barStyle = 'left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + cardColor + ';top:' + barTop + 'px;height:' + laneBarH + 'px;transform:none'
       html += '    <div class="tl-bar' + completed + '" data-card-id="' + c.id + '" style="' + barStyle + '" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
       html += '      <div class="tl-bar-resize tl-bar-resize-l" data-resize="start"></div>'

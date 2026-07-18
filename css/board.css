@@ -69,8 +69,20 @@
 .card-actions button:hover { text-decoration: underline; }
 .card[style*="--card-color"] { border-left: 4px solid var(--card-color); }
 .card[style*="--card-color"]:hover { border-color: var(--card-color); }
-.card { will-change: transform; }
 .card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+}
+.card { will-change: transform; }
+
+.card[style*="--card-color"]::after {
   content: '';
   position: absolute;
   top: 0;
@@ -78,8 +90,8 @@
   bottom: 0;
   left: 0;
   border-radius: inherit;
-  background: var(--card-priority-color);
-  opacity: 0.18;
+  background: var(--card-color);
+  opacity: 0.10;
   pointer-events: none;
   z-index: -1;
 }

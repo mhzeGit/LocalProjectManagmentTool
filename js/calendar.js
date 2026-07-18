@@ -231,8 +231,9 @@ function initCalendarDrag() {
       if (!card) return
       const s = parseDate(card.startDate) || new Date(_calGridStartDate)
       const ed = parseDate(card.endDate) || s
+      const effectiveEnd = (card.startDate && card.endDate && card.startDate !== card.endDate) ? new Date(ed.getTime() - 86400000) : ed
       const startOff = daysBetween(_calGridStartDate, s)
-      const endOff = daysBetween(_calGridStartDate, ed)
+      const endOff = daysBetween(_calGridStartDate, effectiveEnd)
       const sCol = (startOff % 7) + 1
       const sRow = Math.floor(startOff / 7) + 1
       const eColLast = (endOff % 7) + 1
@@ -264,7 +265,7 @@ function initCalendarDrag() {
     var c2 = findCard(spanCard.dataset.cardId)
     var dur = 1
     if (c2 && c2.startDate && c2.endDate) {
-      dur = daysBetween(parseDate(c2.startDate), parseDate(c2.endDate)) + 1
+      dur = Math.max(1, daysBetween(parseDate(c2.startDate), parseDate(c2.endDate)))
     }
     _moving = {
       cardId: spanCard.dataset.cardId,
@@ -488,11 +489,11 @@ document.addEventListener('mouseup', function(ev) {
       if (_resizing.dir === 'start') {
         if (mouseIdx2 >= endIdx2) mouseIdx2 = endIdx2
         card.startDate = formatDate(cellIndexToDate(mouseIdx2))
-        card.endDate = formatDate(cellIndexToDate(endIdx2))
+        card.endDate = formatDate(cellIndexToDate(endIdx2 + 1))
       } else {
         if (mouseIdx2 <= startIdx2) mouseIdx2 = startIdx2
         card.startDate = formatDate(cellIndexToDate(startIdx2))
-        card.endDate = formatDate(cellIndexToDate(mouseIdx2))
+        card.endDate = formatDate(cellIndexToDate(mouseIdx2 + 1))
       }
     }
     if (_resizing.el) _resizing.el.style.opacity = ''
@@ -525,7 +526,7 @@ document.addEventListener('mouseup', function(ev) {
         const dates = gridPosToDates(finalCol, finalCol + _moving.durCols, finalRow)
         if (dates.start && dates.end) {
           card.startDate = formatDate(dates.start)
-          card.endDate = formatDate(dates.end)
+          card.endDate = formatDate(new Date(dates.end.getTime() + 86400000))
         }
       }
     }
@@ -578,8 +579,12 @@ export function renderCalendar() {
   for (const item of datedItems) {
     const c = item.card
     const s = parseDate(c.startDate) || parseDate(c.endDate)
-    const e = parseDate(c.endDate) || parseDate(c.startDate)
+    let e = parseDate(c.endDate) || parseDate(c.startDate)
     if (!s || !e) continue
+
+    if (c.startDate && c.endDate && c.startDate !== c.endDate) {
+      e = new Date(e.getTime() - 86400000)
+    }
 
     const endGrid = new Date(gridStartDate.getTime() + totalCells * 86400000)
     const clampStart = s < gridStartDate ? new Date(gridStartDate) : new Date(s)
@@ -679,7 +684,6 @@ export function renderCalendar() {
 
   for (const seg of spanningSegments) {
     const c = seg.card
-    const color = PRIORITY_COLORS[c.priority] || '#6b7280'
     const completed = c.completed ? ' cal-span-done' : ''
 
     var dateStr = ''
@@ -691,7 +695,7 @@ export function renderCalendar() {
       dateStr = formatShortDate(c.endDate)
     }
 
-    const calSpanBg = c.color || color
+    const calSpanBg = c.color || 'var(--bg-card)'
     const lane = seg.lane || 0
     const marginTop = 26 + lane * 30
     html += '<div class="cal-span-card' + completed + '" data-card-id="' + c.id + '" style="grid-column:' + seg.colStart + '/' + seg.colEnd + ';grid-row:' + seg.row + ';margin-top:' + marginTop + 'px;background:' + calSpanBg + '" title="' + escapeHtml(c.title) + '">'
