@@ -1,9 +1,7 @@
 import { state } from './data.js'
-import { openFolder, saveNow, closeFolder } from './persistence.js'
+import { openFolder, saveNow } from './persistence.js'
 import { openModal } from './modal.js'
 import { openPreferences } from './preferences.js'
-import { switchView } from './board.js'
-
 let openMenuIndex = -1
 let isMenuOpen = false
 
@@ -48,7 +46,6 @@ const menuDefs = [
       { label: 'New Workspace', shortcut: 'Ctrl+Shift+N', action: () => openModal('workspace') },
       { separator: true },
       { label: 'Open Workspace\u2026', shortcut: 'Ctrl+O', action: () => openFolder() },
-      { label: 'Close Workspace', action: closeFolder },
       { separator: true },
       { label: 'Save', shortcut: 'Ctrl+S', action: () => saveNow() },
     ]
@@ -62,10 +59,6 @@ const menuDefs = [
   {
     label: 'View',
     items: [
-      { label: 'Kanban', type: 'view', viewId: 'kanban', action: () => switchView('kanban') },
-      { label: 'Timeline', type: 'view', viewId: 'timeline', action: () => switchView('timeline') },
-      { label: 'Calendar', type: 'view', viewId: 'calendar', action: () => switchView('calendar') },
-      { separator: true },
       { label: renderFilterBarToggleLabel(), dynamic: true, action: toggleFilterBar },
     ]
   },
@@ -92,15 +85,6 @@ function closeAllMenus() {
   document.querySelectorAll('.menubar-label.open').forEach(el => el.classList.remove('open'))
   openMenuIndex = -1
   isMenuOpen = false
-}
-
-function updateViewCheckmarks() {
-  document.querySelectorAll('.menubar-item[data-view-id]').forEach(btn => {
-    const check = btn.querySelector('.menubar-check')
-    if (check) {
-      check.classList.toggle('checked', btn.dataset.viewId === state.selectedView)
-    }
-  })
 }
 
 function updateFilterToggleLabel() {
@@ -186,7 +170,6 @@ function buildMenuBar() {
       label.classList.add('open')
       openMenuIndex = mi
       isMenuOpen = true
-      updateViewCheckmarks()
     })
 
     label.addEventListener('mouseenter', function() {
@@ -196,8 +179,11 @@ function buildMenuBar() {
         label.classList.add('open')
         openMenuIndex = mi
         isMenuOpen = true
-        updateViewCheckmarks()
       }
+    })
+
+    menuEl.addEventListener('mouseleave', function() {
+      if (isMenuOpen) closeAllMenus()
     })
 
     container.appendChild(menuEl)
@@ -219,10 +205,8 @@ document.addEventListener('keydown', function(e) {
 
 export function initMenuBar() {
   buildMenuBar()
-  updateViewCheckmarks()
 }
 
 export function updateMenuBar() {
-  updateViewCheckmarks()
   updateFilterToggleLabel()
 }
