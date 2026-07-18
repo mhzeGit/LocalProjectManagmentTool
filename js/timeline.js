@@ -219,7 +219,7 @@ export function renderTimeline() {
       const end = e || s
       let assigned = false
       for (let i = 0; i < lanes.length; i++) {
-        if (lanes[i] < start) {
+        if (lanes[i] <= start) {
           lanes[i] = end
           laneMap[c.id] = i
           assigned = true
