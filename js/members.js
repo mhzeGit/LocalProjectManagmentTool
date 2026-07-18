@@ -72,6 +72,11 @@ export function renderMemberBar() {
   const bar = document.getElementById('memberBar')
   if (!bar) return
 
+  if (state.selectedProjectId) {
+    bar.innerHTML = ''
+    return
+  }
+
   const members = getWorkspaceMembers()
   const selfId = state.selfMemberId
 

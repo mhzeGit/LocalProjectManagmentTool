@@ -325,11 +325,12 @@ document.addEventListener('mousemove', function(e) {
     var mouseRow = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
     mouseCol = Math.max(1, Math.min(mouseCol, 7))
 
-    if (_resizing.dir === 'start' && mouseRow > _resizing.origRow) {
-      mouseRow = _resizing.origRow
-    }
-    if (_resizing.dir === 'end' && mouseRow < _resizing.origRow) {
-      mouseRow = _resizing.origRow
+    if (_resizing.dir === 'start') {
+      if (mouseRow > _resizing.origRow) mouseRow = _resizing.origRow
+      if (mouseCol > _resizing.origEndCol - 1) mouseCol = _resizing.origEndCol - 1
+    } else {
+      if (mouseRow < _resizing.origRow) mouseRow = _resizing.origRow
+      if (mouseCol < _resizing.origStartCol) mouseCol = _resizing.origStartCol
     }
 
     var s = _resizing.origStartCol
@@ -423,19 +424,17 @@ document.addEventListener('mouseup', function(ev) {
     if (card) {
       var mRow = _resizing._mouseRow != null ? _resizing._mouseRow : _resizing.origRow
       var mCol = _resizing._mouseCol != null ? _resizing._mouseCol : (_resizing.dir === 'start' ? _resizing.origStartCol : _resizing.origEndCol - 1)
-      if (_resizing.dir === 'start' && mRow > _resizing.origRow) mRow = _resizing.origRow
-      if (_resizing.dir === 'end' && mRow < _resizing.origRow) mRow = _resizing.origRow
-      var sIdx, eIdx
       if (_resizing.dir === 'start') {
-        sIdx = (mRow - 1) * 7 + (mCol - 1)
-        eIdx = (_resizing.origRow - 1) * 7 + (_resizing.origEndCol - 2)
+        if (mRow > _resizing.origRow) mRow = _resizing.origRow
+        if (mCol > _resizing.origEndCol - 1) mCol = _resizing.origEndCol - 1
       } else {
-        sIdx = (_resizing.origRow - 1) * 7 + (_resizing.origStartCol - 1)
-        eIdx = (mRow - 1) * 7 + (mCol - 1)
+        if (mRow < _resizing.origRow) mRow = _resizing.origRow
+        if (mCol < _resizing.origStartCol) mCol = _resizing.origStartCol
       }
-      if (sIdx > eIdx) { var tmp = sIdx; sIdx = eIdx; eIdx = tmp }
-      card.startDate = formatDate(cellIndexToDate(sIdx))
-      card.endDate = formatDate(cellIndexToDate(eIdx))
+      var sIdx2 = (_resizing.dir === 'start' ? (mRow - 1) * 7 + (mCol - 1) : (_resizing.origRow - 1) * 7 + (_resizing.origStartCol - 1))
+      var eIdx2 = (_resizing.dir === 'start' ? (_resizing.origRow - 1) * 7 + (_resizing.origEndCol - 2) : (mRow - 1) * 7 + (mCol - 1))
+      card.startDate = formatDate(cellIndexToDate(Math.min(sIdx2, eIdx2)))
+      card.endDate = formatDate(cellIndexToDate(Math.max(sIdx2, eIdx2)))
     }
     if (_resizing.el) _resizing.el.style.opacity = ''
     _resizing = null
