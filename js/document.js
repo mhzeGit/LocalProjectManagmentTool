@@ -122,9 +122,10 @@ export async function renderDocument(documentId) {
 
   const toolbar = document.getElementById('toolbar-' + doc.id)
   if (toolbar) {
-    toolbar.addEventListener('click', function(e) {
+    toolbar.addEventListener('mousedown', function(e) {
       const btn = e.target.closest('[data-cmd]')
       if (!btn || !_currentEditor) return
+      e.preventDefault()
       const cmd = btn.dataset.cmd
       const ed = _currentEditor
 

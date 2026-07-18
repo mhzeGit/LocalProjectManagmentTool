@@ -194,10 +194,10 @@ export function renderTimeline() {
   }
 
   html += '<div class="tl-body" style="width:' + (200 + totalWidth) + 'px">'
+  html += '<div class="tl-rows">'
   if (showToday) {
     html += '<div class="tl-today-line" style="left:' + (200 + todayLeft) + 'px"></div>'
   }
-  html += '<div class="tl-rows">'
 
   for (const col of b.columns) {
     const colDated = datedItems.filter(x => x.columnId === col.id)
