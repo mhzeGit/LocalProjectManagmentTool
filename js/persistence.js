@@ -516,17 +516,11 @@ function stopPolling() {
 
 function updateSaveUI() {
   var openBtn = document.getElementById('openFolderBtn')
-  var closeBtn = document.getElementById('closeFolderBtn')
-  var saveBtn = document.getElementById('saveNowBtn')
 
   if (_saveMode === 'file' && _folderHandle) {
     if (openBtn) openBtn.style.display = 'none'
-    if (closeBtn) closeBtn.style.display = ''
-    if (saveBtn) saveBtn.style.display = ''
   } else {
     if (openBtn) openBtn.style.display = ''
-    if (closeBtn) closeBtn.style.display = 'none'
-    if (saveBtn) saveBtn.style.display = 'none'
   }
 }
 
@@ -627,7 +621,6 @@ export function handleKeyDown(e) {
 }
 
 window.openFolder = openFolder
-window.closeFolder = closeFolder
 window.saveNow = saveNow
 
 window.__autoSave = markDirty
