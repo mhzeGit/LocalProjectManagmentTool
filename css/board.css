@@ -61,15 +61,18 @@
 .card-cl-progress-bar { height: 100%; border-radius: 2px; transition: width .2s, background .2s; }
 .card-priority { position: absolute; top: 8px; right: 10px; display: flex; align-items: flex-end; gap: 2px; height: 14px; }
 .card-priority-bar { width: 4px; height: 12px; border-radius: 1px; }
-.card-priority-bar.filled { opacity: 1; }
+.card-priority-bar.filled { opacity: 1; box-shadow: 0 0 calc(3px * var(--glow-multiplier)) currentColor; }
 .card-priority-bar:not(.filled) { opacity: .12; }
 .card-actions { display: none; gap: 4px; margin-top: 8px; }
 .card:hover .card-actions { display: flex; }
 .card-actions button { font-size: 11px; color: var(--danger); }
 .card-actions button:hover { text-decoration: underline; }
+.card { will-change: transform; }
 .card.dragging { opacity: 0; }
 .card.dragging-collapsed { margin: 0 !important; padding: 0 !important; border: 0 none !important; height: 0 !important; overflow: hidden !important; flex: 0 1 0 !important; }
 .board-column.drag-over { border-color: var(--accent); }
+.card-placeholder { border-radius: 6px; margin-bottom: 8px; border: 1px dashed #4f46e5; background: rgba(79, 70, 229, 0.06); animation: ph-appear 0.15s ease-out; }
+@keyframes ph-appear { from { opacity: 0; transform: scaleY(0.6); } to { opacity: 1; transform: scaleY(1); } }
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); font-size: 14px; }
 .empty-state p { margin-top: 8px; }

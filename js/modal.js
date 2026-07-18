@@ -16,6 +16,44 @@ const PRIORITY_FILLED_ORDER = [
   { filled: 5, value: 'urgent' },
 ]
 
+function applyPriorityValue(value) {
+  const hidden = document.getElementById('cd-priority')
+  const label = document.getElementById('cd-pp-label')
+  const picker = document.getElementById('cd-priority-picker')
+  if (!hidden || !picker) return
+  if (hidden.value === value) return
+  hidden.value = value
+  const cfg = PRIORITY_BAR_CONFIG[value] || PRIORITY_BAR_CONFIG.medium
+  const bars = picker.querySelectorAll('.cd-pp-bar')
+  for (let i = 0; i < bars.length; i++) {
+    const filled = i < cfg.filled
+    bars[i].classList.toggle('filled', filled)
+    bars[i].style.background = cfg.color
+    bars[i].style.color = cfg.color
+  }
+  if (label) label.textContent = value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function setPriorityFromClientX(clientX, picker) {
+  const bars = picker.querySelectorAll('.cd-pp-bar')
+  let closestIdx = 0
+  let closestDist = Infinity
+  for (let i = 0; i < bars.length; i++) {
+    const rect = bars[i].getBoundingClientRect()
+    const dist = Math.abs(clientX - (rect.left + rect.width / 2))
+    if (dist < closestDist) {
+      closestDist = dist
+      closestIdx = i
+    }
+  }
+  const filledCount = closestIdx + 1
+  let best = 'none'
+  for (const entry of PRIORITY_FILLED_ORDER) {
+    if (entry.filled <= filledCount) best = entry.value
+  }
+  applyPriorityValue(best)
+}
+
 function renderPriorityPicker() {
   const picker = document.getElementById('cd-priority-picker')
   const hidden = document.getElementById('cd-priority')
@@ -290,6 +328,17 @@ export function setupModalKeyboard() {
       return
     }
 
+    if (action === 'set-priority') {
+      const index = parseInt(target.dataset.index)
+      const filledCount = index + 1
+      let best = 'none'
+      for (const entry of PRIORITY_FILLED_ORDER) {
+        if (entry.filled <= filledCount) best = entry.value
+      }
+      applyPriorityValue(best)
+      return
+    }
+
     if (action === 'add-chip') {
       const containerId = target.dataset.target
       const row = target.closest('.cd-chip-add-row')
@@ -350,54 +399,23 @@ export function setupModalKeyboard() {
     }
   })
 
-  let _ppDragState = null
+  let _ppActivePicker = null
 
   overlay.addEventListener('mousedown', function(e) {
     if (!this.classList.contains('open')) return
     if (e.button !== 0) return
-    const bar = e.target.closest('.cd-pp-bar')
-    if (!bar) return
-    const picker = bar.closest('.cd-priority-picker')
+    const picker = e.target.closest('.cd-priority-picker')
     if (!picker) return
-    e.preventDefault()
-    const rect = picker.getBoundingClientRect()
-    const segmentWidth = rect.width / 5
-    const rawIndex = Math.floor((e.clientX - rect.left) / segmentWidth)
-    const index = Math.max(0, Math.min(4, rawIndex))
-    const filledCount = index + 1
-    let best = 'none'
-    for (const entry of PRIORITY_FILLED_ORDER) {
-      if (entry.filled <= filledCount) best = entry.value
-    }
-    const hidden = document.getElementById('cd-priority')
-    if (hidden) hidden.value = best
-    renderPriorityPicker()
-    _ppDragState = true
+    _ppActivePicker = picker
   })
 
   document.addEventListener('mousemove', function(e) {
-    if (!_ppDragState) return
-    const picker = document.getElementById('cd-priority-picker')
-    if (!picker) { _ppDragState = null; return }
-    const rect = picker.getBoundingClientRect()
-    const segmentWidth = rect.width / 5
-    const rawIndex = Math.floor((e.clientX - rect.left) / segmentWidth)
-    const index = Math.max(0, Math.min(4, rawIndex))
-    const filledCount = index + 1
-    let best = 'none'
-    for (const entry of PRIORITY_FILLED_ORDER) {
-      if (entry.filled <= filledCount) best = entry.value
-    }
-    const hidden = document.getElementById('cd-priority')
-    if (hidden && hidden.value !== best) {
-      hidden.value = best
-      renderPriorityPicker()
-    }
+    if (!_ppActivePicker) return
+    setPriorityFromClientX(e.clientX, _ppActivePicker)
   })
 
   document.addEventListener('mouseup', function() {
-    if (!_ppDragState) return
-    _ppDragState = null
+    _ppActivePicker = null
   })
 
   let dragSrc = null

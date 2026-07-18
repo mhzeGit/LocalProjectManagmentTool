@@ -191,11 +191,27 @@ export function initDragDrop(renderFn) {
       if (colEl) {
         const zone = colEl.querySelector('.column-cards')
         zone.classList.add('drag-over')
-        if (!zone.querySelector('.card-placeholder') && _dragCardHeight) {
-          const ph = document.createElement('div')
-          ph.className = 'card-placeholder'
-          ph.style.cssText = 'border-radius:6px;margin-bottom:8px;border:1px dashed #4f46e5;height:' + _dragCardHeight + 'px;'
-          zone.appendChild(ph)
+        if (_dragCardHeight) {
+          let ph = zone.querySelector('.card-placeholder')
+          if (!ph) {
+            ph = document.createElement('div')
+            ph.className = 'card-placeholder'
+            zone.appendChild(ph)
+          }
+          ph.style.height = _dragCardHeight + 'px'
+          const cards = zone.querySelectorAll('.card:not(.dragging)')
+          let insertBefore = null
+          for (const card of cards) {
+            const rect = card.getBoundingClientRect()
+            if (e.clientY < rect.top + rect.height / 2) {
+              insertBefore = card
+              break
+            }
+          }
+          const targetNext = insertBefore || null
+          if (ph.nextElementSibling !== targetNext) {
+            zone.insertBefore(ph, insertBefore)
+          }
         }
       }
     }
@@ -287,7 +303,6 @@ export function initDragDrop(renderFn) {
   board.addEventListener('drop', function(e) {
     e.preventDefault()
     if (_dragGhostEl) { _dragGhostEl.remove(); _dragGhostEl = null }
-    board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
 
     const cardId = e.dataTransfer.getData('text/x-card')
     if (cardId) {
@@ -295,22 +310,84 @@ export function initDragDrop(renderFn) {
       if (!colEl) {
         const ptr = document.elementFromPoint(e.clientX, e.clientY)
         if (ptr) colEl = ptr.closest('.board-column:not(.add-column)')
-        if (!colEl) return
+        if (!colEl) { board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() }); return }
       }
       const targetZone = colEl.querySelector('.column-cards')
-      if (!targetZone) return
+      if (!targetZone) { board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() }); return }
       const targetColId = targetZone.dataset.colId
       const targetCol = findColumn(targetColId)
       const sourceCol = findCardColumn(cardId)
-      if (!sourceCol || !targetCol || sourceCol.id === targetCol.id) return
+      if (!sourceCol || !targetCol) { board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() }); return }
       const card = findCard(cardId)
-      if (!card) return
+      if (!card) { board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() }); return }
+
+      const placeholder = targetZone.querySelector('.card-placeholder')
+      let insertBeforeEl = null
+      if (placeholder && placeholder.parentNode === targetZone) {
+        insertBeforeEl = placeholder.nextElementSibling
+        if (insertBeforeEl && !insertBeforeEl.classList.contains('card')) insertBeforeEl = null
+      }
+      board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
+
+      let insertIdx = targetCol.cards.length
+      if (insertBeforeEl && insertBeforeEl.dataset.cardId) {
+        const beforeIdx = targetCol.cards.findIndex(function(c) { return c.id === insertBeforeEl.dataset.cardId })
+        if (beforeIdx !== -1) insertIdx = beforeIdx
+      }
+
       const idx = sourceCol.cards.findIndex(function(c) { return c.id === cardId })
-      if (idx !== -1) sourceCol.cards.splice(idx, 1)
-      targetCol.cards.push(card)
-      if (_renderFn) _renderFn()
+      if (idx === -1) return
+      sourceCol.cards.splice(idx, 1)
+      if (sourceCol.id === targetCol.id && idx < insertIdx) insertIdx--
+      if (insertIdx < 0) insertIdx = 0
+      if (insertIdx > targetCol.cards.length) insertIdx = targetCol.cards.length
+      targetCol.cards.splice(insertIdx, 0, card)
+
+      if (sourceCol.id === targetCol.id) {
+        const cardEl = document.querySelector('.card[data-card-id="' + cardId + '"]')
+        if (cardEl && cardEl.parentNode === targetZone) {
+          cardEl.classList.remove('dragging', 'dragging-collapsed')
+          const cards = targetZone.querySelectorAll('.card')
+          const oldRects = new Map()
+          cards.forEach(function(el) {
+            if (el !== cardEl) oldRects.set(el, el.getBoundingClientRect())
+          })
+          const targetNext = insertBeforeEl && insertBeforeEl !== cardEl ? insertBeforeEl : null
+          targetZone.insertBefore(cardEl, targetNext)
+          cards.forEach(function(el) {
+            if (el === cardEl) return
+            const oldRect = oldRects.get(el)
+            if (oldRect) {
+              const newRect = el.getBoundingClientRect()
+              const dx = oldRect.left - newRect.left
+              const dy = oldRect.top - newRect.top
+              if (dx !== 0 || dy !== 0) {
+                el.style.transition = 'none'
+                el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)'
+              }
+            }
+          })
+          requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+              cards.forEach(function(el) {
+                if (el === cardEl) return
+                if (el.style.transform && el.style.transform !== 'none') {
+                  el.style.transition = 'transform 0.28s cubic-bezier(0.25, 0.8, 0.25, 1)'
+                  el.style.transform = 'translate(0, 0)'
+                }
+              })
+            })
+          })
+        }
+        if (window.__autoSave) window.__autoSave()
+      } else {
+        if (_renderFn) _renderFn()
+        if (window.__autoSave) window.__autoSave()
+      }
       return
     }
+
+    board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
 
     const columnId = e.dataTransfer.getData('text/x-column')
     if (columnId) {

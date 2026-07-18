@@ -153,7 +153,7 @@ export function exportBoardCSV() {
         escapeCSV(card.endDate || ''),
         escapeCSV(serializeValue(card.tags || [])),
         escapeCSV(serializeValue(card.members || [])),
-        escapeCSV(serializeValue(card.checklists || [])),
+        escapeCSV(JSON.stringify(card.checklists || [])),
       ]
       lines.push(row.join(','))
     }
