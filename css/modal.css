@@ -15,6 +15,8 @@
 .btn-confirm:hover { background: var(--accent-hover); }
 .btn-danger { background: var(--danger); color: var(--text-white); }
 .btn-danger:hover { background: var(--danger-hover); }
+.btn-discard { background: var(--danger); color: var(--text-white); }
+.btn-discard:hover { background: var(--danger-hover); }
 
 /* --- Card Detail / Create Modal (two-column) --- */
 .modal:has(.cd-two-col) { width: 860px; max-height: 90vh; display: flex; flex-direction: column; }
@@ -97,8 +99,8 @@
 .cd-cl-children .cd-cl-children { margin-left: 0; }
 
 .cd-priority-row { display: flex; align-items: center; gap: 8px; }
-.cd-priority-picker { display: flex; align-items: flex-end; gap: 5px; height: 28px; cursor: pointer; user-select: none; touch-action: none; }
-.cd-pp-bar { width: 6px; height: 24px; border-radius: 2px; cursor: pointer; transition: opacity .15s, box-shadow .15s; }
+.cd-priority-picker { display: flex; align-items: flex-end; gap: 6px; height: 40px; cursor: pointer; user-select: none; touch-action: none; }
+.cd-pp-bar { width: 20px; height: 36px; border-radius: 3px; cursor: pointer; transition: opacity .15s, box-shadow .15s; }
 .cd-pp-bar.filled { opacity: 1; box-shadow: 0 0 calc(4px * var(--glow-multiplier)) currentColor; }
 .cd-pp-bar:not(.filled) { opacity: .12; }
 .cd-pp-bar:hover { opacity: .7; }
@@ -112,7 +114,6 @@
 .cd-checklist-add-btn { display: inline-block; padding: 6px 14px; background: var(--bg-surface-hover); color: var(--text-secondary); border-radius: 6px; font-size: 13px; }
 .cd-checklist-add-btn:hover { background: var(--border-strong); color: var(--text-white); }
 
-/* Right column footer actions */
-.cd-right-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--border); }
-.cd-right-footer button { padding: 7px 14px; border-radius: 6px; font-size: 13px; }
-.cd-right-footer-right { display: flex; gap: 8px; }
+/* Card form footer (bottom-right, always visible) */
+.cd-form-footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0 0; flex-shrink: 0; }
+.cd-form-footer button { padding: 7px 14px; border-radius: 6px; font-size: 13px; }

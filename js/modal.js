@@ -220,15 +220,14 @@ function buildCardForm(c, saveAction) {
   html += '        </select>'
   html += '      </div>'
 
-  html += '      <div class="cd-right-footer">'
-  html += '        <div class="cd-right-footer-right">'
-  html += '          <button class="btn-cancel" onclick="closeModal()">Cancel</button>'
-  html += '          <button class="btn-confirm" onclick="' + saveAction + '">Save</button>'
-  html += '        </div>'
-  html += '      </div>'
   html += '    </div>'
 
   html += '  </div>'
+  html += '</div>'
+
+  html += '<div class="cd-form-footer">'
+  html += '  <button class="btn-discard" onclick="closeModal()">Discard</button>'
+  html += '  <button class="btn-confirm" onclick="' + saveAction + '">Confirm</button>'
   html += '</div>'
 
   return html
