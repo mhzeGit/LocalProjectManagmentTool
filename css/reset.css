@@ -1,4 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; background: var(--bg-body); color: var(--text-primary); }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--bg-body); color: var(--text-primary); }
+.app-body { flex: 1; display: flex; min-height: 0; }
 button { cursor: pointer; border: none; background: none; font-size: inherit; }
 input, textarea { font-family: inherit; font-size: inherit; }

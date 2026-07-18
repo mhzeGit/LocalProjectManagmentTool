@@ -8,6 +8,7 @@ import { renderCalendar } from './calendar.js'
 import { wasRightDragged } from './dragscroll.js'
 import { renderDocument, destroyEditor } from './document.js'
 import { renderDashboard } from './dashboard.js'
+import { updateMenuBar } from './menubar.js'
 
 export function switchView(view) {
   state.selectedView = view
@@ -16,6 +17,7 @@ export function switchView(view) {
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === view)
   })
+  updateMenuBar()
 }
 
 export function renderBoard() {

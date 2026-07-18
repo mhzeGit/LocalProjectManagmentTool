@@ -1,0 +1,111 @@
+.menubar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 30px;
+  background: var(--bg-strong);
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+  user-select: none;
+  z-index: 100;
+  padding: 0 4px;
+}
+
+.menubar-menu {
+  position: relative;
+}
+
+.menubar-label {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  transition: background .12s, color .12s;
+  white-space: nowrap;
+}
+
+.menubar-label:hover,
+.menubar-label.open {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.menubar-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px var(--shadow-lg);
+  padding: 4px 0;
+  z-index: 200;
+  margin-top: 2px;
+}
+
+.menubar-dropdown.open {
+  display: block;
+}
+
+.menubar-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px 6px 28px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  gap: 12px;
+}
+
+.menubar-item:hover {
+  background: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+.menubar-item .menubar-shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: .3px;
+}
+
+.menubar-item:hover .menubar-shortcut {
+  color: var(--text-secondary);
+}
+
+.menubar-separator {
+  height: 1px;
+  background: var(--border-light);
+  margin: 4px 8px;
+}
+
+.menubar-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  margin-left: -16px;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.menubar-check.checked::before {
+  content: '\2713';
+}
+
+.menubar-item.disabled {
+  opacity: .4;
+  pointer-events: none;
+}

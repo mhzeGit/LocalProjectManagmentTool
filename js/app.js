@@ -21,8 +21,9 @@ import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, c
 import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember } from './members.js'
 import { initFilterEvents, resetFilters, filterCards, getActiveFilterCount } from './filters.js'
 import { openPreferences, closePreferences, initTheme } from './preferences.js'
-import { initPersistence, handleKeyDown, openFolder, getSaveMode } from './persistence.js'
+import { initPersistence, handleKeyDown, openFolder, closeFolder, getSaveMode } from './persistence.js'
 import { getCurrentWorkspace, state } from './data.js'
+import { initMenuBar } from './menubar.js'
 
 import './dragscroll.js'
 
@@ -31,6 +32,7 @@ setInlineEditRender(render)
 setupModalKeyboard()
 initSelfMember()
 initPersistence()
+initMenuBar()
 
 document.addEventListener('keydown', handleKeyDown)
 
@@ -96,6 +98,7 @@ Object.assign(window, {
   removeMember,
   openPreferences,
   closePreferences,
+  closeFolder,
 })
 
 async function onboardingCreateWorkspace() {

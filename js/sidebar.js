@@ -3,6 +3,7 @@ import { openModal } from './modal.js'
 import { renderBoard, renderDocumentView } from './board.js'
 import { initDragDrop } from './dragdrop.js'
 import { renderMemberBar } from './members.js'
+import { updateMenuBar } from './menubar.js'
 
 export function render() {
   const sidebarEl = document.getElementById('sidebar')
@@ -30,6 +31,7 @@ export function render() {
     sidebar.innerHTML = '<div class="sidebar-hint">Select a project to view boards</div>'
     renderBoard()
     renderMemberBar()
+    updateMenuBar()
     return
   }
 
@@ -38,6 +40,7 @@ export function render() {
     sidebar.innerHTML = ''
     renderBoard()
     renderMemberBar()
+    updateMenuBar()
     return
   }
 
@@ -66,6 +69,7 @@ export function render() {
   renderBoard()
   initDragDrop(render)
   renderMemberBar()
+  updateMenuBar()
   if (window.__autoSave) window.__autoSave()
 }
 
