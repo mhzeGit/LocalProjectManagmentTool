@@ -19,12 +19,17 @@ import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } fro
 import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, calendarCopyCard, calendarDuplicateCard, calendarArchiveCard, calendarPasteCard } from './calendar.js'
 
 import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember, openMemberManager } from './members.js'
+import { openPreferences, closePreferences } from './preferences.js'
+import { initPersistence, handleKeyDown } from './persistence.js'
 
 import './dragscroll.js'
 
 setInlineEditRender(render)
 setupModalKeyboard()
 initSelfMember()
+initPersistence()
+
+document.addEventListener('keydown', handleKeyDown)
 
 Object.assign(window, {
   selectWorkspace,
@@ -83,6 +88,8 @@ Object.assign(window, {
   editMember,
   removeMember,
   openMemberManager,
+  openPreferences,
+  closePreferences,
 })
 
 render()

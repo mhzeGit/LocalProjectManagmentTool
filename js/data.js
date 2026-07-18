@@ -31,8 +31,20 @@ export const data = {
 
 let uid = 100
 export function genId() { return 'id' + (++uid) }
+export function setUid(min) { if (min > uid) uid = min }
 
 export const PREDEFINED_MEMBERS = []
+
+export const PREDEFINED_COLORS = [
+  { id: 'pc1', name: 'Indigo', value: '#4f46e5' },
+  { id: 'pc2', name: 'Green', value: '#22c55e' },
+  { id: 'pc3', name: 'Red', value: '#ef4444' },
+  { id: 'pc4', name: 'Yellow', value: '#eab308' },
+  { id: 'pc5', name: 'Cyan', value: '#06b6d4' },
+  { id: 'pc6', name: 'Pink', value: '#ec4899' },
+  { id: 'pc7', name: 'Orange', value: '#f97316' },
+  { id: 'pc8', name: 'Purple', value: '#a855f7' },
+]
 
 export const state = {
   selectedWorkspaceId: 'w1',

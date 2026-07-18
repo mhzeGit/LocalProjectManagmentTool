@@ -116,6 +116,7 @@ export async function renderDocument(documentId) {
     content: doc.content || '',
     onUpdate: function() {
       saveDocumentContent(doc.id, _currentEditor.getHTML())
+      if (window.__autoSave) window.__autoSave()
     },
   })
 

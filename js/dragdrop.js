@@ -345,6 +345,7 @@ export function initDragDrop(renderFn) {
       _colOriginalIdx = -1
       _colCurrentPosKey = null
       _colDraggedId = null
+      if (window.__autoSave) window.__autoSave()
     }
   })
 

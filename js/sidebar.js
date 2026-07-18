@@ -62,6 +62,7 @@ export function render() {
   renderBoard()
   initDragDrop(render)
   renderMemberBar()
+  if (window.__autoSave) window.__autoSave()
 }
 
 export function selectWorkspace(id) {

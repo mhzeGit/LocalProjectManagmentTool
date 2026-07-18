@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/calendar.css">
   <link rel="stylesheet" href="css/document.css">
   <link rel="stylesheet" href="css/members.css">
+  <link rel="stylesheet" href="css/preferences.css">
 </head>
 <body>
 
@@ -30,11 +31,20 @@
       <span class="breadcrumb" id="breadcrumb"></span>
     </div>
     <div class="topbar-right">
+      <div class="save-controls">
+        <span class="save-status" id="saveStatus">Memory</span>
+        <button class="save-btn" id="openFolderBtn" onclick="openFolder()">Open Folder</button>
+        <button class="save-btn save-btn-primary" id="saveNowBtn" onclick="saveNow()" style="display:none">Save</button>
+        <button class="save-btn" id="closeFolderBtn" onclick="closeFolder()" style="display:none">Close</button>
+      </div>
       <div class="view-switcher">
         <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
         <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
         <button class="view-btn" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
       </div>
+      <button class="pref-settings-btn" onclick="openPreferences()" title="Preferences">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
       <div id="memberBar"></div>
     </div>
   </div>
@@ -49,6 +59,21 @@
   <div class="modal">
     <h3 id="modalTitle"></h3>
     <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="save-notification" id="saveNotification"></div>
+
+<div class="pref-overlay" id="preferences-overlay">
+  <div class="pref-window">
+    <div class="pref-header">
+      <h3>Preferences</h3>
+      <button class="pref-header-close" onclick="closePreferences()">✕</button>
+    </div>
+    <div class="pref-body">
+      <div class="pref-sidebar" id="pref-sidebar"></div>
+      <div class="pref-content" id="pref-content"></div>
+    </div>
   </div>
 </div>
 
