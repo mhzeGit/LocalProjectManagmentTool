@@ -1,5 +1,6 @@
-import { state, findBoard, findProject, findWorkspace, findDocument } from './data.js'
+import { state, findBoard, findProject, findWorkspace, findDocument, getTagColor } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
@@ -39,9 +40,22 @@ export function renderBoard() {
     viewSwitcher.style.display = b && !d && !state.selectedDashboard ? 'flex' : 'none'
   }
 
+  renderFilterBar()
+
   if (!w) {
     destroyEditor()
-    area.innerHTML = '<div class="empty-state"><p>Select a workspace to get started</p></div>'
+    area.innerHTML =
+      '<div class="onboarding">' +
+      '<div class="onboarding-icon">' +
+      '  <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>' +
+      '</div>' +
+      '<h1 class="onboarding-title">Welcome to Task Board</h1>' +
+      '<p class="onboarding-desc">Organize your projects, manage tasks, and collaborate with your team. Get started by creating a new workspace or opening an existing one.</p>' +
+      '<div class="onboarding-actions">' +
+      '  <button class="btn-create onboarding-btn" onclick="onboardingCreateWorkspace()">+ Create New Workspace</button>' +
+      '  <button class="btn-open onboarding-btn" onclick="onboardingOpenWorkspace()">Open Workspace</button>' +
+      '</div>' +
+      '</div>'
     return
   }
 
@@ -79,12 +93,23 @@ export function renderBoard() {
     return
   }
 
+  const filterActive = getActiveFilterCount() > 0
+  const filteredCardIds = filterActive ? filterBoardCards(b) : null
+
   let html = '<div class="board-columns">'
   for (const col of b.columns) {
+    const totalCards = col.cards.length
+    let visibleCards = totalCards
+    if (filteredCardIds) {
+      visibleCards = 0
+      for (const c of col.cards) { if (filteredCardIds.has(c.id)) visibleCards++ }
+    }
+    const countStr = filteredCardIds ? visibleCards + '/' + totalCards : '' + totalCards
+
     html += '<div class="board-column" draggable="true" data-column-id="' + col.id + '">'
     html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
     html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
-    html += '  <span class="col-count">' + col.cards.length + '</span>'
+    html += '  <span class="col-count">' + countStr + '</span>'
     html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();copyColumn(\'' + col.id + '\')">Copy</button>'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();pasteColumn(\'' + col.id + '\')">Paste</button>'
@@ -95,6 +120,7 @@ export function renderBoard() {
     html += '</div>'
     html += '<div class="column-cards" data-col-id="' + col.id + '">'
     for (const c of col.cards) {
+      if (filteredCardIds && !filteredCardIds.has(c.id)) continue
       const completed = c.completed ? ' completed' : ''
       const checked = c.completed ? ' checked' : ''
       html += '<div class="card' + completed + '" draggable="true" data-card-id="' + c.id + '">'
@@ -102,6 +128,14 @@ export function renderBoard() {
       html += '  <div class="card-body">'
       html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
       if (c.description) html += '    <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      if (c.tags && c.tags.length > 0) {
+        html += '    <div class="card-tags">'
+        for (const t of c.tags) {
+          const color = getTagColor(t)
+          html += '      <span class="card-tag" style="background:' + color + '">' + escapeHtml(t) + '</span>'
+        }
+        html += '    </div>'
+      }
       if (c.checklists && c.checklists.length > 0) {
         const total = countChecklistItems(c.checklists)
         const done = countCompletedChecklistItems(c.checklists)

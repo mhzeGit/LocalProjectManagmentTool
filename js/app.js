@@ -19,17 +19,22 @@ import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } fro
 import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, calendarCopyCard, calendarDuplicateCard, calendarArchiveCard, calendarPasteCard } from './calendar.js'
 
 import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember } from './members.js'
-import { openPreferences, closePreferences } from './preferences.js'
-import { initPersistence, handleKeyDown } from './persistence.js'
+import { initFilterEvents, resetFilters, filterCards, getActiveFilterCount } from './filters.js'
+import { openPreferences, closePreferences, initTheme } from './preferences.js'
+import { initPersistence, handleKeyDown, openFolder, getSaveMode } from './persistence.js'
+import { getCurrentWorkspace, state } from './data.js'
 
 import './dragscroll.js'
 
+initTheme()
 setInlineEditRender(render)
 setupModalKeyboard()
 initSelfMember()
 initPersistence()
 
 document.addEventListener('keydown', handleKeyDown)
+
+initFilterEvents()
 
 Object.assign(window, {
   selectWorkspace,
@@ -84,12 +89,34 @@ Object.assign(window, {
   calendarPasteCard,
   renderMemberBar,
   setSelfMember,
+  resetFilters,
   getSelfMember,
   addMember,
   editMember,
   removeMember,
   openPreferences,
   closePreferences,
+})
+
+async function onboardingCreateWorkspace() {
+  if (getSaveMode() !== 'file') {
+    await openFolder()
+    if (getSaveMode() !== 'file') return
+  }
+  openModal('workspace')
+}
+
+async function onboardingOpenWorkspace() {
+  await openFolder()
+  const w = getCurrentWorkspace()
+  if (w && w.members.length > 0 && !state.selfMemberId) {
+    openPreferences('members')
+  }
+}
+
+Object.assign(window, {
+  onboardingCreateWorkspace,
+  onboardingOpenWorkspace,
 })
 
 render()

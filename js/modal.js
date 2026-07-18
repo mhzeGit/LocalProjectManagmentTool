@@ -1,4 +1,4 @@
-import { state, findCard, findWorkspace } from './data.js'
+import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 
 let _editingCardId = null
@@ -111,13 +111,19 @@ function buildCardForm(c, saveAction) {
   html += '        <label>Tags</label>'
   html += '        <div class="cd-chips" id="cd-tags">'
   for (const t of tags) {
-    html += '          <span class="cd-chip cd-tag" data-type="tag">' + escapeHtml(t) + '<span class="cd-chip-remove" data-action="remove-chip">×</span></span>'
+    const color = getTagColor(t)
+    html += '          <span class="cd-chip cd-tag" data-type="tag" data-value="' + escapeHtml(t) + '"><span class="cd-tag-dot" style="background:' + color + '"></span>' + escapeHtml(t) + '<span class="cd-chip-remove" data-action="remove-chip">×</span></span>'
   }
   html += '        </div>'
-  html += '        <div class="cd-chip-add-row">'
-  html += '          <input class="cd-chip-input" data-add-chip="cd-tags" placeholder="Add tag...">'
-  html += '          <button class="cd-chip-add-btn" data-action="add-chip" data-target="cd-tags">+</button>'
-  html += '        </div>'
+  html += '        <select id="cd-tag-select" class="cd-select cd-tag-select">'
+  html += '          <option value="">Select tag\u2026</option>'
+  const wsTags = getWorkspaceTags()
+  for (const t of wsTags) {
+    if (!tags.includes(t.name)) {
+      html += '          <option value="' + escapeHtml(t.name) + '">' + escapeHtml(t.name) + '</option>'
+    }
+  }
+  html += '        </select>'
   html += '      </div>'
 
   html += '      <div class="cd-field">'
@@ -213,6 +219,13 @@ export function setupModalKeyboard() {
       addMemberChip(name)
       target.value = ''
       refreshMemberSelect()
+    }
+    if (target.id === 'cd-tag-select') {
+      const name = target.value.trim()
+      if (!name) return
+      addTagChip(name)
+      target.value = ''
+      refreshTagSelect()
     }
   })
 
@@ -559,4 +572,33 @@ function refreshMemberSelect() {
 function getWorkspaceMembersForCard() {
   const w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
   return w ? w.members || [] : []
+}
+
+function addTagChip(name) {
+  const container = document.getElementById('cd-tags')
+  if (!container) return
+  const color = getTagColor(name)
+  const chip = document.createElement('span')
+  chip.className = 'cd-chip cd-tag'
+  chip.dataset.type = 'tag'
+  chip.dataset.value = name
+  chip.innerHTML = '<span class="cd-tag-dot" style="background:' + color + '"></span>' + escapeHtml(name) + '<span class="cd-chip-remove" data-action="remove-chip">×</span>'
+  container.appendChild(chip)
+}
+
+function refreshTagSelect() {
+  const select = document.getElementById('cd-tag-select')
+  if (!select) return
+  const used = new Set()
+  document.querySelectorAll('#cd-tags .cd-chip[data-type="tag"]').forEach(el => {
+    const text = el.dataset.value || el.childNodes[0]?.nodeValue?.trim()
+    if (text) used.add(text)
+  })
+  select.innerHTML = '<option value="">Select tag\u2026</option>'
+  const wsTags = getWorkspaceTags()
+  for (const t of wsTags) {
+    if (!used.has(t.name)) {
+      select.innerHTML += '<option value="' + escapeHtml(t.name) + '">' + escapeHtml(t.name) + '</option>'
+    }
+  }
 }

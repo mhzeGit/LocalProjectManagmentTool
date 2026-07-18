@@ -1,0 +1,441 @@
+/* ─── Theme: Default (Midnight Dark) ─── */
+:root,
+.theme-default {
+  color-scheme: dark;
+  --bg-body: #111118;
+  --bg-panel: #1a1a2a;
+  --bg-panel-alt: #1e1e2e;
+  --bg-surface: #26263a;
+  --bg-surface-hover: #2a2a40;
+  --bg-elevated: #24243a;
+  --bg-topbar: #1a1a26;
+  --bg-input: #12121e;
+  --bg-strong: #16161f;
+  --bg-sidebar: #1e1e2f;
+  --bg-tab-active: #1e1e2e;
+  --bg-tab-hover: #1a1a2a;
+  --bg-card: #26263a;
+  --bg-chip-tag: #2d2d50;
+  --bg-chip-member: #1e3a3a;
+  --bg-self-member: #0d1f0d;
+  --bg-progress: #32324a;
+  --bg-cell-other: #111118;
+  --bg-cell-weekend: #13131c;
+  --bg-cell-weekend-other: #0f0f16;
+  --bg-pref-sidebar: #14141f;
+  --bg-pref-card: #12121e;
+  --bg-color-form: #12121e;
+
+  --border: #2a2a40;
+  --border-light: #2a2a3d;
+  --border-input: #33334a;
+  --border-strong: #3a3a55;
+  --border-dashed: #4a4a65;
+
+  --text-primary: #e0e0e8;
+  --text-bright: #e8e8f0;
+  --text-secondary: #999;
+  --text-muted: #555;
+  --text-dim: #666;
+  --text-inverse: #1a1a2a;
+  --text-white: #fff;
+  --text-placeholder: #555;
+
+  --accent: #4f46e5;
+  --accent-hover: #6366f1;
+  --accent-subtle: rgba(79, 70, 229, 0.12);
+  --accent-subtle-bg: rgba(79, 70, 229, 0.15);
+  --accent-text: #a78bfa;
+  --accent-chip-text: #a78bfa;
+
+  --danger: #ef4444;
+  --danger-hover: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-border: #ef4444;
+
+  --success: #22c55e;
+  --success-hover: #2ed573;
+  --success-bg: #0d1f0d;
+  --success-border: #22c55e44;
+
+  --warning: #eab308;
+
+  --member-text: #5eead4;
+  --member-bg: #1e3a3a;
+  --member-self-border: #22c55e;
+
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow-sm: rgba(0, 0, 0, 0.3);
+  --shadow-md: rgba(0, 0, 0, 0.4);
+  --shadow-lg: rgba(0, 0, 0, 0.5);
+
+  --scrollbar-thumb: #3a3a55;
+  --scrollbar-track: #1a1a2a;
+
+  --card-check-border: #555;
+  --switch-bg: #2a2a3d;
+
+  --cal-today-bg: #1e1214;
+  --cal-today-border: #ef4444;
+  --cal-weekend-bg: #13131c;
+
+  --tl-row-bg: #14141e;
+  --tl-row-label-bg: #1e1e2e;
+  --tl-row-hover: #2a2a3d;
+  --tl-track-empty-bg: #1a1a26;
+  --tl-grid-line: rgba(255, 255, 255, 0.025);
+  --tl-month-marker: rgba(255, 255, 255, 0.1);
+  --tl-month-marker-body: rgba(255, 255, 255, 0.06);
+  --tl-bar-shadow: rgba(0, 0, 0, 0.25);
+  --tl-bar-highlight: rgba(255, 255, 255, 0.12);
+  --tl-bar-resize-hover: rgba(255, 255, 255, 0.18);
+  --tl-bar-resize-active: rgba(255, 255, 255, 0.3);
+  --tl-bar-done-text: rgba(255, 255, 255, 0.5);
+  --tl-bar-cl-progress: rgba(0, 0, 0, 0.3);
+  --tl-drag-over: rgba(79, 70, 229, 0.12);
+  --tl-drag-over-us: rgba(79, 70, 229, 0.18);
+  --tl-preview-bg: rgba(79, 70, 229, 0.13);
+  --tl-preview-border: #4f46e5;
+
+  --cal-ucard-bg: #26263a;
+  --cal-ucard-border: #32324a;
+  --cal-ucard-hover-border: #4f46e5;
+  --cal-span-card-highlight: rgba(255, 255, 255, 0.12);
+  --cal-cl-progress-bg: rgba(255, 255, 255, 0.08);
+  --cal-cell-bg: #14141e;
+  --cal-cell-hover: #181828;
+  --cal-cell-today-bg: #1e1214;
+  --cal-cell-other-bg: #111118;
+  --cal-nav-bg: #1e1e2e;
+  --cal-nav-border: #2a2a40;
+  --cal-nav-hover-bg: #2a2a3d;
+  --cal-dow-bg: #1a1a26;
+  --cal-cell-weekend-bg: #13131c;
+  --cal-cell-weekend-other-bg: #0f0f16;
+  --cal-cell-today-weekend-bg: #1a1a2a;
+  --cal-drag-over-bg: rgba(79, 70, 229, 0.15);
+  --cal-us-bg: #111118;
+  --cal-us-row-bg: #1a1a26;
+  --cal-us-row-border: #2a2a40;
+
+  --mark-bg: #fef08a;
+  --mark-color: #1a1a2a;
+  --blockquote-bg: #1e1e32;
+  --blockquote-border: #4f46e5;
+  --pre-bg: #12121e;
+  --pre-border: #2a2a40;
+  --code-bg: #2a2a3d;
+  --code-color: #f472b6;
+  --th-bg: #1e1e32;
+  --td-bg: #1a1a2a;
+  --selected-cell-bg: #252540;
+  --grip-bg: #2a2a3d;
+
+  --filter-check-color: #c0c0d0;
+  --filter-checked-color: #e0e0f0;
+  --filter-chip-bg: #24243a;
+  --filter-chip-border: #3a3a50;
+  --filter-panel-bg: #1e1e2e;
+  --filter-btn-bg: #1e1e2e;
+  --color-scheme: dark;
+
+  --member-avatar-bg: #3a3a55;
+  --member-avatar-color: #ccc;
+  --member-box-shadow: #555;
+
+  --editor-btn-active-bg: #32325a;
+}
+
+/* ─── Theme: Light ─── */
+.theme-light {
+  color-scheme: light;
+  --bg-body: #f4f4f7;
+  --bg-panel: #ffffff;
+  --bg-panel-alt: #f0f0f5;
+  --bg-surface: #f0f0f5;
+  --bg-surface-hover: #e4e4ed;
+  --bg-elevated: #ffffff;
+  --bg-topbar: #ffffff;
+  --bg-input: #ffffff;
+  --bg-strong: #eaeaf0;
+  --bg-sidebar: #ffffff;
+  --bg-tab-active: #eaeaf0;
+  --bg-tab-hover: #f0f0f5;
+  --bg-card: #f0f0f5;
+  --bg-chip-tag: #e8e4ff;
+  --bg-chip-member: #e0f5f0;
+  --bg-self-member: #e8f8e8;
+  --bg-progress: #ddd;
+  --bg-cell-other: #eeeeee;
+  --bg-cell-weekend: #f0f0f3;
+  --bg-cell-weekend-other: #ececec;
+  --bg-pref-sidebar: #f0f0f4;
+  --bg-pref-card: #f8f8fb;
+  --bg-color-form: #f8f8fb;
+
+  --border: #d8d8e0;
+  --border-light: #e0e0e8;
+  --border-input: #ccc;
+  --border-strong: #bbb;
+  --border-dashed: #aaa;
+
+  --text-primary: #1a1a2a;
+  --text-bright: #111118;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --text-dim: #888;
+  --text-inverse: #e0e0e8;
+  --text-white: #fff;
+  --text-placeholder: #999;
+
+  --accent: #4f46e5;
+  --accent-hover: #6366f1;
+  --accent-subtle: rgba(79, 70, 229, 0.08);
+  --accent-subtle-bg: rgba(79, 70, 229, 0.1);
+  --accent-text: #4f46e5;
+  --accent-chip-text: #4f46e5;
+
+  --danger: #ef4444;
+  --danger-hover: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  --danger-border: #ef4444;
+
+  --success: #22c55e;
+  --success-hover: #2ed573;
+  --success-bg: #e8f8e8;
+  --success-border: #22c55e88;
+
+  --warning: #eab308;
+
+  --member-text: #0d9488;
+  --member-bg: #e8f5f3;
+  --member-self-border: #22c55e;
+
+  --overlay: rgba(0, 0, 0, 0.3);
+  --shadow-sm: rgba(0, 0, 0, 0.08);
+  --shadow-md: rgba(0, 0, 0, 0.12);
+  --shadow-lg: rgba(0, 0, 0, 0.18);
+
+  --scrollbar-thumb: #ccc;
+  --scrollbar-track: #eee;
+
+  --card-check-border: #aaa;
+  --switch-bg: #d0d0d8;
+
+  --cal-today-bg: #fef2f2;
+  --cal-today-border: #ef4444;
+  --cal-weekend-bg: #fafafa;
+
+  --tl-row-bg: #fafafc;
+  --tl-row-label-bg: #f0f0f5;
+  --tl-row-hover: #e8e8f0;
+  --tl-track-empty-bg: #f4f4f8;
+  --tl-grid-line: rgba(0, 0, 0, 0.04);
+  --tl-month-marker: rgba(0, 0, 0, 0.08);
+  --tl-month-marker-body: rgba(0, 0, 0, 0.04);
+  --tl-bar-shadow: rgba(0, 0, 0, 0.12);
+  --tl-bar-highlight: rgba(255, 255, 255, 0.4);
+  --tl-bar-resize-hover: rgba(0, 0, 0, 0.08);
+  --tl-bar-resize-active: rgba(0, 0, 0, 0.15);
+  --tl-bar-done-text: rgba(0, 0, 0, 0.35);
+  --tl-bar-cl-progress: rgba(0, 0, 0, 0.15);
+  --tl-drag-over: rgba(79, 70, 229, 0.1);
+  --tl-drag-over-us: rgba(79, 70, 229, 0.12);
+  --tl-preview-bg: rgba(79, 70, 229, 0.08);
+  --tl-preview-border: #4f46e5;
+
+  --cal-ucard-bg: #f0f0f5;
+  --cal-ucard-border: #d8d8e0;
+  --cal-ucard-hover-border: #4f46e5;
+  --cal-span-card-highlight: rgba(255, 255, 255, 0.5);
+  --cal-cl-progress-bg: rgba(0, 0, 0, 0.06);
+  --cal-cell-bg: #ffffff;
+  --cal-cell-hover: #f8f8fb;
+  --cal-cell-today-bg: #fef2f2;
+  --cal-cell-other-bg: #f4f4f7;
+  --cal-nav-bg: #f0f0f5;
+  --cal-nav-border: #d8d8e0;
+  --cal-nav-hover-bg: #e4e4ed;
+  --cal-dow-bg: #f4f4f7;
+  --cal-cell-weekend-bg: #fafafa;
+  --cal-cell-weekend-other-bg: #f4f4f7;
+  --cal-cell-today-weekend-bg: #fef2f2;
+  --cal-drag-over-bg: rgba(79, 70, 229, 0.08);
+  --cal-us-bg: #ffffff;
+  --cal-us-row-bg: #f4f4f7;
+  --cal-us-row-border: #e0e0e8;
+
+  --mark-bg: #fef08a;
+  --mark-color: #1a1a2a;
+  --blockquote-bg: #f0f0ff;
+  --blockquote-border: #4f46e5;
+  --pre-bg: #f4f4f7;
+  --pre-border: #d8d8e0;
+  --code-bg: #f0f0f5;
+  --code-color: #d63384;
+  --th-bg: #f0f0f5;
+  --td-bg: #ffffff;
+  --selected-cell-bg: #e8e8ff;
+  --grip-bg: #e0e0e8;
+
+  --filter-check-color: #666;
+  --filter-checked-color: #1a1a2a;
+  --filter-chip-bg: #eaeaf0;
+  --filter-chip-border: #d8d8e0;
+  --filter-panel-bg: #ffffff;
+  --filter-btn-bg: #ffffff;
+  --color-scheme: light;
+
+  --member-avatar-bg: #d0d0d8;
+  --member-avatar-color: #555;
+  --member-box-shadow: #ccc;
+
+  --editor-btn-active-bg: #e8e8ff;
+}
+
+/* ─── Theme: Slate (Desaturated, High Contrast Dark) ─── */
+.theme-slate {
+  color-scheme: dark;
+  --bg-body: #08080c;
+  --bg-panel: #111116;
+  --bg-panel-alt: #16161e;
+  --bg-surface: #1a1a24;
+  --bg-surface-hover: #222230;
+  --bg-elevated: #1c1c28;
+  --bg-topbar: #0e0e14;
+  --bg-input: #0c0c12;
+  --bg-strong: #101018;
+  --bg-sidebar: #0e0e14;
+  --bg-tab-active: #16161e;
+  --bg-tab-hover: #111116;
+  --bg-card: #1a1a24;
+  --bg-chip-tag: #1e1e30;
+  --bg-chip-member: #162020;
+  --bg-self-member: #0a180a;
+  --bg-progress: #282838;
+  --bg-cell-other: #0a0a10;
+  --bg-cell-weekend: #0c0c14;
+  --bg-cell-weekend-other: #08080e;
+  --bg-pref-sidebar: #0c0c12;
+  --bg-pref-card: #0e0e14;
+  --bg-color-form: #0e0e14;
+
+  --border: #222230;
+  --border-light: #262636;
+  --border-input: #2a2a3c;
+  --border-strong: #323248;
+  --border-dashed: #3c3c50;
+
+  --text-primary: #d0d0d8;
+  --text-bright: #e0e0e8;
+  --text-secondary: #787888;
+  --text-muted: #484858;
+  --text-dim: #5a5a6a;
+  --text-inverse: #111118;
+  --text-white: #e8e8f0;
+  --text-placeholder: #484858;
+
+  --accent: #7878a8;
+  --accent-hover: #9494c0;
+  --accent-subtle: rgba(120, 120, 168, 0.12);
+  --accent-subtle-bg: rgba(120, 120, 168, 0.15);
+  --accent-text: #a8a8c8;
+  --accent-chip-text: #a8a8c8;
+
+  --danger: #d44;
+  --danger-hover: #e55;
+  --danger-bg: rgba(220, 68, 68, 0.1);
+  --danger-border: #d44;
+
+  --success: #2a9d5a;
+  --success-hover: #38b86a;
+  --success-bg: #081a0e;
+  --success-border: #2a9d5a44;
+
+  --warning: #d4a030;
+
+  --member-text: #5ab8b8;
+  --member-bg: #142828;
+  --member-self-border: #2a9d5a;
+
+  --overlay: rgba(0, 0, 0, 0.75);
+  --shadow-sm: rgba(0, 0, 0, 0.4);
+  --shadow-md: rgba(0, 0, 0, 0.5);
+  --shadow-lg: rgba(0, 0, 0, 0.6);
+
+  --scrollbar-thumb: #323248;
+  --scrollbar-track: #111116;
+
+  --card-check-border: #444;
+  --switch-bg: #262636;
+
+  --cal-today-bg: #1a1010;
+  --cal-today-border: #d44;
+  --cal-weekend-bg: #0c0c14;
+
+  --tl-row-bg: #0e0e14;
+  --tl-row-label-bg: #14141c;
+  --tl-row-hover: #1c1c28;
+  --tl-track-empty-bg: #0e0e14;
+  --tl-grid-line: rgba(255, 255, 255, 0.02);
+  --tl-month-marker: rgba(255, 255, 255, 0.06);
+  --tl-month-marker-body: rgba(255, 255, 255, 0.03);
+  --tl-bar-shadow: rgba(0, 0, 0, 0.35);
+  --tl-bar-highlight: rgba(255, 255, 255, 0.08);
+  --tl-bar-resize-hover: rgba(255, 255, 255, 0.1);
+  --tl-bar-resize-active: rgba(255, 255, 255, 0.2);
+  --tl-bar-done-text: rgba(255, 255, 255, 0.35);
+  --tl-bar-cl-progress: rgba(0, 0, 0, 0.35);
+  --tl-drag-over: rgba(120, 120, 168, 0.12);
+  --tl-drag-over-us: rgba(120, 120, 168, 0.18);
+  --tl-preview-bg: rgba(120, 120, 168, 0.13);
+  --tl-preview-border: #7878a8;
+
+  --cal-ucard-bg: #1a1a24;
+  --cal-ucard-border: #222230;
+  --cal-ucard-hover-border: #7878a8;
+  --cal-span-card-highlight: rgba(255, 255, 255, 0.08);
+  --cal-cl-progress-bg: rgba(255, 255, 255, 0.06);
+  --cal-cell-bg: #0c0c14;
+  --cal-cell-hover: #10101a;
+  --cal-cell-today-bg: #1a1010;
+  --cal-cell-other-bg: #08080c;
+  --cal-nav-bg: #16161e;
+  --cal-nav-border: #222230;
+  --cal-nav-hover-bg: #1c1c28;
+  --cal-dow-bg: #0e0e14;
+  --cal-cell-weekend-bg: #0c0c14;
+  --cal-cell-weekend-other-bg: #08080e;
+  --cal-cell-today-weekend-bg: #14101a;
+  --cal-drag-over-bg: rgba(120, 120, 168, 0.12);
+  --cal-us-bg: #0a0a10;
+  --cal-us-row-bg: #0e0e14;
+  --cal-us-row-border: #222230;
+
+  --mark-bg: #5a5a20;
+  --mark-color: #e0e0e8;
+  --blockquote-bg: #141420;
+  --blockquote-border: #7878a8;
+  --pre-bg: #0c0c12;
+  --pre-border: #222230;
+  --code-bg: #1c1c28;
+  --code-color: #c878a8;
+  --th-bg: #14141c;
+  --td-bg: #111116;
+  --selected-cell-bg: #1a1a28;
+  --grip-bg: #1c1c28;
+
+  --filter-check-color: #787888;
+  --filter-checked-color: #d0d0d8;
+  --filter-chip-bg: #1c1c28;
+  --filter-chip-border: #2a2a3c;
+  --filter-panel-bg: #16161e;
+  --filter-btn-bg: #16161e;
+  --color-scheme: dark;
+
+  --member-avatar-bg: #28283a;
+  --member-avatar-color: #a0a0b0;
+  --member-box-shadow: #333;
+
+  --editor-btn-active-bg: #1c1c30;
+}

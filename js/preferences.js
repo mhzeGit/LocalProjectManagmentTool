@@ -3,9 +3,11 @@ import { render } from './sidebar.js'
 
 let activeCategoryId = 'colors'
 let _prefEditingMemberId = null
+let _prefEditingTagId = null
 
 const categories = [
   { id: 'colors', label: 'Workspace Colors', icon: '\ud83c\udfa8', render: renderColorsTab },
+  { id: 'tags', label: 'Tags', icon: '\ud83c\udff7\ufe0f', render: renderTagsTab },
   { id: 'members', label: 'Members', icon: '\ud83d\udc65', render: renderMembersTab },
   { id: 'general', label: 'General', icon: '\u2699\ufe0f', render: renderGeneralTab },
 ]
@@ -26,6 +28,7 @@ export function openPreferences(categoryId) {
   overlay.classList.add('open')
   activeCategoryId = categoryId && categories.find(c => c.id === categoryId) ? categoryId : categories[0].id
   _prefEditingMemberId = null
+  _prefEditingTagId = null
   renderPreferences()
 }
 
@@ -57,6 +60,7 @@ function renderPreferences() {
 window.selectPrefCategory = function(id) {
   activeCategoryId = id
   _prefEditingMemberId = null
+  _prefEditingTagId = null
   renderPreferences()
 }
 
@@ -246,11 +250,172 @@ window.prefSetSelfMember = function(id) {
   render()
 }
 
-/* ─── General Tab (placeholder for future settings) ─── */
+/* ─── Tags Tab ─── */
+
+function renderTagsTab(container) {
+  const w = getCurrentWorkspace()
+  if (!w) {
+    container.innerHTML = '<div class="pref-placeholder"><div class="pref-placeholder-text">No workspace selected.</div></div>'
+    return
+  }
+
+  const tags = w.tags || []
+  const editing = _prefEditingTagId ? tags.find(t => t.id === _prefEditingTagId) : null
+
+  let html = '<div class="pref-section-title">Workspace Tags</div>'
+
+  if (editing) {
+    html += '<div class="pref-tag-add-form">'
+    html += '  <input type="color" id="pref-tag-edit-color" value="' + escapeHtml(editing.color) + '">'
+    html += '  <input id="pref-tag-edit-name" value="' + escapeHtml(editing.name) + '" placeholder="Tag name" autofocus>'
+    html += '  <button class="pref-member-add-btn" onclick="prefSaveTagEdit()">Save</button>'
+    html += '  <button class="pref-color-add-btn" style="background:#2a2a3d" onclick="prefCancelTagEdit()">Cancel</button>'
+    html += '</div>'
+  } else {
+    html += '<div class="pref-tag-add-form">'
+    html += '  <input type="color" id="pref-new-tag-color" value="#4f46e5">'
+    html += '  <input id="pref-new-tag-name" placeholder="Tag name" autofocus>'
+    html += '  <button class="pref-member-add-btn" onclick="prefAddTag()">+ Add</button>'
+    html += '</div>'
+  }
+
+  html += '<div class="pref-tags-list">'
+  if (tags.length === 0) {
+    html += '<div class="pref-member-empty">No tags yet. Add one above.</div>'
+  } else {
+    for (const t of tags) {
+      html += '<div class="pref-tag-item">'
+      html += '  <span class="pref-tag-color" style="background:' + t.color + '"></span>'
+      html += '  <span class="pref-color-name">' + escapeHtml(t.name) + '</span>'
+      html += '  <div class="pref-member-actions">'
+      html += '    <button class="pref-member-btn pref-member-btn-edit" onclick="prefStartEditTag(\'' + t.id + '\')">\u270e</button>'
+      html += '    <button class="pref-member-btn pref-member-btn-del" onclick="prefRemoveTag(\'' + t.id + '\')">\u2715</button>'
+      html += '  </div>'
+      html += '</div>'
+    }
+  }
+  html += '</div>'
+
+  container.innerHTML = html
+
+  const newNameInput = document.getElementById('pref-new-tag-name')
+  if (newNameInput) {
+    newNameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') prefAddTag()
+    })
+  }
+  const editNameInput = document.getElementById('pref-tag-edit-name')
+  if (editNameInput) {
+    editNameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') prefSaveTagEdit()
+    })
+  }
+}
+
+window.prefAddTag = function() {
+  const w = getCurrentWorkspace()
+  if (!w) return
+  const nameInput = document.getElementById('pref-new-tag-name')
+  const colorInput = document.getElementById('pref-new-tag-color')
+  const name = nameInput ? nameInput.value.trim() : ''
+  if (!name) return
+  const color = colorInput ? colorInput.value : '#4f46e5'
+  if (!w.tags) w.tags = []
+  w.tags.push({ id: genId(), name, color })
+  renderTagsTab(document.getElementById('pref-content'))
+  render()
+}
+
+window.prefRemoveTag = function(id) {
+  const w = getCurrentWorkspace()
+  if (!w) return
+  const idx = w.tags.findIndex(t => t.id === id)
+  if (idx !== -1) w.tags.splice(idx, 1)
+  if (_prefEditingTagId === id) _prefEditingTagId = null
+  renderTagsTab(document.getElementById('pref-content'))
+  render()
+}
+
+window.prefStartEditTag = function(id) {
+  _prefEditingTagId = id
+  renderTagsTab(document.getElementById('pref-content'))
+}
+
+window.prefCancelTagEdit = function() {
+  _prefEditingTagId = null
+  renderTagsTab(document.getElementById('pref-content'))
+}
+
+window.prefSaveTagEdit = function() {
+  if (!_prefEditingTagId) return
+  const w = getCurrentWorkspace()
+  if (!w) return
+  const t = w.tags.find(tag => tag.id === _prefEditingTagId)
+  if (!t) return
+  const nameInput = document.getElementById('pref-tag-edit-name')
+  const colorInput = document.getElementById('pref-tag-edit-color')
+  const name = nameInput ? nameInput.value.trim() : ''
+  if (!name) return
+  t.name = name
+  t.color = colorInput ? colorInput.value : '#4f46e5'
+  _prefEditingTagId = null
+  renderTagsTab(document.getElementById('pref-content'))
+  render()
+}
+
+/* ─── General Tab ─── */
+
+const THEMES = [
+  { id: 'default', label: 'Midnight (Dark)', desc: 'Default dark theme with blue accents', preview: ['#111118', '#1e1e2f', '#4f46e5'] },
+  { id: 'light', label: 'Light', desc: 'Clean light theme', preview: ['#f4f4f7', '#ffffff', '#4f46e5'] },
+  { id: 'slate', label: 'Slate (Dark)', desc: 'Desaturated, high-contrast dark theme', preview: ['#08080c', '#0e0e14', '#7878a8'] },
+]
 
 function renderGeneralTab(container) {
-  container.innerHTML = '<div class="pref-placeholder"><div class="pref-placeholder-icon">\u2699\ufe0f</div><div class="pref-placeholder-text">General settings coming soon</div></div>'
+  const current = getCurrentTheme()
+
+  let html = '<div class="pref-section-title">Theme</div>'
+  html += '<div class="pref-theme-selector">'
+  for (const t of THEMES) {
+    const checked = current === t.id ? ' checked' : ''
+    const activeClass = current === t.id ? ' active' : ''
+    html += '<label class="pref-theme-option' + activeClass + '">'
+    html += '  <input type="radio" name="theme" value="' + t.id + '"' + checked + ' onchange="setTheme(\'' + t.id + '\')">'
+    html += '  <div>'
+    html += '    <div class="pref-theme-label">' + t.label + '</div>'
+    html += '    <div class="pref-theme-desc">' + t.desc + '</div>'
+    html += '  </div>'
+    html += '  <div class="pref-theme-preview">'
+    for (const swatch of t.preview) {
+      html += '    <span class="pref-theme-swatch" style="background:' + swatch + '"></span>'
+    }
+    html += '  </div>'
+    html += '</label>'
+  }
+  html += '</div>'
+  container.innerHTML = html
 }
+
+export function getCurrentTheme() {
+  return localStorage.getItem('kanboard_theme') || 'default'
+}
+
+function setTheme(themeId) {
+  localStorage.setItem('kanboard_theme', themeId)
+  applyTheme(themeId)
+  renderGeneralTab(document.getElementById('pref-content'))
+}
+
+function applyTheme(themeId) {
+  document.documentElement.className = 'theme-' + themeId
+}
+
+export function initTheme() {
+  const theme = getCurrentTheme()
+  applyTheme(theme)
+}
+
+window.setTheme = setTheme
 
 /* ─── Helpers ─── */
 

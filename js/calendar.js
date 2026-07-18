@@ -1,5 +1,6 @@
 import { state, findBoard, findCard, genId } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
 
@@ -231,6 +232,11 @@ function initCalendarDrag() {
       const sRow = Math.floor(startOff / 7) + 1
       const eColLast = (endOff % 7) + 1
       const eRow = Math.floor(endOff / 7) + 1
+      const allSegs = document.querySelectorAll('.cal-span-card[data-card-id="' + spanCard.dataset.cardId + '"]')
+      const otherSegs = []
+      for (let si = 0; si < allSegs.length; si++) {
+        if (allSegs[si] !== spanCard) otherSegs.push(allSegs[si])
+      }
       _resizing = {
         cardId: spanCard.dataset.cardId,
         dir: handle.dataset.side,
@@ -241,7 +247,8 @@ function initCalendarDrag() {
         origEndCol: eColLast + 1,
         origRow: sRow,
         origEndRow: eRow,
-        clones: []
+        clones: [],
+        otherSegments: otherSegs
       }
       document.body.style.cursor = 'ew-resize'
       document.body.style.userSelect = 'none'
@@ -347,11 +354,16 @@ document.addEventListener('mousemove', function(e) {
       }
     }
 
+    for (let si = 0; si < _resizing.otherSegments.length; si++) {
+      _resizing.otherSegments[si].style.display = ''
+    }
+
     let s = anchorCol
     let e2 = anchorCol + 1
     if (_resizing.dir === 'start') {
       if (mouseRow === anchorRow) {
         s = Math.max(1, Math.min(mouseCol, _resizing.origEndCol - 1))
+        _resizing.el.style.gridRow = String(mouseRow)
       } else {
         s = 1
         for (let rr = mouseRow; rr <= anchorRow; rr++) {
@@ -371,6 +383,7 @@ document.addEventListener('mousemove', function(e) {
     } else {
       if (mouseRow === anchorRow) {
         e2 = Math.max(anchorCol + 1, mouseCol + 1)
+        _resizing.el.style.gridRow = String(mouseRow)
       } else {
         e2 = 8
         for (let rr = anchorRow; rr <= mouseRow; rr++) {
@@ -387,6 +400,35 @@ document.addEventListener('mousemove', function(e) {
         }
       }
       _resizing.el.style.gridColumn = _resizing.origStartCol + '/' + e2
+    }
+
+    if (_resizing.dir === 'end' && mouseRow !== anchorRow && mouseRow < _resizing.origEndRow) {
+      _resizing.el.style.gridRow = String(mouseRow)
+      _resizing.el.style.gridColumn = _resizing.origStartCol + '/' + (mouseCol + 1)
+      for (let ci = _resizing.clones.length - 1; ci >= 0; ci--) {
+        if (parseInt(_resizing.clones[ci].style.gridRow) === mouseRow) {
+          if (_resizing.clones[ci].parentNode) _resizing.clones[ci].parentNode.removeChild(_resizing.clones[ci])
+          _resizing.clones.splice(ci, 1)
+        }
+      }
+    }
+    if (_resizing.dir === 'start' && mouseRow !== anchorRow && mouseRow > _resizing.origRow) {
+      _resizing.el.style.gridRow = String(mouseRow)
+      _resizing.el.style.gridColumn = mouseCol + '/' + _resizing.origEndCol
+      for (let ci = _resizing.clones.length - 1; ci >= 0; ci--) {
+        if (parseInt(_resizing.clones[ci].style.gridRow) === mouseRow) {
+          if (_resizing.clones[ci].parentNode) _resizing.clones[ci].parentNode.removeChild(_resizing.clones[ci])
+          _resizing.clones.splice(ci, 1)
+        }
+      }
+    }
+
+    const curRow = parseInt(_resizing.el.style.gridRow) || (_resizing.dir === 'start' ? _resizing.origRow : _resizing.origEndRow)
+    for (let si = 0; si < _resizing.otherSegments.length; si++) {
+      const osRow = parseInt(_resizing.otherSegments[si].style.gridRow)
+      if (osRow === curRow) {
+        _resizing.otherSegments[si].style.display = 'none'
+      }
     }
 
     _resizing._mouseCol = mouseCol
@@ -511,8 +553,10 @@ export function renderCalendar() {
     }
   }
 
-  const datedItems = allItems.filter(function(x) { return x.card.startDate || x.card.endDate })
-  const undatedItems = allItems.filter(function(x) { return !x.card.startDate && !x.card.endDate })
+  const filteredItems = getActiveFilterCount() > 0 ? filterCards(allItems) : allItems
+
+  const datedItems = filteredItems.filter(function(x) { return x.card.startDate || x.card.endDate })
+  const undatedItems = filteredItems.filter(function(x) { return !x.card.startDate && !x.card.endDate })
 
   const firstOfMonth = new Date(year, month, 1)
   const firstDayOfWeek = firstOfMonth.getDay()

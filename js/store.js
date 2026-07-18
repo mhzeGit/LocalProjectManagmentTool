@@ -5,12 +5,15 @@ import { closeModal } from './modal.js'
 export function createWorkspace() {
   const name = document.getElementById('modalInput').value.trim()
   if (!name) return
-  data.workspaces.push({ id: genId(), name, members: [], projects: [] })
+  data.workspaces.push({ id: genId(), name, members: [], tags: [], projects: [] })
   closeModal()
   state.selectedWorkspaceId = data.workspaces[data.workspaces.length - 1].id
   state.selectedProjectId = null
   state.selectedBoardId = null
   render()
+  if (!state.selfMemberId) {
+    setTimeout(() => window.openPreferences('members'), 100)
+  }
 }
 
 export function deleteWorkspace(id) {
@@ -221,7 +224,7 @@ function collectCardForm() {
 
   const tags = []
   document.querySelectorAll('#cd-tags .cd-chip[data-type="tag"]').forEach(el => {
-    const text = el.childNodes[0]?.nodeValue?.trim()
+    const text = el.dataset.value || (el.childNodes[0]?.nodeValue?.trim())
     if (text) tags.push(text)
   })
 

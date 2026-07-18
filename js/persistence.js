@@ -108,6 +108,7 @@ function saveAllToFolder(handle) {
     var wsFilename = 'workspace_' + ws.id + '.json'
     var wsData = {
       type: 'workspace', id: ws.id, name: ws.name,
+      tags: (ws.tags || []),
       members: (ws.members || []).map(function(m) { return m.id }),
       projects: (ws.projects || []).map(function(p) { return p.id }),
       archivedProjects: (ws.archivedProjects || []).map(function(p) { return p.id })
@@ -289,7 +290,7 @@ function reconstructData(allData, stateData) {
 
   for (var wi = 0; wi < wsList.length; wi++) {
     var wsMeta = wsList[wi]
-    var newWs = { id: wsMeta.id, name: wsMeta.name }
+    var newWs = { id: wsMeta.id, name: wsMeta.name, tags: wsMeta.tags || [] }
     newWs.members = (wsMeta.members || []).map(function(mId) {
       var m = allData.members[mId]
       return m ? { id: m.id, name: m.name, avatar: m.avatar || '' } : null
@@ -514,22 +515,15 @@ function stopPolling() {
 }
 
 function updateSaveUI() {
-  var statusEl = document.getElementById('saveStatus')
   var openBtn = document.getElementById('openFolderBtn')
   var closeBtn = document.getElementById('closeFolderBtn')
   var saveBtn = document.getElementById('saveNowBtn')
 
-  if (!statusEl) return
-
   if (_saveMode === 'file' && _folderHandle) {
-    statusEl.textContent = 'File'
-    statusEl.className = 'save-status active'
     if (openBtn) openBtn.style.display = 'none'
     if (closeBtn) closeBtn.style.display = ''
     if (saveBtn) saveBtn.style.display = ''
   } else {
-    statusEl.textContent = 'Memory'
-    statusEl.className = 'save-status'
     if (openBtn) openBtn.style.display = ''
     if (closeBtn) closeBtn.style.display = 'none'
     if (saveBtn) saveBtn.style.display = 'none'

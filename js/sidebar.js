@@ -87,6 +87,18 @@ export function selectProject(id) {
 }
 
 export function selectBoard(id) {
+  if (state.selectedBoardId !== id) {
+    const f = state.filters
+    f.search = ''
+    f.members = []
+    f.tags = []
+    f.priority = []
+    f.startDateFrom = ''
+    f.startDateTo = ''
+    f.endDateFrom = ''
+    f.endDateTo = ''
+    f.completed = 'all'
+  }
   state.selectedBoardId = id
   state.selectedDocumentId = null
   state.selectedDashboard = false

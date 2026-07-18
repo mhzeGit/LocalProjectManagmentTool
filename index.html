@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-default">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Task Board</title>
+  <link rel="stylesheet" href="css/themes.css">
   <link rel="stylesheet" href="css/reset.css">
   <link rel="stylesheet" href="css/sidebar.css">
   <link rel="stylesheet" href="css/board.css">
@@ -12,6 +13,7 @@
   <link rel="stylesheet" href="css/calendar.css">
   <link rel="stylesheet" href="css/document.css">
   <link rel="stylesheet" href="css/members.css">
+  <link rel="stylesheet" href="css/filters.css">
   <link rel="stylesheet" href="css/preferences.css">
 </head>
 <body>
@@ -29,11 +31,10 @@
   <div class="topbar">
     <div class="topbar-left">
       <span class="breadcrumb" id="breadcrumb"></span>
+      <button class="save-btn" id="openFolderBtn" onclick="openFolder()">Open Folder</button>
     </div>
     <div class="topbar-right">
       <div class="save-controls">
-        <span class="save-status" id="saveStatus">Memory</span>
-        <button class="save-btn" id="openFolderBtn" onclick="openFolder()">Open Folder</button>
         <button class="save-btn save-btn-primary" id="saveNowBtn" onclick="saveNow()" style="display:none">Save</button>
         <button class="save-btn" id="closeFolderBtn" onclick="closeFolder()" style="display:none">Close</button>
       </div>
@@ -48,6 +49,7 @@
       </button>
     </div>
   </div>
+  <div id="filterBar" class="hidden"></div>
   <div class="board-area" id="boardArea">
     <div class="empty-state">
       <p>Select or create a workspace to get started</p>

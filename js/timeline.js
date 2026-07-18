@@ -1,5 +1,6 @@
 import { state, findBoard, findColumn, findCard, findCardColumn, genId } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
 
@@ -85,11 +86,13 @@ export function renderTimeline() {
     }
   }
 
+  const filteredItems = getActiveFilterCount() > 0 ? filterCards(allItems) : allItems
+
   const now = new Date()
   now.setHours(0, 0, 0, 0)
 
-  const datedItems = allItems.filter(x => x.card.startDate || x.card.endDate)
-  const undatedItems = allItems.filter(x => !x.card.startDate && !x.card.endDate)
+  const datedItems = filteredItems.filter(x => x.card.startDate || x.card.endDate)
+  const undatedItems = filteredItems.filter(x => !x.card.startDate && !x.card.endDate)
 
   const todayMinus14 = new Date(now)
   todayMinus14.setDate(todayMinus14.getDate() - 14)
@@ -178,6 +181,13 @@ export function renderTimeline() {
   html += '  </div>'
   html += '</div>'
 
+  const colFilteredCounts = {}
+  if (filteredItems.length < allItems.length) {
+    for (const item of filteredItems) {
+      colFilteredCounts[item.columnId] = (colFilteredCounts[item.columnId] || 0) + 1
+    }
+  }
+
   html += '<div class="tl-body" style="width:' + (200 + totalWidth) + 'px">'
   if (showToday) {
     html += '<div class="tl-today-line" style="left:' + (200 + todayLeft) + 'px"></div>'
@@ -226,7 +236,7 @@ export function renderTimeline() {
     html += '<div class="tl-row" data-col-id="' + col.id + '">'
     html += '  <div class="tl-row-label" draggable="true" data-col-id="' + col.id + '" style="min-height:' + trackHeight + 'px">'
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
-    html += '    <span class="tl-row-count">' + col.cards.length + '</span>'
+    html += '    <span class="tl-row-count">' + (colFilteredCounts[col.id] != null ? colFilteredCounts[col.id] + '/' + col.cards.length : col.cards.length) + '</span>'
     html += '  </div>'
     const gridStops = 'transparent 0px, transparent ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + DAY_WIDTH + 'px'
     html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px;height:' + trackHeight + 'px;background-image:repeating-linear-gradient(90deg,' + gridStops + ')">'

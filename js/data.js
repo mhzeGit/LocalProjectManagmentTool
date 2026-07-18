@@ -1,32 +1,5 @@
 export const data = {
-  workspaces: [
-    {
-      id: 'w1', name: 'Template Workspace',
-      members: [
-        { id: 'm1', name: 'Alice', avatar: '' },
-        { id: 'm2', name: 'Bob', avatar: '' },
-        { id: 'm3', name: 'Charlie', avatar: '' },
-      ],
-      projects: [
-        {
-          id: 'p1', name: 'Template Project',
-          boards: [
-            {
-              id: 'b1', name: 'Task Board',
-              columns: [
-                { id: 'col1', name: 'To Do', cards: [] },
-                { id: 'col2', name: 'Doing', cards: [] },
-                { id: 'col3', name: 'Done', cards: [] },
-              ]
-            }
-          ],
-          documents: [
-            { id: 'd1', name: 'Getting Started', content: '<h1>Welcome</h1><p>Start writing your document here. This supports <strong>bold</strong>, <em>italic</em>, and more!</p>' }
-          ]
-        }
-      ]
-    }
-  ]
+  workspaces: []
 }
 
 let uid = 100
@@ -47,13 +20,24 @@ export const PREDEFINED_COLORS = [
 ]
 
 export const state = {
-  selectedWorkspaceId: 'w1',
-  selectedProjectId: 'p1',
+  selectedWorkspaceId: null,
+  selectedProjectId: null,
   selectedBoardId: null,
   selectedDocumentId: null,
   selectedDashboard: false,
   selectedView: 'kanban',
   selfMemberId: null,
+  filters: {
+    search: '',
+    members: [],
+    tags: [],
+    priority: [],
+    startDateFrom: '',
+    startDateTo: '',
+    endDateFrom: '',
+    endDateTo: '',
+    completed: 'all',
+  },
 }
 
 export function getCurrentWorkspace() {
@@ -67,3 +51,14 @@ export function findColumn(id) { for (const w of data.workspaces) { for (const p
 export function findCard(id) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { for (const c of b.columns) { const cd = c.cards.find(crd => crd.id === id); if (cd) return cd } } } } return null }
 export function findCardColumn(cardId) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { for (const c of b.columns) { if (c.cards.find(crd => crd.id === cardId)) return c } } } } return null }
 export function findDocument(id) { for (const w of data.workspaces) { for (const p of w.projects) { const d = p.documents.find(doc => doc.id === id); if (d) return d } } return null }
+
+export function getWorkspaceTags() {
+  const w = getCurrentWorkspace()
+  return w ? (w.tags || []) : []
+}
+
+export function getTagColor(tagName) {
+  const tags = getWorkspaceTags()
+  const tag = tags.find(t => t.name === tagName)
+  return tag ? tag.color : '#6b7280'
+}
