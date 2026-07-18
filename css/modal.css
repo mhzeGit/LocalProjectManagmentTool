@@ -114,6 +114,15 @@
 .cd-checklist-add-btn { display: inline-block; padding: 6px 14px; background: var(--bg-surface-hover); color: var(--text-secondary); border-radius: 6px; font-size: 13px; }
 .cd-checklist-add-btn:hover { background: var(--border-strong); color: var(--text-white); }
 
+/* Color picker */
+.cd-color-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.cd-color-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; transition: border-color .15s, transform .1s; }
+.cd-color-swatch:hover { border-color: var(--text-bright); transform: scale(1.1); }
+.cd-color-swatch-selected { border-color: var(--text-primary) !important; box-shadow: 0 0 0 2px var(--bg-panel), 0 0 0 4px currentColor; }
+.cd-color-swatch-none { background: var(--bg-surface-hover); color: var(--text-dim); font-size: 11px; line-height: 24px; text-align: center; border-color: var(--border-strong); }
+.cd-color-swatch-none:hover { border-color: var(--danger); color: var(--danger); }
+.cd-color-swatch-none.cd-color-swatch-selected { border-color: var(--danger) !important; box-shadow: 0 0 0 2px var(--bg-panel), 0 0 0 4px var(--danger); }
+
 /* Card form footer (bottom-right, always visible) */
 .cd-form-footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0 0; flex-shrink: 0; }
 .cd-form-footer button { padding: 7px 14px; border-radius: 6px; font-size: 13px; }

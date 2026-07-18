@@ -166,7 +166,7 @@ function saveAllToFolder(handle) {
               startDate: cd.startDate || null, endDate: cd.endDate || null,
               priority: cd.priority || '3', tags: cd.tags || [],
               members: cd.members || [], checklists: cd.checklists || [],
-              columnId: c.id
+              color: cd.color || null, columnId: c.id
             }))
             manifest.files.cards.push(cdFilename)
           }
@@ -181,7 +181,7 @@ function saveAllToFolder(handle) {
             startDate: ac.startDate || null, endDate: ac.endDate || null,
             priority: ac.priority || '3', tags: ac.tags || [],
             members: ac.members || [], checklists: ac.checklists || [],
-            archived: true, boardId: b.id
+            color: ac.color || null, archived: true, boardId: b.id
           }))
           manifest.files.cards.push(acFilename)
         }
@@ -204,7 +204,7 @@ function saveAllToFolder(handle) {
               startDate: axcd.startDate || null, endDate: axcd.endDate || null,
               priority: axcd.priority || '3', tags: axcd.tags || [],
               members: axcd.members || [], checklists: axcd.checklists || [],
-              archived: true, columnId: axc.id
+              color: axcd.color || null, archived: true, columnId: axc.id
             }))
             manifest.files.cards.push(axcdFilename)
           }
@@ -331,7 +331,8 @@ function reconstructData(allData, stateData) {
               priority: cdMeta.priority || '3',
               tags: cdMeta.tags || [],
               members: cdMeta.members || [],
-              checklists: cdMeta.checklists || []
+              checklists: cdMeta.checklists || [],
+              color: cdMeta.color || null
             })
           }
 
@@ -373,7 +374,8 @@ function reconstructData(allData, stateData) {
               priority: cdMeta.priority || '3',
               tags: cdMeta.tags || [],
               members: cdMeta.members || [],
-              checklists: cdMeta.checklists || []
+              checklists: cdMeta.checklists || [],
+              color: cdMeta.color || null
             })
           }
         }

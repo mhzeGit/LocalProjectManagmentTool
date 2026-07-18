@@ -1,4 +1,4 @@
-import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor } from './data.js'
+import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 
 const PRIORITY_BAR_CONFIG = {
@@ -220,6 +220,18 @@ function buildCardForm(c, saveAction) {
   html += '        </select>'
   html += '      </div>'
 
+  html += '      <div class="cd-field">'
+  html += '        <label>Color</label>'
+  html += '        <input type="hidden" id="cd-color" value="' + (c.color || '') + '">'
+  html += '        <div class="cd-color-picker">'
+  for (const pc of PREDEFINED_COLORS) {
+    const selected = c.color === pc.value ? ' cd-color-swatch-selected' : ''
+    html += '          <button class="cd-color-swatch' + selected + '" data-color="' + pc.value + '" style="background:' + pc.value + '" title="' + pc.name + '"></button>'
+  }
+  html += '          <button class="cd-color-swatch cd-color-swatch-none' + (!c.color ? ' cd-color-swatch-selected' : '') + '" data-color="" title="None">✕</button>'
+  html += '        </div>'
+  html += '      </div>'
+
   html += '    </div>'
 
   html += '  </div>'
@@ -308,6 +320,15 @@ export function setupModalKeyboard() {
     if (!this.classList.contains('open')) return
     const target = e.target
     const action = target.dataset.action
+
+    if (target.classList.contains('cd-color-swatch')) {
+      const color = target.dataset.color || ''
+      document.getElementById('cd-color').value = color
+      document.querySelectorAll('.cd-color-swatch').forEach(function(el) {
+        el.classList.toggle('cd-color-swatch-selected', el.dataset.color === color)
+      })
+      return
+    }
 
     if (!action) {
       if (e.target === this) {

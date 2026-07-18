@@ -270,7 +270,8 @@ export function renderTimeline() {
       const completed = c.completed ? ' tl-bar-done' : ''
       const barLabel = c.title.length > 25 ? c.title.slice(0, 24) + '\u2026' : c.title
 
-      let barStyle = 'left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + color + ';top:' + barTop + 'px;height:' + laneBarH + 'px;transform:none'
+      const cardColor = c.color || color
+      let barStyle = 'left:' + barLeft + 'px;width:' + barWidth + 'px;background:' + cardColor + ';top:' + barTop + 'px;height:' + laneBarH + 'px;transform:none'
       html += '    <div class="tl-bar' + completed + '" data-card-id="' + c.id + '" style="' + barStyle + '" title="' + escapeHtml(c.title) + ' \u00b7 ' + (c.startDate || 'no date') + ' \u2192 ' + (c.endDate || 'no date') + '">'
       html += '      <div class="tl-bar-resize tl-bar-resize-l" data-resize="start"></div>'
       if (barWidth > 28) {
@@ -318,7 +319,8 @@ export function renderTimeline() {
     for (const item of colUndated) {
       const c = item.card
       const completed = c.completed ? ' tl-ucard-done' : ''
-      html += '    <div class="tl-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" title="' + escapeHtml(c.title) + '">'
+      const tlUcardColorStyle = c.color ? 'border-left:3px solid ' + c.color + ';' : ''
+      html += '    <div class="tl-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" title="' + escapeHtml(c.title) + '" style="' + tlUcardColorStyle + '">'
       html += '      <span class="tl-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
       html += '      <span class="tl-ucard-title">' + escapeHtml(c.title) + '</span>'
       if (c.checklists && c.checklists.length > 0) {

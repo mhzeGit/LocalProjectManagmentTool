@@ -1,4 +1,4 @@
-import { state, findBoard, findProject, findWorkspace, findDocument, getTagColor } from './data.js'
+import { state, findBoard, findProject, findWorkspace, findDocument, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
@@ -55,6 +55,9 @@ export function renderBoard() {
   if (viewSwitcher) {
     viewSwitcher.style.display = b && !d && !state.selectedDashboard ? 'flex' : 'none'
   }
+  document.querySelectorAll('.view-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.view === state.selectedView)
+  })
 
   renderFilterBar()
 
@@ -153,7 +156,9 @@ export function renderBoard() {
       if (filteredCardIds && !filteredCardIds.has(c.id)) continue
       const completed = c.completed ? ' completed' : ''
       const checked = c.completed ? ' checked' : ''
-      html += '<div class="card' + completed + '" draggable="true" data-card-id="' + c.id + '">'
+      const cardColorStyle = c.color ? '--card-color:' + c.color + ';' : ''
+      const barCfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.medium
+      html += '<div class="card' + completed + '" draggable="true" data-card-id="' + c.id + '" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
       html += '  <div class="card-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="card-check-circle"><svg class="card-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>'
       html += '  <div class="card-body">'
       html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
@@ -174,15 +179,12 @@ export function renderBoard() {
         html += '    <div class="card-cl-progress' + allDone + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
       }
       html += '  </div>'
-      {
-        const cfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.medium
-        html += '  <div class="card-priority">'
-        for (let i = 0; i < 5; i++) {
-          const filled = i < cfg.filled ? ' filled' : ''
-          html += '<div class="card-priority-bar' + filled + '" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
-        }
-        html += '  </div>'
+      html += '  <div class="card-priority">'
+      for (let i = 0; i < 5; i++) {
+        const filled = i < barCfg.filled ? ' filled' : ''
+        html += '<div class="card-priority-bar' + filled + '" style="background:' + barCfg.color + ';color:' + barCfg.color + '"></div>'
       }
+      html += '  </div>'
       html += '</div>'
     }
     html += '</div>'
@@ -216,11 +218,18 @@ export function renderBoard() {
         menu.style.top = e.clientY + 'px'
         menu.dataset.cardId = card.dataset.cardId
         const colId = card.closest('[data-col-id]')?.dataset.colId || ''
+        let colorSwatches = ''
+        for (const pc of PREDEFINED_COLORS) {
+          colorSwatches += '<button class="ps-color-swatch" data-color="' + pc.value + '" style="background:' + pc.value + '" onclick="event.stopPropagation();setCardColor(\'' + card.dataset.cardId + '\',\'' + pc.value + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'
+        }
+        colorSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setCardColor(\'' + card.dataset.cardId + '\',null);this.closest(\'.tl-ctx-menu\').remove()" title="None">✕</button>'
         let ctxHtml = '<button class="tl-ctx-item" data-action="copy">Copy</button>'
         ctxHtml += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
         if (window.getCopiedCard && window.getCopiedCard()) {
           ctxHtml += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
         }
+        ctxHtml += '<div class="tl-ctx-divider"></div>'
+        ctxHtml += '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>'
         ctxHtml += '<div class="tl-ctx-divider"></div>'
         ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
         menu.innerHTML = ctxHtml

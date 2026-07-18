@@ -211,6 +211,7 @@ export function saveCard(cardId) {
   c.tags = data.tags
   c.members = data.members
   c.checklists = data.checklists
+  c.color = data.color
   closeModal()
   render()
 }
@@ -221,6 +222,7 @@ function collectCardForm() {
   const startDate = document.getElementById('cd-start')?.value || null
   const endDate = document.getElementById('cd-end')?.value || null
   const priority = document.getElementById('cd-priority')?.value || '3'
+  const color = document.getElementById('cd-color')?.value || null
 
   const tags = []
   document.querySelectorAll('#cd-tags .cd-chip[data-type="tag"]').forEach(el => {
@@ -261,7 +263,7 @@ function collectCardForm() {
     checklists.push(...collectChildren(clContainer))
   }
 
-  return { title, description, startDate, endDate, priority, tags, members, checklists }
+  return { title, description, startDate, endDate, priority, tags, members, checklists, color }
 }
 
 let _copiedCard = null
@@ -359,7 +361,7 @@ export function addProjectDirect(workspaceId) {
 export function addCardDirect(columnId) {
   const col = findColumn(columnId)
   if (!col) return
-  const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [] }
+  const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [], color: null }
   col.cards.push(card)
   render()
   requestAnimationFrame(() => {
@@ -393,6 +395,13 @@ export function setProjectColor(id, color) {
     render()
     return
   }
+}
+
+export function setCardColor(cardId, color) {
+  const c = findCard(cardId)
+  if (!c) return
+  c.color = color || null
+  render()
 }
 
 export function createDocument(projectId) {

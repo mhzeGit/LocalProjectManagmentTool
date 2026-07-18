@@ -599,6 +599,35 @@ export function renderCalendar() {
     }
   }
 
+  const segsByRow = {}
+  for (const seg of spanningSegments) {
+    if (!segsByRow[seg.row]) segsByRow[seg.row] = []
+    segsByRow[seg.row].push(seg)
+  }
+
+  const rowMaxLanes = {}
+  for (const row in segsByRow) {
+    const segs = segsByRow[row]
+    segs.sort((a, b) => a.colStart - b.colStart)
+    const lanes = []
+    for (const seg of segs) {
+      let assigned = false
+      for (let i = 0; i < lanes.length; i++) {
+        if (lanes[i] <= seg.colStart) {
+          lanes[i] = seg.colEnd
+          seg.lane = i
+          assigned = true
+          break
+        }
+      }
+      if (!assigned) {
+        lanes.push(seg.colEnd)
+        seg.lane = lanes.length - 1
+      }
+    }
+    rowMaxLanes[row] = lanes.length
+  }
+
   let html = '<div class="cal-wrapper">'
 
   html += '<div class="cal-header">'
@@ -633,7 +662,13 @@ export function renderCalendar() {
     if (isToday) cls += ' cal-today'
     if (isWeekend) cls += ' cal-weekend'
 
-    html += '<div class="' + cls + '" style="grid-column:' + col + ';grid-row:' + row + '" data-date="' + dateKey + '">'
+    const maxLanes = rowMaxLanes[row] || 0
+    let cellMinHeight = 100
+    if (maxLanes > 1) {
+      cellMinHeight = 26 + 26 + maxLanes * 30 + 6
+    }
+
+    html += '<div class="' + cls + '" style="grid-column:' + col + ';grid-row:' + row + ';min-height:' + cellMinHeight + 'px" data-date="' + dateKey + '">'
     html += '  <div class="cal-day-head">'
     html += '    <span class="cal-day-num">' + dayNum + '</span>'
     html += '  </div>'
@@ -656,7 +691,10 @@ export function renderCalendar() {
       dateStr = formatShortDate(c.endDate)
     }
 
-    html += '<div class="cal-span-card' + completed + '" data-card-id="' + c.id + '" style="grid-column:' + seg.colStart + '/' + seg.colEnd + ';grid-row:' + seg.row + ';background:' + color + '" title="' + escapeHtml(c.title) + '">'
+    const calSpanBg = c.color || color
+    const lane = seg.lane || 0
+    const marginTop = 26 + lane * 30
+    html += '<div class="cal-span-card' + completed + '" data-card-id="' + c.id + '" style="grid-column:' + seg.colStart + '/' + seg.colEnd + ';grid-row:' + seg.row + ';margin-top:' + marginTop + 'px;background:' + calSpanBg + '" title="' + escapeHtml(c.title) + '">'
     html += '    <div class="cal-span-resize cal-span-resize-l" data-side="start"></div>'
     html += '    <span class="cal-span-title">' + escapeHtml(c.title) + '</span>'
     if (dateStr) {
@@ -688,7 +726,8 @@ export function renderCalendar() {
       for (const item of colUndated) {
         const c = item.card
         const completed = c.completed ? ' cal-ucard-done' : ''
-        html += '        <div class="cal-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '">'
+        const calUcardColorStyle = c.color ? 'border-left:3px solid ' + c.color + ';' : ''
+        html += '        <div class="cal-ucard' + completed + '" draggable="true" data-card-id="' + c.id + '" style="' + calUcardColorStyle + '">'
         html += '          <span class="cal-ucard-dot" style="background:' + (PRIORITY_COLORS[c.priority] || '#6b7280') + '"></span>'
         html += '          <span class="cal-ucard-title">' + escapeHtml(c.title) + '</span>'
         if (c.checklists && c.checklists.length > 0) {

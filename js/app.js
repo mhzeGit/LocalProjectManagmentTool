@@ -9,7 +9,7 @@ import {
   createProject, deleteProject,   archiveProject, copyProject, setProjectColor,
   createBoard, deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
-  createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted,
+  createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor,
   addProjectDirect, addCardDirect, addColumnDirect,
   createDocument, deleteDocument
 } from './store.js'
@@ -72,6 +72,7 @@ Object.assign(window, {
   pasteIntoColumn,
   getCopiedCard,
   toggleCardCompleted,
+  setCardColor,
   addProjectDirect,
   addCardDirect,
   addColumnDirect,
