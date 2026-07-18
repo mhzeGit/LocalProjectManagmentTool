@@ -195,13 +195,19 @@ function initCalendarDrag() {
 
     if (handle) {
       e.preventDefault()
+      const gr = spanCard.style.gridRow || '1'
+      const origRow = parseInt(gr)
       _resizing = {
         cardId: spanCard.dataset.cardId,
         dir: handle.dataset.side,
         startX: e.clientX,
+        startY: e.clientY,
         el: spanCard,
         origStartCol: startCol,
-        origEndCol: endCol
+        origEndCol: endCol,
+        origRow: origRow,
+        mouseCol: null,
+        mouseRow: null
       }
       document.body.style.cursor = 'ew-resize'
       document.body.style.userSelect = 'none'
@@ -277,15 +283,21 @@ document.addEventListener('mousemove', function(e) {
 
   if (_resizing && _resizing.el) {
     e.preventDefault()
-    const col = Math.floor((e.clientX - rect.left) / cellW) + 1
-    let start = _resizing.origStartCol
-    let end = _resizing.origEndCol
-    if (_resizing.dir === 'start') {
-      start = Math.max(1, Math.min(col, end - 1))
+    const mouseCol = Math.floor((e.clientX - rect.left) / cellW) + 1
+    const mouseRow = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
+    _resizing.mouseCol = mouseCol
+    _resizing.mouseRow = mouseRow
+
+    var s = _resizing.origStartCol
+    var e2 = _resizing.origEndCol
+    var r = _resizing.origRow
+    if (mouseRow !== r) {
+      if (_resizing.dir === 'start') { s = 1 } else { e2 = 8 }
     } else {
-      end = Math.max(start + 1, col + 1)
+      if (_resizing.dir === 'start') { s = Math.max(1, Math.min(mouseCol, e2 - 1)) }
+      else { e2 = Math.max(s + 1, mouseCol + 1) }
     }
-    _resizing.el.style.gridColumn = start + '/' + end
+    _resizing.el.style.gridColumn = s + '/' + e2
     return
   }
 
@@ -294,9 +306,9 @@ document.addEventListener('mousemove', function(e) {
     const col = Math.floor((e.clientX - rect.left) / cellW) + 1
     const row = Math.max(1, Math.min(Math.floor((e.clientY - rect.top) / cellH) + 1, _calTotalRows))
 
-    let newCol = Math.max(1, Math.min(col, 8 - _moving.durCols))
+    var newCol = Math.max(1, Math.min(col, 8 - _moving.durCols))
     _moving.el.style.gridColumn = newCol + '/' + (newCol + _moving.durCols)
-    _moving.el.style.gridRow = row
+    _moving.el.style.gridRow = String(row)
     return
   }
 })
@@ -313,22 +325,23 @@ document.addEventListener('mouseup', function(ev) {
       document.body.style.userSelect = ''
       return
     }
-    const gc = _resizing.el.style.gridColumn || ''
-    const parts = gc.split('/')
-    if (parts.length >= 2) {
-      const finalStart = parseInt(parts[0])
-      const finalEnd = parseInt(parts[1])
-      const finalRow = parseInt(_resizing.el.style.gridRow) || 1
-      const card = findCard(_resizing.cardId)
-      if (card) {
-        const dates = gridPosToDates(finalStart, finalEnd, finalRow)
-        if (dates.start && dates.end) {
-          card.startDate = formatDate(dates.start)
-          card.endDate = formatDate(dates.end)
-        }
+    var card = findCard(_resizing.cardId)
+    if (card) {
+      var mRow = _resizing.mouseRow != null ? _resizing.mouseRow : _resizing.origRow
+      var mCol = _resizing.mouseCol != null ? _resizing.mouseCol : (_resizing.dir === 'start' ? _resizing.origStartCol : _resizing.origEndCol - 1)
+      var sIdx, eIdx
+      if (_resizing.dir === 'start') {
+        sIdx = (mRow - 1) * 7 + (mCol - 1)
+        eIdx = (_resizing.origRow - 1) * 7 + (_resizing.origEndCol - 2)
+      } else {
+        sIdx = (_resizing.origRow - 1) * 7 + (_resizing.origStartCol - 1)
+        eIdx = (mRow - 1) * 7 + (mCol - 1)
       }
+      if (sIdx > eIdx) { var tmp = sIdx; sIdx = eIdx; eIdx = tmp }
+      card.startDate = formatDate(cellIndexToDate(sIdx))
+      card.endDate = formatDate(cellIndexToDate(eIdx))
     }
-    _resizing.el.style.opacity = ''
+    if (_resizing.el) _resizing.el.style.opacity = ''
     _resizing = null
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
