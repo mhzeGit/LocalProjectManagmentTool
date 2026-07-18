@@ -132,73 +132,111 @@ export function renderCanvasView(canvasId) {
 
   const header = document.createElement('div')
   header.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--bg-topbar);border-bottom:1px solid var(--border-light);flex-shrink:0;min-height:40px;'
-  header.innerHTML = '<h2 class="document-title" id="canvasTitle-' + canvasId + '" ondblclick="startRenameCanvas(\'' + canvasId + '\')" style="font-size:16px;font-weight:600;color:var(--text-primary);margin:0;cursor:pointer;flex-shrink:0;">' + c.name + '</h2>'
-  header.innerHTML += '<div class="canvas-toolbar" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;"></div>'
+  header.innerHTML = '<h2 class="document-title" id="canvasTitle-' + canvasId + '" ondblclick="startRenameCanvas(\'' + canvasId + '\')" style="font-size:16px;font-weight:600;color:var(--text-primary);margin:0;cursor:pointer;">' + c.name + '</h2>'
   header.innerHTML += '<div style="flex:1;"></div>'
 
-  const toolbarActions = [
-    { id: 'canvasToolCursor', title: 'Select (V)', icon: '⇱', tool: TOOLS.CURSOR },
-    { id: 'canvasToolText', title: 'Text Box (T)', icon: 'T', tool: TOOLS.TEXT },
-    { id: 'canvasToolShape', title: 'Shapes', icon: '□', tool: TOOLS.SHAPES, hasSubmenu: true },
-    { id: 'canvasToolArrow', title: 'Arrow (A)', icon: '→', tool: TOOLS.ARROW },
-    { id: 'canvasToolConnector', title: 'Connector (C)', icon: '—', tool: TOOLS.CONNECTION_LINE },
-    { id: 'canvasToolImage', title: 'Image Container', icon: '🖼', tool: TOOLS.IMAGE_CONTAINER },
-  ]
-  const toolbarEl = header.querySelector('.canvas-toolbar')
-  const toolBtnMap = {}
-  for (const a of toolbarActions) {
-    const btn = document.createElement('button')
-    btn.id = a.id
-    btn.title = a.title
-    btn.textContent = a.icon
-    btn.dataset.tool = a.tool
-    btn.style.cssText = 'padding:4px 10px;font-size:13px;font-weight:500;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-surface-hover);color:var(--text-secondary);cursor:pointer;transition:all .1s;'
-    btn.onmouseover = () => { if (!btn.classList.contains('active')) btn.style.background = 'var(--accent-subtle)' }
-    btn.onmouseout = () => { if (!btn.classList.contains('active')) btn.style.background = 'var(--bg-surface-hover)' }
-    btn.onclick = () => setActiveTool(a.tool)
-    toolbarEl.appendChild(btn)
-    toolBtnMap[a.tool] = btn
-
-    if (a.hasSubmenu) {
-      const submenu = document.createElement('div')
-      submenu.id = 'canvasShapeSubmenu'
-      submenu.style.cssText = 'display:none;position:absolute;top:100%;left:0;background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:6px;padding:4px;box-shadow:0 4px 16px var(--shadow-md);z-index:10;white-space:nowrap;'
-      const shapes = [
-        { type: 'rectangle', label: 'Rectangle', icon: '▬' },
-        { type: 'circle', label: 'Circle', icon: '●' },
-        { type: 'triangle', label: 'Triangle', icon: '▲' },
-        { type: 'diamond', label: 'Diamond', icon: '◆' },
-      ]
-      for (const s of shapes) {
-        const sb = document.createElement('button')
-        sb.textContent = s.icon + ' ' + s.label
-        sb.style.cssText = 'display:block;width:100%;padding:6px 12px;font-size:12px;color:var(--text-secondary);border-radius:4px;border:none;background:transparent;cursor:pointer;text-align:left;'
-        sb.onmouseover = () => sb.style.background = 'var(--bg-surface-hover)'
-        sb.onmouseout = () => sb.style.background = 'transparent'
-        sb.onclick = (e) => { e.stopPropagation(); setShapeSubType(s.type); setActiveTool(TOOLS.SHAPES); submenu.style.display = 'none' }
-        submenu.appendChild(sb)
-      }
-      btn.style.position = 'relative'
-      btn.appendChild(submenu)
-      btn.onclick = (e) => {
-        e.stopPropagation()
-        setActiveTool(TOOLS.SHAPES)
-        const allSubmenus = container.querySelectorAll('.canvas-shape-submenu')
-        allSubmenus.forEach(m => m.style.display = 'none')
-        submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block'
-      }
-      submenu.className = 'canvas-shape-submenu'
-    }
-  }
-
-  header.innerHTML += '<div class="canvas-actions" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">'
-  header.innerHTML += '<button id="canvasUndoBtn" title="Undo (Ctrl+Z)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-surface-hover);color:var(--text-secondary);cursor:pointer;">↩</button>'
-  header.innerHTML += '<button id="canvasRedoBtn" title="Redo (Ctrl+Shift+Z)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-surface-hover);color:var(--text-secondary);cursor:pointer;">↪</button>'
-  header.innerHTML += '<button id="canvasDeleteBtn" title="Delete selected (Del)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-surface-hover);color:var(--danger);cursor:pointer;">🗑</button>'
-  header.innerHTML += '<button id="canvasFitBtn" title="Fit to screen (F)" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-surface-hover);color:var(--text-secondary);cursor:pointer;">⊞</button>'
+  header.innerHTML += '<div class="canvas-actions">'
+  header.innerHTML += '<button id="canvasUndoBtn" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>'
+  header.innerHTML += '<button id="canvasRedoBtn" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>'
+  header.innerHTML += '<button id="canvasDeleteBtn" title="Delete selected (Del)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>'
+  header.innerHTML += '<button id="canvasFitBtn" title="Fit to screen (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>'
   header.innerHTML += '</div>'
 
   container.appendChild(header)
+
+  const body = document.createElement('div')
+  body.style.cssText = 'flex:1;display:flex;flex-direction:row;position:relative;min-height:0;'
+
+  const sideToolbar = document.createElement('div')
+  sideToolbar.className = 'canvas-side-toolbar'
+  sideToolbar.id = 'canvasSideToolbar-' + canvasId
+
+  const toolSvgs = {
+    cursor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>',
+    text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 19L19 5"/><path d="M12 5h7v7"/></svg>',
+    connection: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="20" x2="20" y2="4"/><circle cx="4" cy="20" r="1.5" fill="currentColor"/><circle cx="20" cy="4" r="1.5" fill="currentColor"/></svg>',
+    imageContainer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/><circle cx="10" cy="10" r="1" fill="currentColor"/></svg>',
+    rectangle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>',
+    circle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>',
+    triangle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l10 20H2z"/></svg>',
+    diamond: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l10 10-10 10L2 12z"/></svg>',
+  }
+
+  const toolBtnMap = {}
+  const toolbarTools = [
+    { tool: TOOLS.CURSOR, svg: toolSvgs.cursor, label: 'Select (V)' },
+    { tool: TOOLS.TEXT, svg: toolSvgs.text, label: 'Text Box (T)' },
+    { tool: TOOLS.SHAPES, svg: toolSvgs.rectangle, label: 'Shapes', hasSubmenu: true },
+    { tool: TOOLS.ARROW, svg: toolSvgs.arrow, label: 'Arrow (A)' },
+    { tool: TOOLS.CONNECTION_LINE, svg: toolSvgs.connection, label: 'Connector (C)' },
+    { tool: TOOLS.IMAGE_CONTAINER, svg: toolSvgs.imageContainer, label: 'Image Container' },
+  ]
+
+  for (const t of toolbarTools) {
+    if (t.hasSubmenu) {
+      const shapesContainer = document.createElement('div')
+      shapesContainer.className = 'toolbar-shapes-container'
+
+      const shapesBtn = document.createElement('button')
+      shapesBtn.className = 'toolbar-btn'
+      shapesBtn.dataset.tool = t.tool
+      shapesBtn.title = t.label
+      shapesBtn.innerHTML = toolSvgs.rectangle
+      shapesBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const submenu = shapesContainer.querySelector('.canvas-shape-submenu')
+        if (submenu) submenu.classList.toggle('visible')
+        setActiveTool(TOOLS.SHAPES)
+      })
+      shapesContainer.appendChild(shapesBtn)
+      toolBtnMap[t.tool] = shapesBtn
+
+      const shapeTypes = [
+        { key: 'rectangle', label: 'Rectangle', svg: toolSvgs.rectangle },
+        { key: 'circle', label: 'Circle', svg: toolSvgs.circle },
+        { key: 'triangle', label: 'Triangle', svg: toolSvgs.triangle },
+        { key: 'diamond', label: 'Diamond', svg: toolSvgs.diamond },
+      ]
+      const submenu = document.createElement('div')
+      submenu.className = 'canvas-shape-submenu'
+      for (const st of shapeTypes) {
+        const opt = document.createElement('button')
+        opt.className = 'toolbar-submenu-item'
+        opt.dataset.shapeType = st.key
+        opt.title = st.label
+        opt.innerHTML = st.svg
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation()
+          setShapeSubType(st.key)
+          setActiveTool(TOOLS.SHAPES)
+          submenu.classList.remove('visible')
+          shapesBtn.innerHTML = st.svg
+        })
+        submenu.appendChild(opt)
+      }
+      shapesContainer.appendChild(submenu)
+      sideToolbar.appendChild(shapesContainer)
+    } else {
+      const btn = document.createElement('button')
+      btn.className = 'toolbar-btn'
+      btn.dataset.tool = t.tool
+      btn.title = t.label
+      btn.innerHTML = t.svg
+      btn.addEventListener('click', () => setActiveTool(t.tool))
+      sideToolbar.appendChild(btn)
+      toolBtnMap[t.tool] = btn
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const allSubmenus = sideToolbar.querySelectorAll('.canvas-shape-submenu')
+    allSubmenus.forEach(m => {
+      if (!m.parentElement.contains(e.target)) m.classList.remove('visible')
+    })
+  })
+
+  body.appendChild(sideToolbar)
 
   const canvasArea = document.createElement('div')
   canvasArea.id = 'canvasArea-' + canvasId
@@ -219,19 +257,21 @@ export function renderCanvasView(canvasId) {
   entityLayer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;'
   canvasArea.appendChild(entityLayer)
 
-  container.appendChild(canvasArea)
+  body.appendChild(canvasArea)
 
   const sidePanel = document.createElement('div')
   sidePanel.id = 'canvasSidePanel-' + canvasId
-  sidePanel.style.cssText = 'position:absolute;top:40px;right:0;width:260px;height:calc(100% - 40px);background:var(--bg-panel-alt);border-left:1px solid var(--border);overflow-y:auto;display:none;z-index:5;padding:12px;font-size:13px;color:var(--text-primary);'
-  sidePanel.innerHTML = '<div class="canvas-panel-empty" style="color:var(--text-dim);text-align:center;padding:40px 0;">No selection</div>'
-  container.appendChild(sidePanel)
+  sidePanel.className = 'canvas-side-panel'
+  sidePanel.innerHTML = '<div class="canvas-panel-empty">No selection</div>'
+  body.appendChild(sidePanel)
+
+  container.appendChild(body)
 
   area.appendChild(container)
 
   _ui = {
-    container, canvasArea, mainCanvas, arrowCanvas, entityLayer, sidePanel,
-    toolBtnMap, toolbarEl,
+    container, body, canvasArea, mainCanvas, arrowCanvas, entityLayer, sidePanel, sideToolbar,
+    toolBtnMap,
     offsetX: _canvasData.viewport?.offsetX || 0,
     offsetY: _canvasData.viewport?.offsetY || 0,
     scale: _canvasData.viewport?.scale || 1,
@@ -659,10 +699,12 @@ function setShapeSubType(type) {
 function updateToolUI() {
   if (!_ui) return
   for (const [tool, btn] of Object.entries(_ui.toolBtnMap)) {
-    const isActive = tool === _ui.activeTool
-    btn.style.background = isActive ? 'var(--accent)' : 'var(--bg-surface-hover)'
-    btn.style.color = isActive ? 'var(--text-white)' : 'var(--text-secondary)'
-    btn.style.borderColor = isActive ? 'var(--accent)' : 'var(--border-strong)'
+    btn.classList.toggle('active', tool === _ui.activeTool)
+  }
+  const shapesBtn = _ui.toolBtnMap[TOOLS.SHAPES]
+  if (shapesBtn) {
+    const svgMap = { rectangle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>', circle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>', triangle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l10 20H2z"/></svg>', diamond: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l10 10-10 10L2 12z"/></svg>' }
+    shapesBtn.innerHTML = svgMap[_ui.shapeSubType] || svgMap.rectangle
   }
 }
 
