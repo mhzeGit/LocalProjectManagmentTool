@@ -39,20 +39,14 @@ function applyPaperSize(paperEl, containerEl, size, zoom) {
   zoom = zoom || 1.0
 
   const cw = containerEl.clientWidth
-  const ch = containerEl.clientHeight
   let w = cw
   let h = w * cfg.ratioH / cfg.ratioW
 
-  if (h > ch) {
-    h = ch
-    w = h * cfg.ratioW / cfg.ratioH
-  }
+  w = Math.floor(w * zoom)
+  h = Math.floor(h * zoom)
 
-  w *= zoom
-  h *= zoom
-
-  paperEl.style.width = Math.floor(w) + 'px'
-  paperEl.style.height = Math.floor(h) + 'px'
+  paperEl.style.width = w + 'px'
+  paperEl.style.height = h + 'px'
 }
 
 function setupResizeObserver(paperEl, containerEl, getState) {
