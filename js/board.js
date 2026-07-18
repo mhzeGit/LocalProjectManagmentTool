@@ -10,6 +10,14 @@ import { renderDocument, destroyEditor } from './document.js'
 import { renderDashboard } from './dashboard.js'
 import { updateMenuBar } from './menubar.js'
 
+const PRIORITY_BAR_CONFIG = {
+  none:   { filled: 0, color: '#6b7280' },
+  low:    { filled: 1, color: '#22c55e' },
+  medium: { filled: 2, color: '#3b82f6' },
+  high:   { filled: 3, color: '#f59e0b' },
+  urgent: { filled: 5, color: '#ef4444' },
+}
+
 export function switchView(view) {
   state.selectedView = view
   state.selectedDocumentId = null
@@ -151,6 +159,15 @@ export function renderBoard() {
         html += '    <div class="card-cl-progress' + allDone + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
       }
       html += '  </div>'
+      if (c.priority && c.priority !== 'none') {
+        const cfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.none
+        html += '  <div class="card-priority">'
+        for (let i = 0; i < 5; i++) {
+          const filled = i < cfg.filled ? ' filled' : ''
+          html += '<div class="card-priority-bar' + filled + '" style="background:' + cfg.color + ';color:' + cfg.color + '"></div>'
+        }
+        html += '  </div>'
+      }
       html += '</div>'
     }
     html += '</div>'

@@ -24,6 +24,7 @@ import { openPreferences, closePreferences, initTheme } from './preferences.js'
 import { initPersistence, handleKeyDown, openFolder, closeFolder, getSaveMode } from './persistence.js'
 import { getCurrentWorkspace, state } from './data.js'
 import { initMenuBar } from './menubar.js'
+import { exportBoardCSV, importBoardCSV } from './io.js'
 
 import './dragscroll.js'
 
@@ -99,6 +100,8 @@ Object.assign(window, {
   openPreferences,
   closePreferences,
   closeFolder,
+  exportBoardCSV,
+  importBoardCSV,
 })
 
 async function onboardingCreateWorkspace() {

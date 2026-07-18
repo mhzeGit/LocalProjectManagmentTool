@@ -2,6 +2,7 @@ import { state } from './data.js'
 import { openFolder, saveNow } from './persistence.js'
 import { openModal } from './modal.js'
 import { openPreferences } from './preferences.js'
+import { exportBoardCSV, importBoardCSV } from './io.js'
 let openMenuIndex = -1
 let isMenuOpen = false
 
@@ -48,6 +49,9 @@ const menuDefs = [
       { label: 'Open Workspace\u2026', shortcut: 'Ctrl+O', action: () => openFolder() },
       { separator: true },
       { label: 'Save', shortcut: 'Ctrl+S', action: () => saveNow() },
+      { separator: true },
+      { label: 'Export Board as CSV\u2026', action: () => exportBoardCSV() },
+      { label: 'Import Board from CSV\u2026', action: () => importBoardCSV() },
     ]
   },
   {

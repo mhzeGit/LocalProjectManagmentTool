@@ -37,7 +37,7 @@
 .column-footer { padding: 4px 8px 8px; }
 .btn-add-card { display: flex; align-items: center; gap: 4px; width: 100%; padding: 6px 8px; border-radius: 6px; color: var(--text-dim); font-size: 13px; }
 .btn-add-card:hover { background: var(--bg-surface-hover); color: var(--text-secondary); }
-.card { background: var(--bg-card); border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow-sm); cursor: pointer; border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; transition: opacity .15s; }
+.card { position: relative; background: var(--bg-card); border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow-sm); cursor: pointer; border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; transition: opacity .15s; }
 .card:hover { box-shadow: 0 2px 10px var(--shadow-md); border-color: var(--accent); }
 .card.completed { opacity: .55; }
 .card.completed .card-title { text-decoration: line-through; color: var(--text-dim); }
@@ -54,6 +54,10 @@
 .card-tag { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; color: var(--text-white); line-height: 1.5; }
 .card-cl-progress { height: 3px; border-radius: 2px; background: var(--bg-progress); margin-top: 8px; overflow: hidden; }
 .card-cl-progress-bar { height: 100%; border-radius: 2px; transition: width .2s, background .2s; }
+.card-priority { position: absolute; top: 10px; right: 12px; display: flex; align-items: flex-end; gap: 3px; height: 18px; }
+.card-priority-bar { width: 3px; height: 14px; border-radius: 1px; transition: opacity .15s; }
+.card-priority-bar.filled { opacity: 1; box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; }
+.card-priority-bar:not(.filled) { opacity: .15; }
 .card-actions { display: none; gap: 4px; margin-top: 8px; }
 .card:hover .card-actions { display: flex; }
 .card-actions button { font-size: 11px; color: var(--danger); }
