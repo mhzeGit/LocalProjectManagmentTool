@@ -502,9 +502,11 @@ document.addEventListener('mouseup', function(ev) {
     const moved = Math.abs(ev.clientX - _moving.startX) > 3
     if (!moved || !_moving.el) {
       if (_moving.el) { _moving.el.style.opacity = '' }
+      const cardId = _moving.cardId
       _moving = null
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      if (cardId) openCardDetail(cardId)
       return
     }
     const gc = _moving.el.style.gridColumn || ''

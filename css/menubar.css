@@ -46,7 +46,6 @@
   box-shadow: 0 6px 24px var(--shadow-lg);
   padding: 4px 0;
   z-index: 200;
-  margin-top: 2px;
 }
 
 .menubar-dropdown.open {

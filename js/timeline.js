@@ -958,6 +958,8 @@ document.addEventListener('mouseup', function() {
       }
 
       renderTimeline()
+    } else if (card && _moving.virtualLeft === null) {
+      openCardDetail(card.id)
     } else {
       renderTimeline()
     }
