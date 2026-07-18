@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, selectDocument, toggleAddBoardMenu } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectDashboard, toggleAddBoardMenu } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -36,6 +36,7 @@ Object.assign(window, {
   selectProject,
   selectBoard,
   selectDocument,
+  selectDashboard,
   toggleAddBoardMenu,
   switchView,
   showWsCtxMenu,

@@ -31,6 +31,39 @@ function formatDate(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
 }
 
+function dateTextFromRange(sCol, sRow, eCol, eRow) {
+  var sIdx = (sRow - 1) * 7 + (sCol - 1)
+  var eIdx = (eRow - 1) * 7 + (eCol - 1)
+  if (sIdx > eIdx) { var t = sIdx; sIdx = eIdx; eIdx = t }
+  var sd = cellIndexToDate(sIdx)
+  var ed = cellIndexToDate(eIdx)
+  if (sd.getTime() === ed.getTime()) return formatShortDate(formatDate(sd))
+  return formatShortDate(formatDate(sd)) + ' - ' + formatShortDate(formatDate(ed))
+}
+
+function updateCardDates(el, sCol, sRow, eCol, eRow) {
+  var text = dateTextFromRange(sCol, sRow, eCol, eRow)
+  var datesEl = el.querySelector('.cal-span-dates')
+  if (datesEl) { datesEl.textContent = text }
+  else {
+    var titleEl = el.querySelector('.cal-span-title')
+    if (titleEl && titleEl.nextSibling) {
+      var span = document.createElement('span')
+      span.className = 'cal-span-dates'
+      span.textContent = text
+      titleEl.parentNode.insertBefore(span, titleEl.nextSibling)
+    }
+  }
+  el.title = text
+}
+
+function formatShortDate(str) {
+  if (!str) return ''
+  var d = parseDate(str)
+  if (!d) return ''
+  return MONTHS[d.getMonth()] + ' ' + d.getDate()
+}
+
 function daysBetween(a, b) {
   const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())
   const utc2 = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())
@@ -342,6 +375,19 @@ document.addEventListener('mousemove', function(e) {
     _resizing.el.style.gridColumn = s + '/' + e2
     _resizing._mouseCol = mouseCol
     _resizing._mouseRow = mouseRow
+
+    var dsCol, dsRow, deCol, deRow
+    if (_resizing.dir === 'start') {
+      dsCol = mouseCol; dsRow = mouseRow
+      deCol = _resizing.origEndCol - 1; deRow = _resizing.origRow
+    } else {
+      dsCol = _resizing.origStartCol; dsRow = _resizing.origRow
+      deCol = mouseCol; deRow = mouseRow
+    }
+    updateCardDates(_resizing.el, dsCol, dsRow, deCol, deRow)
+    for (var ci2 = 0; ci2 < _resizing.clones.length; ci2++) {
+      updateCardDates(_resizing.clones[ci2], dsCol, dsRow, deCol, deRow)
+    }
     return
   }
 
@@ -353,6 +399,7 @@ document.addEventListener('mousemove', function(e) {
     var newCol = Math.max(1, Math.min(col, 8 - _moving.durCols))
     _moving.el.style.gridColumn = newCol + '/' + (newCol + _moving.durCols)
     _moving.el.style.gridRow = String(row)
+    updateCardDates(_moving.el, newCol, row, newCol + _moving.durCols - 1, row)
     return
   }
 })
@@ -538,9 +585,21 @@ export function renderCalendar() {
     const color = PRIORITY_COLORS[c.priority] || '#6b7280'
     const completed = c.completed ? ' cal-span-done' : ''
 
+    var dateStr = ''
+    if (c.startDate && c.endDate) {
+      dateStr = formatShortDate(c.startDate) + ' - ' + formatShortDate(c.endDate)
+    } else if (c.startDate) {
+      dateStr = formatShortDate(c.startDate)
+    } else if (c.endDate) {
+      dateStr = formatShortDate(c.endDate)
+    }
+
     html += '<div class="cal-span-card' + completed + '" data-card-id="' + c.id + '" style="grid-column:' + seg.colStart + '/' + seg.colEnd + ';grid-row:' + seg.row + ';background:' + color + '" title="' + escapeHtml(c.title) + '">'
     html += '    <div class="cal-span-resize cal-span-resize-l" data-side="start"></div>'
     html += '    <span class="cal-span-title">' + escapeHtml(c.title) + '</span>'
+    if (dateStr) {
+      html += '    <span class="cal-span-dates">' + dateStr + '</span>'
+    }
     html += '    <div class="cal-span-resize cal-span-resize-r" data-side="end"></div>'
     if (c.checklists && c.checklists.length > 0) {
       const clTotal = countChecklistItems(c.checklists)

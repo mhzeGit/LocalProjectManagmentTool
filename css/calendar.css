@@ -116,12 +116,12 @@
 }
 
 .cal-cell.cal-today {
-  background: #1a1a2a;
-  box-shadow: inset 0 0 0 1px #4f46e5;
+  background: #1e1214;
+  box-shadow: inset 0 0 0 1px #ef4444;
 }
 
 .cal-cell.cal-today .cal-day-num {
-  background: #4f46e5;
+  background: #ef4444;
   color: #fff;
 }
 
@@ -293,15 +293,16 @@
 
 .cal-span-card {
   z-index: 2;
-  border-radius: 4px;
-  padding: 1px 6px;
-  margin: 22px 2px 0 2px;
-  height: 18px;
+  border-radius: 6px;
+  padding: 0 6px;
+  margin: 26px 8px 0 8px;
+  height: 26px;
   display: flex;
   align-items: center;
+  gap: 6px;
   cursor: pointer;
-  overflow: visible;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
   transition: opacity 0.15s, filter 0.15s, box-shadow 0.15s;
   pointer-events: auto;
   box-sizing: border-box;
@@ -330,7 +331,7 @@
 }
 
 .cal-span-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -338,6 +339,19 @@
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   pointer-events: none;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.cal-span-dates {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  margin-left: auto;
+  padding-left: 4px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
 .cal-span-cl-progress {

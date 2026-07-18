@@ -41,7 +41,11 @@ export function render() {
     return
   }
 
-  let html = '<div class="section-title"><span>Task Boards</span><span class="btn-add-board" onclick="toggleAddBoardMenu(event,\'' + p.id + '\')">+</span></div>'
+  const dashActive = state.selectedDashboard ? ' active' : ''
+  let html = `<div class="nav-child${dashActive}" onclick="selectDashboard()">
+    <span class="name">Dashboard</span>
+  </div>`
+  html += '<div class="section-title" style="margin-top:12px"><span>Task Boards</span><span class="btn-add-board" onclick="toggleAddBoardMenu(event,\'' + p.id + '\')">+</span></div>'
   for (const b of p.boards) {
     const active = state.selectedBoardId === b.id ? ' active' : ''
     html += `<div class="nav-child${active}" onclick="selectBoard('${b.id}')">
@@ -70,6 +74,7 @@ export function selectWorkspace(id) {
   state.selectedProjectId = null
   state.selectedBoardId = null
   state.selectedDocumentId = null
+  state.selectedDashboard = false
   render()
 }
 
@@ -77,18 +82,28 @@ export function selectProject(id) {
   state.selectedProjectId = id
   state.selectedBoardId = null
   state.selectedDocumentId = null
+  state.selectedDashboard = false
   render()
 }
 
 export function selectBoard(id) {
   state.selectedBoardId = id
   state.selectedDocumentId = null
+  state.selectedDashboard = false
   render()
 }
 
 export function selectDocument(id) {
   state.selectedDocumentId = id
   state.selectedBoardId = null
+  state.selectedDashboard = false
+  render()
+}
+
+export function selectDashboard() {
+  state.selectedDashboard = true
+  state.selectedBoardId = null
+  state.selectedDocumentId = null
   render()
 }
 

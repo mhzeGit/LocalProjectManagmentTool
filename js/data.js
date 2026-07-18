@@ -50,7 +50,8 @@ export const state = {
   selectedWorkspaceId: 'w1',
   selectedProjectId: 'p1',
   selectedBoardId: null,
-  selectedDocumentId: 'd1',
+  selectedDocumentId: null,
+  selectedDashboard: false,
   selectedView: 'kanban',
   selfMemberId: null,
 }

@@ -6,6 +6,7 @@ import { renderTimeline } from './timeline.js'
 import { renderCalendar } from './calendar.js'
 import { wasRightDragged } from './dragscroll.js'
 import { renderDocument, destroyEditor } from './document.js'
+import { renderDashboard } from './dashboard.js'
 
 export function switchView(view) {
   state.selectedView = view
@@ -31,10 +32,11 @@ export function renderBoard() {
   if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
   if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
   if (d) bc += ` <span>›</span> <span class="bc-link" onclick="selectDocument('${d.id}')">${d.name}</span>`
+  if (state.selectedDashboard) bc += ` <span>›</span> <span>Dashboard</span>`
   breadcrumb.innerHTML = bc
 
   if (viewSwitcher) {
-    viewSwitcher.style.display = b && !d ? 'flex' : 'none'
+    viewSwitcher.style.display = b && !d && !state.selectedDashboard ? 'flex' : 'none'
   }
 
   if (!w) {
@@ -46,6 +48,12 @@ export function renderBoard() {
   if (w && !p) {
     destroyEditor()
     renderWorkspacePage(area, w)
+    return
+  }
+
+  if (p && state.selectedDashboard) {
+    destroyEditor()
+    renderDashboard(area)
     return
   }
 

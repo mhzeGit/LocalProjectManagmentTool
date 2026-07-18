@@ -1,27 +1,23 @@
 /* --- Member Bar (top-right) --- */
 #memberBar { display: flex; align-items: center; gap: 4px; }
 
-.mb-avatars { display: flex; align-items: center; gap: 2px; }
+.mb-avatars { display: flex; align-items: center; }
+.mb-avatars .mb-avatar-wrap + .mb-avatar-wrap { margin-left: -14px; }
 
 .mb-avatar-wrap {
   width: 32px; height: 32px; border-radius: 50%;
-  border: 2px solid transparent;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden; position: relative;
+  box-shadow: 0 0 0 2px #1a1a26, 0 0 0 3px #555;
 }
-.mb-avatar-wrap.mb-self { border-color: #22c55e; }
-.mb-avatar-wrap.mb-self::after {
-  content: ''; position: absolute; bottom: 0; right: 0;
-  width: 10px; height: 10px; background: #22c55e;
-  border-radius: 50%; border: 2px solid #1a1a26;
-}
+.mb-avatar-wrap.mb-self { box-shadow: 0 0 0 2px #1a1a26, 0 0 0 3px #22c55e; }
 
 .mb-avatar { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .mb-avatar-initials {
   display: flex; align-items: center; justify-content: center;
   width: 100%; height: 100%; border-radius: 50%;
-  background: #2a2a40; color: #bbb; font-size: 12px; font-weight: 600;
+  background: #3a3a55; color: #ccc; font-size: 12px; font-weight: 600;
 }
 
 .mb-manage-btn {

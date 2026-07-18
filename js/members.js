@@ -80,8 +80,14 @@ export function renderMemberBar() {
     return
   }
 
+  const sorted = [...members].sort((a, b) => {
+    if (a.id === selfId) return -1
+    if (b.id === selfId) return 1
+    return 0
+  })
+
   let html = '<div class="mb-avatars" style="cursor:pointer" onclick="openPreferences(\'members\')">'
-  for (const m of members) {
+  for (const m of sorted) {
     const isSelf = m.id === selfId
     if (m.avatar) {
       html += '<div class="mb-avatar-wrap' + (isSelf ? ' mb-self' : '') + '" title="' + escapeHtml(m.name) + (isSelf ? ' (You)' : '') + '">'
