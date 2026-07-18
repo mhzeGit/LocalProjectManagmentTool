@@ -1,4 +1,4 @@
-import { findColumn, findCard, findProject, findDocument } from './data.js'
+import { findColumn, findCard, findProject, findDocument, findCanvas } from './data.js'
 
 let _renderFn = null
 
@@ -66,6 +66,28 @@ export function startRenameProject(projectId) {
   function finish() {
     const val = input.value.trim()
     if (val) { p.name = val; if (_renderFn) _renderFn() }
+    else if (_renderFn) _renderFn()
+  }
+  input.addEventListener('blur', finish)
+  input.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
+    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+  })
+}
+
+export function startRenameCanvas(documentId) {
+  const span = document.getElementById('canvasTitle-' + documentId)
+  const c = findCanvas(documentId)
+  if (!span || !c) return
+  const input = document.createElement('input')
+  input.value = c.name
+  input.style.cssText = 'background:#12121e;border:1px solid #4f46e5;border-radius:4px;color:#e0e0e8;font-size:24px;font-weight:700;padding:4px 8px;width:100%;outline:none;'
+  span.replaceWith(input)
+  input.focus()
+  input.select()
+  function finish() {
+    const val = input.value.trim()
+    if (val) { c.name = val; if (_renderFn) _renderFn() }
     else if (_renderFn) _renderFn()
   }
   input.addEventListener('blur', finish)

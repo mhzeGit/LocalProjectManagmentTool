@@ -38,9 +38,9 @@ function applyPaperSize(paperEl, containerEl, size, zoom) {
 
   zoom = zoom || 1.0
 
-  const cw = containerEl.clientWidth
-  let w = cw
-  let h = w * cfg.ratioH / cfg.ratioW
+  const maxW = Math.min(containerEl.clientWidth, Math.floor(window.innerWidth * 0.5))
+  let w = maxW
+  let h = Math.floor(w * cfg.ratioH / cfg.ratioW)
 
   w = Math.floor(w * zoom)
   h = Math.floor(h * zoom)

@@ -65,6 +65,15 @@ export function render() {
       <button class="btn-del" onclick="event.stopPropagation();deleteDocument('${d.id}')">✕</button>
     </div>`
   }
+  const canvasBoards = p.canvasBoards || []
+  html += '<div class="section-title" style="margin-top:12px"><span>Canvas Boards</span><span class="btn-add-board" onclick="event.stopPropagation();openModal(\'canvas\',\'' + p.id + '\')">+</span></div>'
+  for (const c of canvasBoards) {
+    const active = state.selectedCanvasId === c.id ? ' active' : ''
+    html += `<div class="nav-child${active}" onclick="selectCanvas('${c.id}')">
+      <span class="name">${c.name}</span>
+      <button class="btn-del" onclick="event.stopPropagation();deleteCanvas('${c.id}')">✕</button>
+    </div>`
+  }
   sidebar.innerHTML = html
   renderBoard()
   initDragDrop(render)
@@ -78,6 +87,7 @@ export function selectWorkspace(id) {
   state.selectedProjectId = null
   state.selectedBoardId = null
   state.selectedDocumentId = null
+  state.selectedCanvasId = null
   state.selectedDashboard = false
   render()
 }
@@ -86,6 +96,7 @@ export function selectProject(id) {
   state.selectedProjectId = id
   state.selectedBoardId = null
   state.selectedDocumentId = null
+  state.selectedCanvasId = null
   state.selectedDashboard = false
   render()
 }
@@ -105,6 +116,7 @@ export function selectBoard(id) {
   }
   state.selectedBoardId = id
   state.selectedDocumentId = null
+  state.selectedCanvasId = null
   state.selectedDashboard = false
   render()
 }
@@ -112,6 +124,15 @@ export function selectBoard(id) {
 export function selectDocument(id) {
   state.selectedDocumentId = id
   state.selectedBoardId = null
+  state.selectedCanvasId = null
+  state.selectedDashboard = false
+  render()
+}
+
+export function selectCanvas(id) {
+  state.selectedCanvasId = id
+  state.selectedBoardId = null
+  state.selectedDocumentId = null
   state.selectedDashboard = false
   render()
 }
@@ -120,6 +141,7 @@ export function selectDashboard() {
   state.selectedDashboard = true
   state.selectedBoardId = null
   state.selectedDocumentId = null
+  state.selectedCanvasId = null
   render()
 }
 
@@ -135,7 +157,8 @@ export function toggleAddBoardMenu(e, projectId) {
   menu.className = 'tl-ctx-menu add-board-menu'
   menu.style.left = (rect.left - 80) + 'px'
   menu.style.top = (rect.bottom + 2) + 'px'
-  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'board\',\'' + projectId + '\')">Task Board</button>'
+  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'board\',\'' + projectId + '\')">Task Board</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'canvas\',\'' + projectId + '\')">Canvas Board</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }

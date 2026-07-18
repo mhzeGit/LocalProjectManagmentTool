@@ -98,7 +98,7 @@ function saveAllToFolder(handle) {
   var manifest = {
     version: 1,
     lastSaved: new Date().toISOString(),
-    files: { workspaces: [], members: [], projects: [], boards: [], columns: [], cards: [], documents: [] }
+    files: { workspaces: [], members: [], projects: [], boards: [], columns: [], cards: [], documents: [], canvases: [] }
   }
 
   var promises = []
@@ -130,7 +130,8 @@ function saveAllToFolder(handle) {
         type: 'project', id: p.id, name: p.name, workspaceId: ws.id,
         color: p.color || null,
         boards: (p.boards || []).map(function(b) { return b.id }),
-        documents: (p.documents || []).map(function(d) { return d.id })
+        documents: (p.documents || []).map(function(d) { return d.id }),
+        canvases: (p.canvasBoards || []).map(function(c) { return c.id })
       }
       promises.push(writeFile(handle, pFilename, pData))
       manifest.files.projects.push(pFilename)
@@ -222,6 +223,16 @@ function saveAllToFolder(handle) {
         }))
         manifest.files.documents.push(dFilename)
       }
+
+      for (var cai = 0; cai < (p.canvasBoards || []).length; cai++) {
+        var ca = p.canvasBoards[cai]
+        var caFilename = 'canvas_' + ca.id + '.json'
+        promises.push(writeFile(handle, caFilename, {
+          type: 'canvas', id: ca.id, name: ca.name,
+          data: ca.data || null, projectId: p.id
+        }))
+        manifest.files.canvases.push(caFilename)
+      }
     }
 
     for (var api = 0; api < (ws.archivedProjects || []).length; api++) {
@@ -242,6 +253,7 @@ function saveAllToFolder(handle) {
     selectedProjectId: state.selectedProjectId,
     selectedBoardId: state.selectedBoardId,
     selectedDocumentId: state.selectedDocumentId,
+    selectedCanvasId: state.selectedCanvasId,
     selectedView: state.selectedView,
     selfMemberId: state.selfMemberId
   }))
@@ -258,7 +270,7 @@ function loadAllFromFolder(handle) {
     if (!manifest) return null
 
     var loadPromises = []
-    var allData = { workspaces: [], members: {}, projects: {}, boards: {}, columns: {}, cards: {}, documents: {} }
+    var allData = { workspaces: [], members: {}, projects: {}, boards: {}, columns: {}, cards: {}, documents: {}, canvases: {} }
 
     function loadFiles(fileList, target) {
       for (var i = 0; i < fileList.length; i++) {
@@ -275,6 +287,7 @@ function loadAllFromFolder(handle) {
     loadFiles(manifest.files.columns || [], allData.columns)
     loadFiles(manifest.files.cards || [], allData.cards)
     loadFiles(manifest.files.documents || [], allData.documents)
+    loadFiles(manifest.files.canvases || [], allData.canvases)
 
     var statePromise = readJSON(handle, '_state.json')
 
@@ -304,7 +317,7 @@ function reconstructData(allData, stateData) {
       var pMeta = allData.projects[pId]
       if (!pMeta || pMeta.archived) continue
 
-      var newP = { id: pMeta.id, name: pMeta.name, color: pMeta.color || null, boards: [], documents: [] }
+      var newP = { id: pMeta.id, name: pMeta.name, color: pMeta.color || null, boards: [], documents: [], canvasBoards: [] }
 
       for (var bi = 0; bi < (pMeta.boards || []).length; bi++) {
         var bId = pMeta.boards[bi]
@@ -392,6 +405,14 @@ function reconstructData(allData, stateData) {
         newP.documents.push({ id: dMeta.id, name: dMeta.name, content: dMeta.content || '', paperSize: dMeta.paperSize || null, paperZoom: dMeta.paperZoom || null })
       }
 
+      for (var cai = 0; cai < (pMeta.canvases || []).length; cai++) {
+        var caId = pMeta.canvases[cai]
+        var caMeta = allData.canvases[caId]
+        if (!caMeta) continue
+        newP.canvasBoards = newP.canvasBoards || []
+        newP.canvasBoards.push({ id: caMeta.id, name: caMeta.name, data: caMeta.data || null })
+      }
+
       newWs.projects.push(newP)
     }
 
@@ -412,7 +433,8 @@ function reconstructData(allData, stateData) {
     Object.keys(allData.projects),
     Object.keys(allData.boards),
     Object.keys(allData.columns),
-    Object.keys(allData.documents)
+    Object.keys(allData.documents),
+    Object.keys(allData.canvases || {})
   )
   var maxNum = 100
   for (var idi = 0; idi < allIds.length; idi++) {
@@ -435,6 +457,7 @@ function applyLoadedData(result, message) {
     if (result.state.selectedProjectId !== undefined) state.selectedProjectId = result.state.selectedProjectId
     if (result.state.selectedBoardId !== undefined) state.selectedBoardId = result.state.selectedBoardId
     if (result.state.selectedDocumentId !== undefined) state.selectedDocumentId = result.state.selectedDocumentId
+    if (result.state.selectedCanvasId !== undefined) state.selectedCanvasId = result.state.selectedCanvasId
     if (result.state.selectedView !== undefined) state.selectedView = result.state.selectedView
     if (result.state.selfMemberId !== undefined) {
       state.selfMemberId = result.state.selfMemberId

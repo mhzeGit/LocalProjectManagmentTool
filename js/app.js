@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectDashboard, toggleAddBoardMenu } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -11,9 +11,10 @@ import {
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard,
   createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor, moveCardToBoardColumn,
   addProjectDirect, addCardDirect, addColumnDirect,
-  createDocument, deleteDocument, setDocumentPaperSize
+  createDocument, deleteDocument, setDocumentPaperSize,
+  createCanvas, deleteCanvas, renameCanvas
 } from './store.js'
-import { startRenameColumn, startRenameCard, startRenameProject, startRenameDocument } from './inlineEdit.js'
+import { startRenameColumn, startRenameCard, startRenameProject, startRenameDocument, startRenameCanvas } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
 
 import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, calendarCopyCard, calendarDuplicateCard, calendarArchiveCard, calendarPasteCard } from './calendar.js'
@@ -45,6 +46,7 @@ Object.assign(window, {
   selectProject,
   selectBoard,
   selectDocument,
+  selectCanvas,
   selectDashboard,
   toggleAddBoardMenu,
   switchView,
@@ -80,10 +82,14 @@ Object.assign(window, {
   createDocument,
   deleteDocument,
   setDocumentPaperSize,
+  createCanvas,
+  deleteCanvas,
+  renameCanvas,
   startRenameColumn,
   startRenameCard,
   startRenameProject,
   startRenameDocument,
+  startRenameCanvas,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
   openCardDetail,
   calendarPrevMonth,

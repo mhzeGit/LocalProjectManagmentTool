@@ -1,4 +1,4 @@
-import { state, findBoard, findProject, findWorkspace, findDocument, getTagColor, PREDEFINED_COLORS } from './data.js'
+import { state, findBoard, findProject, findWorkspace, findDocument, findCanvas, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
@@ -8,6 +8,7 @@ import { renderCalendar } from './calendar.js'
 import { renderListView } from './listView.js'
 import { wasRightDragged } from './dragscroll.js'
 import { renderDocument, destroyEditor } from './document.js'
+import { renderCanvasView, destroyCanvas, isCanvasActive } from './canvas.js'
 import { renderDashboard } from './dashboard.js'
 import { updateMenuBar } from './menubar.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
@@ -50,12 +51,16 @@ export function renderBoard() {
   if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
   if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
   if (d) bc += ` <span>›</span> <span class="bc-link" onclick="selectDocument('${d.id}')">${d.name}</span>`
+  const canvasBoard = state.selectedCanvasId ? findCanvas(state.selectedCanvasId) : null
+  if (canvasBoard) bc += ` <span>›</span> <span class="bc-link" onclick="selectCanvas('${canvasBoard.id}')">${canvasBoard.name}</span>`
   if (state.selectedDashboard) bc += ` <span>›</span> <span>Dashboard</span>`
   breadcrumb.innerHTML = bc
 
+  const canvasActive = state.selectedCanvasId !== null
   if (viewSwitcher) {
-    viewSwitcher.style.display = b && !d && !state.selectedDashboard ? 'flex' : 'none'
+    viewSwitcher.style.display = b && !d && !state.selectedDashboard && !canvasActive ? 'flex' : 'none'
   }
+  if (!canvasActive && isCanvasActive()) destroyCanvas()
   document.querySelectorAll('.view-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.view === state.selectedView)
   })
@@ -64,7 +69,7 @@ export function renderBoard() {
 
   const ioEl = document.getElementById('boardIO')
   if (ioEl) {
-    if (b && w && !state.selectedDashboard && !state.selectedDocumentId) {
+    if (b && w && !state.selectedDashboard && !state.selectedDocumentId && !state.selectedCanvasId) {
       ioEl.classList.remove('hidden')
     } else {
       ioEl.classList.add('hidden')
@@ -107,6 +112,12 @@ export function renderBoard() {
 
   if (p && d) {
     renderDocumentView(d.id)
+    return
+  }
+
+  if (p && canvasBoard) {
+    destroyEditor()
+    renderCanvasView(canvasBoard.id)
     return
   }
 

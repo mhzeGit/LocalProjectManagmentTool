@@ -110,6 +110,9 @@ export function openModal(type, parentId) {
   } else if (type === 'document') {
     title.textContent = 'Create Document'
     body.innerHTML = '<label>Document Name</label><input id="modalInput" placeholder="e.g. Meeting Notes" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createDocument(\'' + parentId + '\')">Create</button></div>'
+  } else if (type === 'canvas') {
+    title.textContent = 'Create Canvas Board'
+    body.innerHTML = '<label>Canvas Name</label><input id="modalInput" placeholder="e.g. Whiteboard" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createCanvas(\'' + parentId + '\')">Create</button></div>'
   }
 }
 

@@ -1,4 +1,4 @@
-import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument } from './data.js'
+import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument, findCanvas } from './data.js'
 import { render } from './sidebar.js'
 import { closeModal } from './modal.js'
 
@@ -232,7 +232,7 @@ function collectCardForm() {
 
   const members = []
   document.querySelectorAll('#cd-members .cd-chip[data-type="member"]').forEach(el => {
-    const text = el.childNodes[0]?.nodeValue?.trim()
+    const text = el.dataset.value || (el.childNodes[0]?.nodeValue?.trim())
     if (text) members.push(text)
   })
 
@@ -466,6 +466,61 @@ export function setDocumentPaperSize(id, paperSize) {
   if (d) { d.paperSize = paperSize }
 }
 
+export function createCanvas(projectId) {
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  const p = findProject(projectId)
+  if (!p) return
+  if (!p.canvasBoards) p.canvasBoards = []
+  const canvas = { id: genId(), name, data: getEmptyCanvasState() }
+  p.canvasBoards.push(canvas)
+  closeModal()
+  state.selectedCanvasId = canvas.id
+  state.selectedBoardId = null
+  state.selectedDocumentId = null
+  render()
+}
+
+export function deleteCanvas(id) {
+  if (!confirm('Delete this canvas board and all its content?')) return
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      if (!p.canvasBoards) continue
+      const idx = p.canvasBoards.findIndex(c => c.id === id)
+      if (idx !== -1) {
+        p.canvasBoards.splice(idx, 1)
+        if (state.selectedCanvasId === id) {
+          state.selectedCanvasId = p.canvasBoards.length > 0 ? p.canvasBoards[0].id : null
+        }
+        render()
+        return
+      }
+    }
+  }
+}
+
+export function renameCanvas(id, name) {
+  const c = findCanvas(id)
+  if (c) { c.name = name; render() }
+}
+
+export function saveCanvasContent(canvasId, canvasData) {
+  const c = findCanvas(canvasId)
+  if (c) { c.data = canvasData }
+}
+export function getCanvasData(canvasId) {
+  const c = findCanvas(canvasId)
+  return c ? c.data : null
+}
+
+function getEmptyCanvasState() {
+  return {
+    textBoxes: [], shapes: [], arrows: [], connectors: [], connections: [],
+    viewport: { offsetX: 0, offsetY: 0, scale: 1 },
+    nextTextBoxId: 1, nextShapeId: 1, nextArrowId: 1, nextConnectorId: 1, nextConnectionId: 1
+  }
+}
+
 export function copyProject(id) {
   for (const w of data.workspaces) {
     const idx = w.projects.findIndex(p => p.id === id)
@@ -476,6 +531,7 @@ export function copyProject(id) {
     copy.name = orig.name + ' (copy)'
     copy.boards.forEach(b => { b.id = genId(); b.columns.forEach(c => { c.id = genId(); c.cards.forEach(cd => cd.id = genId()) }) })
     if (copy.documents) copy.documents.forEach(d => { d.id = genId() })
+    if (copy.canvasBoards) copy.canvasBoards.forEach(c => { c.id = genId() })
     w.projects.splice(idx + 1, 0, copy)
     render()
     return
