@@ -1049,24 +1049,30 @@ function openContextMenu(e) {
   items.push(buildAddSubmenu(wx,wy,hit))
 
   if (hit&&hit.type==='textBox') {
-    items.push(makeCtxItem('Duplicate',()=>duplicateSelection())); items.push(makeCtxItem('Copy',()=>copySelection()))
-    if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt()))
+    items.push(makeCtxItem('Duplicate',()=>duplicateSelection(),'Ctrl+D'))
+    items.push(makeCtxItem('Copy',()=>copySelection(),'Ctrl+C'))
+    if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
     items.push(makeCtxItem('Connect to...',()=>{_ui.connectingFrom=hit.i;_ui.activeTool=TOOLS.CONNECTION_LINE;updateToolUI()}))
-    items.push(makeCtxItem('Lock',()=>toggleLock('textBox',hit.i))); items.push(makeCtxItem('Delete',()=>deleteSelected()))
+    items.push(makeCtxItem('Lock',()=>toggleLock('textBox',hit.i)))
+    items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
     items.push(buildSortSubmenu())
   } else if (hit&&hit.type==='shape') {
-    items.push(makeCtxItem('Duplicate',()=>duplicateSelection())); items.push(makeCtxItem('Copy',()=>copySelection()))
-    if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt()))
-    items.push(makeCtxItem('Lock',()=>toggleLock('shape',hit.i))); items.push(makeCtxItem('Delete',()=>deleteSelected()))
+    items.push(makeCtxItem('Duplicate',()=>duplicateSelection(),'Ctrl+D'))
+    items.push(makeCtxItem('Copy',()=>copySelection(),'Ctrl+C'))
+    if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
+    items.push(makeCtxItem('Lock',()=>toggleLock('shape',hit.i)))
+    items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
     items.push(buildSortSubmenu())
   } else if (hit&&hit.type==='arrow') {
-    items.push(makeCtxItem('Lock',()=>toggleLock('arrow',hit.i))); items.push(makeCtxItem('Delete Arrow',()=>deleteSelected()))
+    items.push(makeCtxItem('Lock',()=>toggleLock('arrow',hit.i)))
+    items.push(makeCtxItem('Delete Arrow',()=>deleteSelected(),null,true))
   } else if (hit&&hit.type==='connector') {
-    items.push(makeCtxItem('Lock',()=>toggleLock('connector',hit.i))); items.push(makeCtxItem('Delete Connector',()=>deleteSelected()))
+    items.push(makeCtxItem('Lock',()=>toggleLock('connector',hit.i)))
+    items.push(makeCtxItem('Delete Connector',()=>deleteSelected(),null,true))
   } else if (hit&&hit.type==='connection') {
-    items.push(makeCtxItem('Delete Connection',()=>deleteSelected()))
+    items.push(makeCtxItem('Delete Connection',()=>deleteSelected(),null,true))
   } else {
-    if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt()))
+    if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
   }
 
   for (const it of items) { if (it) menu.appendChild(it) }
@@ -1094,13 +1100,17 @@ function buildSortSubmenu() {
   const wrap=document.createElement('div'); wrap.className='context-submenu-trigger'
   const btn=document.createElement('button'); btn.className='context-item has-submenu'; btn.innerHTML='<span>Sort</span><span class="submenu-arrow">\u25b8</span>'
   const sub=document.createElement('div'); sub.className='context-submenu'
-  sub.appendChild(makeCtxItem('Bring to Front',()=>bringToFront()))
-  sub.appendChild(makeCtxItem('Send to Back',()=>sendToBack()))
-  sub.appendChild(makeCtxItem('Bring Forward',()=>bringForward()))
-  sub.appendChild(makeCtxItem('Send Backward',()=>sendBackward()))
+  sub.appendChild(makeCtxItem('Bring to Front',()=>bringToFront(),'Ctrl+Shift+]'))
+  sub.appendChild(makeCtxItem('Send to Back',()=>sendToBack(),'Ctrl+Shift+['))
+  sub.appendChild(makeCtxItem('Bring Forward',()=>bringForward(),'Ctrl+]'))
+  sub.appendChild(makeCtxItem('Send Backward',()=>sendBackward(),'Ctrl+['))
   wrap.appendChild(btn); wrap.appendChild(sub); return wrap
 }
-function makeCtxItem(label, onClick) { const el=document.createElement('button'); el.className='context-item'; el.textContent=label; el.addEventListener('click',()=>{onClick();closeContextMenu()}); return el }
+function makeCtxItem(label, onClick, shortcut, isDanger) {
+  const el=document.createElement('button'); el.className='context-item'+(isDanger?' danger':'')
+  if (shortcut) { el.innerHTML='<span>'+label+'</span><span class="ctx-shortcut">'+shortcut+'</span>' } else el.textContent=label
+  el.addEventListener('click',()=>{onClick();closeContextMenu()}); return el
+}
 function closeContextMenu() { if(_ui&&_ui.contextMenu) _ui.contextMenu.style.display='none' }
 
 /* ─── Inline Editing ─── */
