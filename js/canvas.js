@@ -682,6 +682,7 @@ export function renderCanvasView(canvasId) {
     targetOffsetX:_canvasData.viewport?.offsetX||0, targetOffsetY:_canvasData.viewport?.offsetY||0, targetScale:_canvasData.viewport?.scale||1,
     activeTool:TOOLS.CURSOR, shapeSubType:'rectangle', isPanning:false, lastPanX:0,lastPanY:0,
     isDragging:false, dragStartX:0,dragStartY:0,
+    isDrawing:false,
     isResizing:false, resizeHandle:'', resizeEntityType:null, resizeEntityIdx:-1, resizeStartBounds:null,
     selectedTextBoxes:new Set(), selectedShapes:new Set(), selectedArrows:new Set(), selectedConnectors:new Set(), selectedConnection:null,
     connectingFrom:null, connectingMouseWorld:{x:0,y:0}, arrowDragTarget:null, isDraggingArrowEnd:false, dragArrowEndSnapshot:null,
@@ -759,6 +760,13 @@ function onPointerDown(e) {
   if (e.button===2) { _ui.rmbDownTime=performance.now(); _ui.rmbMoved=false; _ui.rmbPending=true; return }
   if (e.button===1||(e.button===0&&e.altKey)) { _ui.isPanning=true; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing'; return }
 
+  if (_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.TEXT||_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
+    _ui.drawingStartX=wx; _ui.drawingStartY=wy; _ui.isDrawing=true; _ui.canvasArea.setPointerCapture(e.pointerId); return
+  }
+
+  if (_ui.activeTool===TOOLS.ARROW) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else addArrow(wx,wy); return }
+  if (_ui.activeTool===TOOLS.CONNECTION_LINE) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else addConnector(wx,wy); return }
+
   const edgeTb=getEdgeAt(wx,wy,_canvasData.textBoxes), edgeSh=edgeTb?null:getEdgeAt(wx,wy,_canvasData.shapes), edge=edgeTb||edgeSh
   if (edge) {
     _ui.isResizing=true; _ui.resizeHandle=edge.handle; _ui.resizeEntityType=edgeTb?'textBox':'shape'; _ui.resizeEntityIdx=edge.idx
@@ -766,7 +774,7 @@ function onPointerDown(e) {
     _ui.resizeStartBounds={x:entity.x,y:entity.y,w:entity.w,h:entity.h}; _ui.canvasArea.style.cursor=edge.cursor; return
   }
 
-  const hit=e.shiftKey||e.ctrlKey?getTopHitAt(wx,wy):getTopHitAt(wx,wy)
+  const hit=getTopHitAt(wx,wy)
   if (hit&&hit.type==='arrow') { const a=_canvasData.arrows[hit.i]; const ed=Math.min(Math.hypot(wx-a.x1,wy-a.y1),Math.hypot(wx-a.x2,wy-a.y2)); if(ed<12){ _ui.arrowDragTarget=hit.i; _ui.isDraggingArrowEnd=true; _ui.dragArrowEndSnapshot={...a}; return } }
   if (hit) {
     if (!e.shiftKey&&!e.ctrlKey) clearSelection()
@@ -778,10 +786,6 @@ function onPointerDown(e) {
     updateSidePanel(); return
   }
 
-  if (_ui.activeTool===TOOLS.TEXT) { addTextBox(wx,wy); return }
-  if (_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER) { _ui.drawingStartX=wx; _ui.drawingStartY=wy; return }
-  if (_ui.activeTool===TOOLS.ARROW) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else addArrow(wx,wy); return }
-  if (_ui.activeTool===TOOLS.CONNECTION_LINE) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else addConnector(wx,wy); return }
   if (e.button===0) { _ui.isSelectingBox=true; _ui.boxStartX=wx; _ui.boxStartY=wy; _ui.boxEndX=wx; _ui.boxEndY=wy; clearSelection() }
 }
 
@@ -793,7 +797,7 @@ function onPointerMove(e) {
   if (_ui.isDragging) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale; for(const idx of _ui.selectedTextBoxes){ const tb=_canvasData.textBoxes[idx], s=getDragStart(idx,'textBox'); if(s){tb.x=s.x+dx;tb.y=s.y+dy} }; for(const idx of _ui.selectedShapes){ const sh=_canvasData.shapes[idx], s=getDragStart(idx,'shape'); if(s){sh.x=s.x+dx;sh.y=s.y+dy} }; return }
   if (_ui.isDraggingArrowEnd&&_ui.arrowDragTarget!==null) { const a=_canvasData.arrows[_ui.arrowDragTarget]; if(a){ const snap=_ui.dragArrowEndSnapshot, fd=Math.hypot(wx-snap.x1,wy-snap.y1), td=Math.hypot(wx-snap.x2,wy-snap.y2); if(fd<td){a.x1=wx;a.y1=wy}else{a.x2=wx;a.y2=wy} }; return }
   if (_ui.connectingFrom!==null&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) { _ui.connectingMouseWorld={x:wx,y:wy}; return }
-  if ((_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.TEXT||_ui.activeTool===TOOLS.IMAGE_CONTAINER)&&e.buttons===1) {
+  if (_ui.isDrawing) {
     const dx=Math.abs(wx-_ui.drawingStartX), dy=Math.abs(wy-_ui.drawingStartY)
     if (dx>2||dy>2) {
       const x=Math.min(_ui.drawingStartX,wx), y=Math.min(_ui.drawingStartY,wy), w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
@@ -815,14 +819,14 @@ function onPointerUp(e) {
   if (_ui.isDraggingArrowEnd) { finishArrowDrag(); return }
   if (_ui.connectingFrom!==null) { const hit=getTopHitAt(wx,wy); if(hit&&hit.type==='textBox'&&hit.i!==_ui.connectingFrom){ if(_ui.activeTool===TOOLS.ARROW)addArrowBetween(_ui.connectingFrom,hit.i); else if(_ui.activeTool===TOOLS.CONNECTION_LINE)addConnectionCmd(_ui.connectingFrom,hit.i) }; _ui.connectingFrom=null; saveData(); return }
   if (_ui.isSelectingBox) { finishSelectBox(); return }
-  if (_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER||_ui.activeTool===TOOLS.TEXT) {
+  if (_ui.isDrawing&&(_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER||_ui.activeTool===TOOLS.TEXT)) {
     if (_ui.drawingPreview) {
       const dp=_ui.drawingPreview
       if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(dp.x+dp.w/2,dp.y+dp.h/2,_ui.shapeSubType,dp.w,dp.h)
       else if (_ui.activeTool===TOOLS.TEXT) addTextBox(dp.x,dp.y,dp.w,dp.h)
       else addImageContainer(dp.x,dp.y,dp.w,dp.h)
     } else { if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(wx,wy,_ui.shapeSubType); else if (_ui.activeTool===TOOLS.TEXT) addTextBox(wx,wy); else addImageContainer(wx,wy) }
-    _ui.drawingPreview=null; saveData(); return
+    _ui.isDrawing=false; _ui.drawingPreview=null; saveData(); return
   }
 }
 
