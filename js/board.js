@@ -1,5 +1,6 @@
 import { data, state, findBoard, findProject, findWorkspace, findDocument, findCanvas, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { render } from './sidebar.js'
 import { getResolvedAvatar } from './persistence.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
