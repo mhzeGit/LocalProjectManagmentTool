@@ -8,6 +8,12 @@ let _renderedCanvasId = null
 let _ctx = null
 let _arrowCtx = null
 let _parentTree = null
+let _renderDirty = false
+let _lastCanvasW = 0, _lastCanvasH = 0
+let _cachedGridRgb = null
+let _cachedThemeBg = null
+let _cachedAccent = null
+let _cachedPanelBg = null
 
 /* ─── History Manager ─── */
 function createHistoryManager() {
@@ -56,11 +62,11 @@ function worldToScreen(wx, wy) {
   return { x: wx * _ui.scale + _ui.offsetX, y: wy * _ui.scale + _ui.offsetY }
 }
 
-function getThemeBg() { return getComputedStyle(document.documentElement).getPropertyValue('--bg-body').trim() || '#111118' }
-function getAccentColor() { return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4f46e5' }
+function getThemeBg() { if (!_cachedThemeBg) _cachedThemeBg = getComputedStyle(document.documentElement).getPropertyValue('--bg-body').trim() || '#111118'; return _cachedThemeBg }
+function getAccentColor() { if (!_cachedAccent) _cachedAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4f46e5'; return _cachedAccent }
 function getTextPrimary() { return getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#e0e0e8' }
 function getTextDim() { return getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim() || '#666' }
-function getPanelBg() { return getComputedStyle(document.documentElement).getPropertyValue('--bg-panel-alt').trim() || '#1e1e2e' }
+function getPanelBg() { if (!_cachedPanelBg) _cachedPanelBg = getComputedStyle(document.documentElement).getPropertyValue('--bg-panel-alt').trim() || '#1e1e2e'; return _cachedPanelBg }
 function hexToRgb(hex) {
   hex = hex.replace('#', '')
   if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
@@ -433,7 +439,7 @@ function getEmptyCanvasData() {
 function drawGrid(ctx, w, h) {
   const {offsetX, offsetY, scale}=_ui, bg=getThemeBg()
   ctx.fillStyle=bg; ctx.fillRect(0,0,w,h)
-  const gridRgb=hexToRgb(getComputedStyle(document.documentElement).getPropertyValue('--border').trim()||'#2a2a40')
+  if (!_cachedGridRgb) _cachedGridRgb=hexToRgb(getComputedStyle(document.documentElement).getPropertyValue('--border').trim()||'#2a2a40'); const gridRgb=_cachedGridRgb
   for (const lvl of GRID_CONFIG.gridLevels) {
     const vpx=lvl.spacing*scale, alpha=gridOpacity(vpx,lvl.minPx,lvl.peakPx,lvl.maxPx)*lvl.weight*0.45
     if (alpha<=0) continue
@@ -452,10 +458,19 @@ function drawEntities() {
   drawGrid(ctx, canvas.width/dpr, canvas.height/dpr)
   ctx.translate(_ui.offsetX, _ui.offsetY); ctx.scale(_ui.scale, _ui.scale)
 
+  const cw=canvas.width/dpr, ch=canvas.height/dpr, margin=200
+  const vl=(-_ui.offsetX-margin)/_ui.scale, vt=(-_ui.offsetY-margin)/_ui.scale
+  const vr=(cw-_ui.offsetX+margin)/_ui.scale, vb=(ch-_ui.offsetY+margin)/_ui.scale
+
   const drawOrder=_parentTree.getDrawOrder()
   for (const item of drawOrder) {
-    if (item.type==='shape') drawShape(_canvasData.shapes[item.i], item.i)
-    else drawTextBox(_canvasData.textBoxes[item.i], item.i)
+    if (item.type==='shape') {
+      const s=_canvasData.shapes[item.i]; if (!s||s.x+s.w<vl||s.x>vr||s.y+s.h<vt||s.y>vb) continue
+      drawShape(s, item.i)
+    } else {
+      const tb=_canvasData.textBoxes[item.i]; if (!tb||tb.x+tb.w<vl||tb.x>vr||tb.y+tb.h<vt||tb.y>vb) continue
+      drawTextBox(tb, item.i)
+    }
   }
 
   if (_ui.isSelectingBox) {
@@ -523,40 +538,52 @@ function drawShape(shape, idx) {
 function drawTextBox(tb, idx) {
   const ctx=_ui.mainCanvas.getContext('2d'), dpr=window.devicePixelRatio||1
   ctx.save()
-  const sel=_ui.selectedTextBoxes.has(idx), alpha=sel?0.15:0.08
+  const sel=_ui.selectedTextBoxes.has(idx)
   ctx.fillStyle=tb.color||'#1a1a1a'; ctx.strokeStyle=tb.borderColor||'#444'
   ctx.lineWidth=2/_ui.scale; drawRoundedRect(ctx,tb.x,tb.y,tb.w,tb.h,6); ctx.fill(); ctx.stroke()
-
-  if (tb.title) {
-    const titleFont='bold '+(tb.fontSize||14)+'px system-ui,sans-serif'
-    ctx.fillStyle=tb.titleColor||'#e7e7e7'; ctx.font=titleFont; ctx.textBaseline='top'
-    const maxTitleW=Math.max(10,tb.w-16), titleWords=(tb.title||'').split(/\s+/)
-    let titleLines=[], tLine=''
-    for (const w of titleWords) { const test=tLine?tLine+' '+w:w; if (ctx.measureText(test).width>maxTitleW&&tLine) { titleLines.push(tLine); tLine=w } else tLine=test }
-    if (tLine) titleLines.push(tLine)
-    const titleH=Math.min(tb.h/3,Math.max(24,titleLines.length*((tb.fontSize||14)+2)+12))
-    let tly=tb.y+6
-    for (const l of titleLines) { ctx.fillText(l,tb.x+8,tly); tly+=(tb.fontSize||14)+2 }
-    ctx.strokeStyle=tb.borderColor||'#444'; ctx.lineWidth=1/_ui.scale
-    ctx.beginPath(); ctx.moveTo(tb.x+4,tb.y+titleH); ctx.lineTo(tb.x+tb.w-4,tb.y+titleH); ctx.stroke()
-  }
-
-  if (tb.text) {
-    const bodyFont=(tb.fontSize||14)+'px system-ui,sans-serif', lineH=(tb.fontSize||14)+4
-    ctx.fillStyle=tb.textColor||'#ddd'; ctx.font=bodyFont; ctx.textBaseline='top'
-    const maxW=Math.max(10,tb.w-16), titleOff=tb.title?Math.min(tb.h/3,Math.max(24,((tb.title||'').split(/\s+/).length)*((tb.fontSize||14)+2)+12))+8:8
-    const words=tb.text.split(/\s+/); let lines=[], line='', ly=tb.y+titleOff
-    const maxLines=Math.max(1,Math.floor((tb.h-titleOff-4)/lineH))
-    for (const w of words) { const test=line?line+' '+w:w; if (ctx.measureText(test).width>maxW&&line) { lines.push(line); line=w; if(lines.length>=maxLines)break } else line=test }
-    if (line&&lines.length<maxLines) lines.push(line)
-    for (const l of lines) { ctx.fillText(l,tb.x+8,ly); ly+=lineH }
-  }
 
   if (sel) {
     ctx.save(); ctx.strokeStyle=getAccentColor(); ctx.lineWidth=2/_ui.scale; drawRoundedRect(ctx,tb.x,tb.y,tb.w,tb.h,6); ctx.stroke()
     drawResizeHandles(ctx, tb, dpr); ctx.restore()
   }
   ctx.restore()
+}
+
+/* ─── Persistent Text Box Overlays ─── */
+function createTextBoxOverlay(tb) {
+  if (_ui._textBoxOverlays.has(tb.id)) return
+  const s=_ui.scale, fs=tb.fontSize||14
+  const el=document.createElement('div'); el.className='canvas-inline-editor'
+  el.style.cssText='position:absolute;background:'+(tb.color||'#1a1a1a')+';border:2px solid transparent;border-radius:'+Math.round(6*s)+'px;padding:'+Math.round(6*s)+'px;z-index:100;box-sizing:border-box;'
+  const titleInput=document.createElement('input'); titleInput.value=tb.title||''; titleInput.placeholder='Title'; titleInput.style.cssText='display:block;width:100%;border:none;background:transparent;color:'+(tb.titleColor||'#e7e7e7')+';font-size:'+Math.round((fs+2)*s)+'px;font-weight:bold;outline:none;margin-bottom:'+Math.round(4*s)+'px;padding:'+Math.round(2*s)+'px '+Math.round(4*s)+'px;box-sizing:border-box;'
+  const textArea=document.createElement('textarea'); textArea.value=tb.text||''; textArea.placeholder='Content...'; textArea.style.cssText='display:block;width:100%;border:none;background:transparent;color:'+(tb.textColor||'#ddd')+';font-size:'+Math.round(fs*s)+'px;resize:none;outline:none;font-family:system-ui,sans-serif;min-height:'+Math.round(60*s)+'px;padding:'+Math.round(2*s)+'px '+Math.round(4*s)+'px;box-sizing:border-box;'
+  el.appendChild(titleInput); el.appendChild(textArea)
+  _ui.entityLayer.appendChild(el)
+  const o={el,titleInput,textArea}
+  _ui._textBoxOverlays.set(tb.id,o)
+  wireOverlayInput(tb,o)
+}
+function removeTextBoxOverlay(tbId) {
+  const o=_ui._textBoxOverlays.get(tbId); if(!o) return
+  o.el.remove(); _ui._textBoxOverlays.delete(tbId)
+}
+function updateTextBoxOverlays() {
+  const ids=new Set(_canvasData.textBoxes.map(t=>t.id))
+  for (const [id] of _ui._textBoxOverlays) { if (!ids.has(id)) removeTextBoxOverlay(id) }
+  for (const tb of _canvasData.textBoxes) {
+    if (!_ui._textBoxOverlays.has(tb.id)) createTextBoxOverlay(tb)
+    const o=_ui._textBoxOverlays.get(tb.id); if(!o) continue
+    const sp=worldToScreen(tb.x,tb.y), s=_ui.scale, fs=tb.fontSize||14
+    o.el.style.left=sp.x+'px'; o.el.style.top=sp.y+'px'; o.el.style.width=(tb.w*s)+'px'; o.el.style.height=(tb.h*s)+'px'
+    o.el.style.background=tb.color||'#1a1a1a'
+    o.el.style.borderRadius=Math.round(6*s)+'px'; o.el.style.padding=Math.round(6*s)+'px'
+    o.el.style.border='2px solid '+(tb.locked?'transparent':getAccentColor())
+    o.titleInput.style.fontSize=Math.round((fs+2)*s)+'px'; o.titleInput.style.color=tb.titleColor||'#e7e7e7'
+    o.titleInput.style.marginBottom=Math.round(4*s)+'px'; o.titleInput.style.padding=Math.round(2*s)+'px '+Math.round(4*s)+'px'
+    o.textArea.style.fontSize=Math.round(fs*s)+'px'; o.textArea.style.color=tb.textColor||'#ddd'
+    o.textArea.style.minHeight=Math.round(60*s)+'px'; o.textArea.style.padding=Math.round(2*s)+'px '+Math.round(4*s)+'px'
+    o.titleInput.disabled=tb.locked; o.textArea.disabled=tb.locked
+  }
 }
 
 function drawResizeHandles(ctx, entity, dpr) {
@@ -627,9 +654,10 @@ function drawConnection(idx) {
   ctx.restore()
 }
 
-function drawConnectionPreview(fromIdx, mouseWorld) {
+function drawConnectionPreview(fromHit, mouseWorld) {
   const ctx=_ui.arrowCanvas.getContext('2d'), dpr=window.devicePixelRatio||1
-  const ft=_canvasData.textBoxes[fromIdx]; if (!ft) return
+  const arr=fromHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes
+  const ft=arr[fromHit.i]; if (!ft) return
   const fp=getNodeEdgePoint(ft,mouseWorld.x,mouseWorld.y)
   ctx.save(); ctx.strokeStyle='rgba(79,70,229,0.5)'; ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale]); ctx.beginPath(); ctx.moveTo(fp.x,fp.y); ctx.lineTo(mouseWorld.x,mouseWorld.y); ctx.stroke(); ctx.setLineDash([]); ctx.restore()
 }
@@ -689,7 +717,7 @@ export function renderCanvasView(canvasId) {
   const canvasArea=document.createElement('div'); canvasArea.id='canvasArea-'+canvasId; canvasArea.style.cssText='flex:1;position:relative;overflow:hidden;cursor:default;'
   const mainCanvas=document.createElement('canvas'); mainCanvas.id='canvasMain-'+canvasId; mainCanvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:block;'; canvasArea.appendChild(mainCanvas)
   const arrowCanvas=document.createElement('canvas'); arrowCanvas.id='canvasArrow-'+canvasId; arrowCanvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:block;pointer-events:none;'; canvasArea.appendChild(arrowCanvas)
-  const entityLayer=document.createElement('div'); entityLayer.id='canvasEntityLayer-'+canvasId; entityLayer.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;'; canvasArea.appendChild(entityLayer)
+  const entityLayer=document.createElement('div'); entityLayer.id='canvasEntityLayer-'+canvasId; entityLayer.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:1;'; canvasArea.appendChild(entityLayer)
   body.appendChild(canvasArea)
   const sidePanel=document.createElement('div'); sidePanel.id='canvasSidePanel-'+canvasId; sidePanel.className='canvas-side-panel'; sidePanel.innerHTML='<div class="canvas-panel-empty">No selection</div>'; body.appendChild(sidePanel)
   const contextMenu=document.createElement('div'); contextMenu.id='canvasContextMenu-'+canvasId; contextMenu.className='canvas-context-menu'; contextMenu.style.display='none'; body.appendChild(contextMenu)
@@ -702,13 +730,14 @@ export function renderCanvasView(canvasId) {
     isDragging:false, dragStartX:0,dragStartY:0,
     isDrawing:false,
     isResizing:false, resizeHandle:'', resizeEntityType:null, resizeEntityIdx:-1, resizeStartBounds:null,
+    _textBoxOverlays:new Map(),
     selectedTextBoxes:new Set(), selectedShapes:new Set(), selectedArrows:new Set(), selectedConnectors:new Set(), selectedConnection:null,
     connectingFrom:null, connectingMouseWorld:{x:0,y:0}, arrowDragTarget:null, isDraggingArrowEnd:false, dragArrowEndSnapshot:null,
     drawingStartX:0,drawingStartY:0, drawingPreview:null,
     isSelectingBox:false, boxStartX:0,boxStartY:0,boxEndX:0,boxEndY:0,
     lastWorldMouse:{x:0,y:0},
     nextTextBoxId:_canvasData.nextTextBoxId||1, nextShapeId:_canvasData.nextShapeId||1, nextArrowId:_canvasData.nextArrowId||1, nextConnectorId:_canvasData.nextConnectorId||1, nextConnectionId:_canvasData.nextConnectionId||1,
-    clipboard:[], _dragState:[], inlineEditState:null, rmbDownTime:0, rmbMoved:false, rmbPending:false,
+    clipboard:[], _dragState:[], rmbDownTime:0, rmbMoved:false, rmbPending:false,
   }
   _ctx=_ui.mainCanvas.getContext('2d'); _arrowCtx=_ui.arrowCanvas.getContext('2d')
 
@@ -717,7 +746,7 @@ export function renderCanvasView(canvasId) {
   document.getElementById('canvasRedoBtn')?.addEventListener('click',()=>performRedo())
   document.getElementById('canvasDeleteBtn')?.addEventListener('click',()=>deleteSelected())
   document.getElementById('canvasFitBtn')?.addEventListener('click',()=>{ focusOnSelected()||focusOnAll() })
-  _renderedCanvasId=canvasId; animate()
+  _renderedCanvasId=canvasId; _renderDirty=true; animate()
 }
 
 function buildToolbar(canvasId) {
@@ -791,7 +820,7 @@ function onPointerDown(e) {
     _ui._shapeDragOrig={x:wx,y:wy,w:defW,h:defH}
     _ui.isDrawing=true
     _ui.canvasArea.setPointerCapture(e.pointerId)
-    return
+    requestRender(); return
   }
 
   if (_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
@@ -807,7 +836,7 @@ function onPointerDown(e) {
     _ui._shapeDragOrig={x:wx,y:wy,w:defW,h:defH}
     _ui.isDrawing=true
     _ui.canvasArea.setPointerCapture(e.pointerId)
-    return
+    requestRender(); return
   }
 
   if (_ui.activeTool===TOOLS.TEXT) {
@@ -822,11 +851,11 @@ function onPointerDown(e) {
     _ui._tbDragOrig={x:wx,y:wy,w:200,h:120}
     _ui.isDrawing=true
     _ui.canvasArea.setPointerCapture(e.pointerId)
-    return
+    requestRender(); return
   }
 
-  if (_ui.activeTool===TOOLS.ARROW) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else{_ui.drawingStartX=wx;_ui.drawingStartY=wy;_ui.isDrawing=true;_ui.canvasArea.setPointerCapture(e.pointerId)}; return }
-  if (_ui.activeTool===TOOLS.CONNECTION_LINE) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else{_ui.drawingStartX=wx;_ui.drawingStartY=wy;_ui.isDrawing=true;_ui.canvasArea.setPointerCapture(e.pointerId)}; return }
+  if (_ui.activeTool===TOOLS.ARROW) { const h=getTopHitAt(wx,wy); if(h&&(h.type==='textBox'||h.type==='shape')){_ui.connectingFrom=h;_ui.connectingMouseWorld={x:wx,y:wy}}else{_ui.drawingStartX=wx;_ui.drawingStartY=wy;_ui.isDrawing=true;_ui.canvasArea.setPointerCapture(e.pointerId)}; return }
+  if (_ui.activeTool===TOOLS.CONNECTION_LINE) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom={i:h.i,type:'textBox'};_ui.connectingMouseWorld={x:wx,y:wy}}else{_ui.drawingStartX=wx;_ui.drawingStartY=wy;_ui.isDrawing=true;_ui.canvasArea.setPointerCapture(e.pointerId)}; return }
 
   const edgeTb=getEdgeAt(wx,wy,_canvasData.textBoxes), edgeSh=edgeTb?null:getEdgeAt(wx,wy,_canvasData.shapes), edge=edgeTb||edgeSh
   if (edge) {
@@ -836,20 +865,21 @@ function onPointerDown(e) {
   }
 
   const hit=getTopHitAt(wx,wy)
-  if (hit&&hit.type==='arrow') { const a=_canvasData.arrows[hit.i]; const ed=Math.min(Math.hypot(wx-a.x1,wy-a.y1),Math.hypot(wx-a.x2,wy-a.y2)); if(ed<12){ _ui.arrowDragTarget=hit.i; _ui.isDraggingArrowEnd=true; _ui.dragArrowEndSnapshot={...a}; return } }
+  if (hit&&hit.type==='arrow') { const a=_canvasData.arrows[hit.i]; const ed=Math.min(Math.hypot(wx-a.x1,wy-a.y1),Math.hypot(wx-a.x2,wy-a.y2)); if(ed<12){ clearSelection(); _ui.selectedArrows.add(hit.i); updateSidePanel(); requestRender(); _ui.arrowDragTarget=hit.i; _ui.isDraggingArrowEnd=true; _ui.dragArrowEndSnapshot={...a}; return } }
   if (hit) {
     if (!e.shiftKey&&!e.ctrlKey) clearSelection()
     if (hit.type==='textBox') { if(e.ctrlKey){if(_ui.selectedTextBoxes.has(hit.i))_ui.selectedTextBoxes.delete(hit.i);else _ui.selectedTextBoxes.add(hit.i)}else{_ui.selectedTextBoxes.add(hit.i)}; _ui.isDragging=!_canvasData.textBoxes[hit.i].locked }
     else if (hit.type==='shape') { if(e.ctrlKey){if(_ui.selectedShapes.has(hit.i))_ui.selectedShapes.delete(hit.i);else _ui.selectedShapes.add(hit.i)}else{_ui.selectedShapes.add(hit.i)}; _ui.isDragging=!_canvasData.shapes[hit.i].locked }
-    else if (hit.type==='arrow') _ui.selectedArrows.add(hit.i)
+    else if (hit.type==='arrow') { _ui.selectedArrows.add(hit.i); _ui.isDragging=!_canvasData.arrows[hit.i].locked }
     else if (hit.type==='connector') _ui.selectedConnectors.add(hit.i)
     else if (hit.type==='connection') _ui.selectedConnection=hit.i
     if (_ui.isDragging) {
       _ui._dragState=[]
       for (const idx of _ui.selectedTextBoxes) _ui._dragState.push({t:'tb',i:idx,sx:_canvasData.textBoxes[idx].x,sy:_canvasData.textBoxes[idx].y})
       for (const idx of _ui.selectedShapes) _ui._dragState.push({t:'sh',i:idx,sx:_canvasData.shapes[idx].x,sy:_canvasData.shapes[idx].y})
+      for (const idx of _ui.selectedArrows) { const a=_canvasData.arrows[idx]; _ui._dragState.push({t:'ar',i:idx,sx1:a.x1,sy1:a.y1,sx2:a.x2,sy2:a.y2}) }
     }
-    updateSidePanel(); return
+    updateSidePanel(); requestRender(); return
   }
 
   if (e.button===0) { _ui.isSelectingBox=true; _ui.boxStartX=wx; _ui.boxStartY=wy; _ui.boxEndX=wx; _ui.boxEndY=wy; clearSelection() }
@@ -858,13 +888,13 @@ function onPointerDown(e) {
 function onPointerMove(e) {
   const {sx,sy,wx,wy}=getEventWorld(e); _ui.lastWorldMouse={x:wx,y:wy}
   if (_ui.rmbPending&&(Math.abs(sx-_ui.dragStartX)>3||Math.abs(sy-_ui.dragStartY)>3)) { _ui.rmbMoved=true; _ui.isPanning=true; _ui.rmbPending=false; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing' }
-  if (_ui.isPanning) { const dx=sx-_ui.lastPanX, dy=sy-_ui.lastPanY; _ui.targetOffsetX+=dx; _ui.targetOffsetY+=dy; _ui.lastPanX=sx; _ui.lastPanY=sy; return }
-  if (_ui.isResizing) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale, b=_ui.resizeStartBounds; if(!b)return; const h=_ui.resizeHandle; let nx=b.x,ny=b.y,nw=b.w,nh=b.h; if(h.includes('l')){nx=b.x+dx;nw=b.w-dx} if(h.includes('r'))nw=b.w+dx; if(h.includes('t')){ny=b.y+dy;nh=b.h-dy} if(h.includes('b'))nh=b.h+dy; if(nw<20){if(h.includes('l'))nx=b.x+b.w-20;nw=20} if(nh<20){if(h.includes('t'))ny=b.y+b.h-20;nh=20}; const entity=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx]; if(entity){entity.x=nx;entity.y=ny;entity.w=nw;entity.h=nh}; return }
-  if (_ui.isDragging) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale; for(const item of _ui._dragState){ const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i]; if(e){e.x=item.sx+dx;e.y=item.sy+dy} }; return }
-  if (_ui.isDraggingArrowEnd&&_ui.arrowDragTarget!==null) { const a=_canvasData.arrows[_ui.arrowDragTarget]; if(a){ const snap=_ui.dragArrowEndSnapshot, fd=Math.hypot(wx-snap.x1,wy-snap.y1), td=Math.hypot(wx-snap.x2,wy-snap.y2); if(fd<td){a.x1=wx;a.y1=wy}else{a.x2=wx;a.y2=wy} }; return }
-  if (_ui.connectingFrom!==null&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) { _ui.connectingMouseWorld={x:wx,y:wy}; return }
+  if (_ui.isPanning) { const dx=sx-_ui.lastPanX, dy=sy-_ui.lastPanY; _ui.offsetX+=dx; _ui.offsetY+=dy; _ui.targetOffsetX+=dx; _ui.targetOffsetY+=dy; _ui.lastPanX=sx; _ui.lastPanY=sy; requestRender(); return }
+  if (_ui.isResizing) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale, b=_ui.resizeStartBounds; if(!b)return; const h=_ui.resizeHandle; let nx=b.x,ny=b.y,nw=b.w,nh=b.h; if(h.includes('l')){nx=b.x+dx;nw=b.w-dx} if(h.includes('r'))nw=b.w+dx; if(h.includes('t')){ny=b.y+dy;nh=b.h-dy} if(h.includes('b'))nh=b.h+dy; if(nw<20){if(h.includes('l'))nx=b.x+b.w-20;nw=20} if(nh<20){if(h.includes('t'))ny=b.y+b.h-20;nh=20}; const entity=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx]; if(entity){entity.x=nx;entity.y=ny;entity.w=nw;entity.h=nh}; requestRender(); return }
+  if (_ui.isDragging) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale; for(const item of _ui._dragState){ if(item.t==='ar'){const a=_canvasData.arrows[item.i];if(a){a.x1=item.sx1+dx;a.y1=item.sy1+dy;a.x2=item.sx2+dx;a.y2=item.sy2+dy}}else{const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i];if(e){e.x=item.sx+dx;e.y=item.sy+dy}} }; requestRender(); return }
+  if (_ui.isDraggingArrowEnd&&_ui.arrowDragTarget!==null) { const a=_canvasData.arrows[_ui.arrowDragTarget]; if(a){ const snap=_ui.dragArrowEndSnapshot, fd=Math.hypot(wx-snap.x1,wy-snap.y1), td=Math.hypot(wx-snap.x2,wy-snap.y2); if(fd<td){a.x1=wx;a.y1=wy}else{a.x2=wx;a.y2=wy} }; requestRender(); return }
+  if (_ui.connectingFrom!==null&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) { _ui.connectingMouseWorld={x:wx,y:wy}; requestRender(); return }
   if (_ui.isDrawing) {
-    if (_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE) return
+    if (_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE) { requestRender(); return }
     if (_ui.activeTool===TOOLS.TEXT&&_ui._tbDragIdx!==undefined) {
       const tb=_canvasData.textBoxes[_ui._tbDragIdx]
       if (tb) {
@@ -872,7 +902,7 @@ function onPointerMove(e) {
         const w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
         if (w>5||h2>5) { tb.x=x; tb.y=y; tb.w=Math.max(w,20); tb.h=Math.max(h2,20) }
       }
-      return
+      requestRender(); return
     }
     if ((_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER)&&_ui._shapeDragIdx!==undefined) {
       const shape=_canvasData.shapes[_ui._shapeDragIdx]
@@ -881,27 +911,27 @@ function onPointerMove(e) {
         const w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
         if (w>5||h2>5) { shape.x=x; shape.y=y; shape.w=Math.max(w,20); shape.h=Math.max(h2,20) }
       }
-      return
+      requestRender(); return
     }
     const dx=Math.abs(wx-_ui.drawingStartX), dy=Math.abs(wy-_ui.drawingStartY)
     if (dx>2||dy>2) {
       const x=Math.min(_ui.drawingStartX,wx), y=Math.min(_ui.drawingStartY,wy), w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
       _ui.drawingPreview={x,y,w,h2,shapeType:_ui.shapeSubType}
     } else _ui.drawingPreview=null
-    return
+    requestRender(); return
   }
-  if (_ui.isSelectingBox) { _ui.boxEndX=wx; _ui.boxEndY=wy; return }
+  if (_ui.isSelectingBox) { _ui.boxEndX=wx; _ui.boxEndY=wy; requestRender(); return }
   if (_ui.activeTool===TOOLS.CURSOR) { const edge=getEdgeAt(wx,wy,_canvasData.textBoxes)||getEdgeAt(wx,wy,_canvasData.shapes); _ui.canvasArea.style.cursor=edge?edge.cursor:'default' }
 }
 
 function onPointerUp(e) {
   const {wx,wy}=getEventWorld(e)
-  if (_ui.isPanning) { _ui.isPanning=false; _ui.canvasArea.style.cursor=_ui.activeTool===TOOLS.CURSOR?'default':'crosshair'; saveData(); return }
-  if (_ui.isResizing) { finishResize(); return }
-  if (_ui.isDragging) { finishDrag(); return }
-  if (_ui.isDraggingArrowEnd) { finishArrowDrag(); return }
-  if (_ui.connectingFrom!==null) { const hit=getTopHitAt(wx,wy); if(hit&&hit.type==='textBox'&&hit.i!==_ui.connectingFrom){ if(_ui.activeTool===TOOLS.ARROW)addArrowBetween(_ui.connectingFrom,hit.i); else if(_ui.activeTool===TOOLS.CONNECTION_LINE)addConnectionCmd(_ui.connectingFrom,hit.i) }; _ui.connectingFrom=null; saveData(); return }
-  if (_ui.isSelectingBox) { finishSelectBox(); return }
+  if (_ui.isPanning) { _ui.isPanning=false; _ui.canvasArea.style.cursor=_ui.activeTool===TOOLS.CURSOR?'default':'crosshair'; saveData(); requestRender(); return }
+  if (_ui.isResizing) { finishResize(); requestRender(); return }
+  if (_ui.isDragging) { finishDrag(); requestRender(); return }
+  if (_ui.isDraggingArrowEnd) { finishArrowDrag(); requestRender(); return }
+  if (_ui.connectingFrom!==null) { const fromInfo=_ui.connectingFrom; const hit=getTopHitAt(wx,wy); if(hit&&(hit.type==='textBox'||hit.type==='shape')&&!(hit.type===fromInfo.type&&hit.i===fromInfo.i)){ if(_ui.activeTool===TOOLS.ARROW)addArrowBetween(fromInfo,hit); else if(_ui.activeTool===TOOLS.CONNECTION_LINE&&hit.type==='textBox'&&fromInfo.type==='textBox')addConnectionCmd(fromInfo.i,hit.i) }; _ui.connectingFrom=null; saveData(); requestRender(); return }
+  if (_ui.isSelectingBox) { finishSelectBox(); requestRender(); return }
   if (_ui.isDrawing&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) {
     const dx=wx-_ui.drawingStartX, dy=wy-_ui.drawingStartY
     if (Math.abs(dx)>5||Math.abs(dy)>5) {
@@ -944,14 +974,14 @@ function onWheel(e) {
   const rect=_ui.canvasArea.getBoundingClientRect(), sx=e.clientX-rect.left, sy=e.clientY-rect.top
   const factor=e.deltaY>0?0.92:1.08, newScale=clamp(_ui.targetScale*factor,0.05,5)
   const wx=(sx-_ui.offsetX)/_ui.scale, wy=(sy-_ui.offsetY)/_ui.scale
-  _ui.targetOffsetX=sx-wx*newScale; _ui.targetOffsetY=sy-wy*newScale; _ui.targetScale=newScale
+  _ui.targetOffsetX=sx-wx*newScale; _ui.targetOffsetY=sy-wy*newScale; _ui.targetScale=newScale; requestRender()
 }
 
 function onDoubleClick(e) {
   const {wx,wy}=getEventWorld(e)
   if (_ui.activeTool===TOOLS.TEXT) { addTextBox(wx,wy); return }
   const hit=getTopHitAt(wx,wy)
-  if (hit&&hit.type==='textBox') { clearSelection(); _ui.selectedTextBoxes.add(hit.i); updateSidePanel(); startInlineEdit(hit.i); return }
+  if (hit&&hit.type==='textBox') { clearSelection(); _ui.selectedTextBoxes.add(hit.i); updateSidePanel(); return }
   if (hit&&hit.type==='connection') { _ui.selectedConnection=hit.i; updateSidePanel(); startConnectionEdit(hit.i); return }
 }
 
@@ -996,25 +1026,60 @@ function onKeyDown(e) {
   if (e.key==='l'||e.key==='L') { toggleLockSelected(); return }
   if (e.key.startsWith('Arrow')) {
     e.preventDefault(); const dx=e.key==='ArrowLeft'?-10:e.key==='ArrowRight'?10:0, dy=e.key==='ArrowUp'?-10:e.key==='ArrowDown'?10:0
-    const moved=[]
+    const moved=[], arrowMoves=[]
     for (const idx of _ui.selectedTextBoxes) { const tb=_canvasData.textBoxes[idx]; if(tb){moved.push({id:tb.id,fromX:tb.x,fromY:tb.y,toX:tb.x+dx,toY:tb.y+dy,type:'textBox'});tb.x+=dx;tb.y+=dy} }
     for (const idx of _ui.selectedShapes) { const s=_canvasData.shapes[idx]; if(s){moved.push({id:s.id,fromX:s.x,fromY:s.y,toX:s.x+dx,toY:s.y+dy,type:'shape'});s.x+=dx;s.y+=dy} }
-    if (moved.length>0) _history.push(createMoveCmd(moved)); saveData()
+    for (const idx of _ui.selectedArrows) { const a=_canvasData.arrows[idx]; if(a){arrowMoves.push({i:idx,from:{x1:a.x1,y1:a.y1,x2:a.x2,y2:a.y2},to:{x1:a.x1+dx,y1:a.y1+dy,x2:a.x2+dx,y2:a.y2+dy}});a.x1+=dx;a.y1+=dy;a.x2+=dx;a.y2+=dy} }
+    if (moved.length>0) _history.push(createMoveCmd(moved))
+    if (arrowMoves.length>0) {
+      const snapshots=arrowMoves.map(m=>({...m}))
+      _history.push({undo(){for(const s of snapshots){const a=_canvasData.arrows[s.i];if(a){a.x1=s.from.x1;a.y1=s.from.y1;a.x2=s.from.x2;a.y2=s.from.y2}}},redo(){for(const s of snapshots){const a=_canvasData.arrows[s.i];if(a){a.x1=s.to.x1;a.y1=s.to.y1;a.x2=s.to.x2;a.y2=s.to.y2}}},description:'Move Arrow'})
+    }
+    saveData(); requestRender()
   }
 }
 
 /* ─── Drag/Resize Helpers ─── */
 function finishDrag() {
-  _ui.isDragging=false; const moves=[]
+  _ui.isDragging=false; const moves=[], arrowMoves=[]
   for (const item of _ui._dragState) {
-    const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i]
-    if (e&&(item.sx!==e.x||item.sy!==e.y)) moves.push({id:e.id,fromX:item.sx,fromY:item.sy,toX:e.x,toY:e.y,type:item.t==='tb'?'textBox':'shape'})
+    if (item.t==='ar') {
+      const a=_canvasData.arrows[item.i]
+      if (a&&(item.sx1!==a.x1||item.sy1!==a.y1||item.sx2!==a.x2||item.sy2!==a.y2)) arrowMoves.push({i:item.i,from:{x1:item.sx1,y1:item.sy1,x2:item.sx2,y2:item.sy2},to:{x1:a.x1,y1:a.y1,x2:a.x2,y2:a.y2}})
+    } else {
+      const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i]
+      if (e&&(item.sx!==e.x||item.sy!==e.y)) moves.push({id:e.id,fromX:item.sx,fromY:item.sy,toX:e.x,toY:e.y,type:item.t==='tb'?'textBox':'shape'})
+    }
   }
-  if (moves.length>0) _history.push(createMoveCmd(moves)); _ui._dragState=[]; saveData()
+  if (moves.length>0) {
+    _history.push(createMoveCmd(moves))
+    const movedIds=new Set(moves.map(m=>m.id))
+    for (const a of _canvasData.arrows) {
+      if (a.connectedFrom!==null) {
+        const arr=a.connectedFromType==='shape'?_canvasData.shapes:_canvasData.textBoxes
+        const e=arr[a.connectedFrom]
+        if (e&&movedIds.has(e.id)) { const p=getRectEdgePoint(e.x,e.y,e.w,e.h,a.x2,a.y2); a.x1=p.x;a.y1=p.y }
+      }
+      if (a.connectedTo!==null) {
+        const arr=a.connectedToType==='shape'?_canvasData.shapes:_canvasData.textBoxes
+        const e=arr[a.connectedTo]
+        if (e&&movedIds.has(e.id)) { const p=getRectEdgePoint(e.x,e.y,e.w,e.h,a.x1,a.y1); a.x2=p.x;a.y2=p.y }
+      }
+    }
+  }
+  if (arrowMoves.length>0) {
+    const snapshots=arrowMoves.map(m=>({i:m.i,...m}))
+    _history.push({undo(){for(const s of snapshots){const a=_canvasData.arrows[s.i];if(a){a.x1=s.from.x1;a.y1=s.from.y1;a.x2=s.from.x2;a.y2=s.from.y2}}},redo(){for(const s of snapshots){const a=_canvasData.arrows[s.i];if(a){a.x1=s.to.x1;a.y1=s.to.y1;a.x2=s.to.x2;a.y2=s.to.y2}}},description:'Move Arrow'})
+  }
+  _ui._dragState=[]; saveData()
 }
 function finishResize() {
   _ui.isResizing=false; const entity=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx]
   if (entity&&_ui.resizeStartBounds) { const fb=_ui.resizeStartBounds, tb={x:entity.x,y:entity.y,w:entity.w,h:entity.h}; _history.push({undo(){const e=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx];if(e){e.x=fb.x;e.y=fb.y;e.w=fb.w;e.h=fb.h}},redo(){const e=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx];if(e){e.x=tb.x;e.y=tb.y;e.w=tb.w;e.h=tb.h}},description:'Resize'}) }
+  for (const a of _canvasData.arrows) {
+    if (a.connectedFrom!==null&&a.connectedFrom===_ui.resizeEntityIdx&&a.connectedFromType===_ui.resizeEntityType) { const arr=a.connectedFromType==='shape'?_canvasData.shapes:_canvasData.textBoxes; const e=arr[a.connectedFrom]; if(e){const p=getRectEdgePoint(e.x,e.y,e.w,e.h,a.x2,a.y2);a.x1=p.x;a.y1=p.y} }
+    if (a.connectedTo!==null&&a.connectedTo===_ui.resizeEntityIdx&&a.connectedToType===_ui.resizeEntityType) { const arr=a.connectedToType==='shape'?_canvasData.shapes:_canvasData.textBoxes; const e=arr[a.connectedTo]; if(e){const p=getRectEdgePoint(e.x,e.y,e.w,e.h,a.x1,a.y1);a.x2=p.x;a.y2=p.y} }
+  }
   _ui.resizeStartBounds=null; _ui.resizeEntityType=null; _ui.resizeEntityIdx=-1; saveData()
 }
 function finishArrowDrag() {
@@ -1047,7 +1112,7 @@ function openContextMenu(e) {
     items.push(makeCtxItem('Duplicate',()=>duplicateSelection(),'Ctrl+D'))
     items.push(makeCtxItem('Copy',()=>copySelection(),'Ctrl+C'))
     if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
-    items.push(makeCtxItem('Connect to...',()=>{_ui.connectingFrom=hit.i;_ui.activeTool=TOOLS.CONNECTION_LINE;updateToolUI()}))
+    items.push(makeCtxItem('Connect to...',()=>{_ui.connectingFrom={i:hit.i,type:'textBox'};_ui.activeTool=TOOLS.CONNECTION_LINE;updateToolUI()}))
     items.push(makeCtxItem(_canvasData.textBoxes[hit.i].locked?'Unlock':'Lock',()=>toggleLock('textBox',hit.i)))
     items.push(buildSortSubmenu())
     items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
@@ -1055,6 +1120,7 @@ function openContextMenu(e) {
     items.push(makeCtxItem('Duplicate',()=>duplicateSelection(),'Ctrl+D'))
     items.push(makeCtxItem('Copy',()=>copySelection(),'Ctrl+C'))
     if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
+    items.push(makeCtxItem('Connect Arrow...',()=>{_ui.connectingFrom={i:hit.i,type:'shape'};_ui.activeTool=TOOLS.ARROW;updateToolUI()}))
     items.push(makeCtxItem(_canvasData.shapes[hit.i].locked?'Unlock':'Lock',()=>toggleLock('shape',hit.i)))
     items.push(buildSortSubmenu())
     items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
@@ -1079,8 +1145,8 @@ function buildAddSubmenu(wx,wy,hit) {
   const btn=document.createElement('button'); btn.className='context-item has-submenu'; btn.innerHTML='<span>Add</span><span class="submenu-arrow">\u25b8</span>'
   const sub=document.createElement('div'); sub.className='context-submenu'
   sub.appendChild(makeCtxItem('Text Box',()=>addTextBox(wx,wy)))
-  sub.appendChild(makeCtxItem('Arrow',()=>hit&&hit.type==='textBox'?(_ui.connectingFrom=hit.i):addArrow(wx,wy)))
-  sub.appendChild(makeCtxItem('Connector',()=>hit&&hit.type==='textBox'?(_ui.connectingFrom=hit.i):addConnector(wx,wy)))
+  sub.appendChild(makeCtxItem('Arrow',()=>hit&&(hit.type==='textBox'||hit.type==='shape')?(_ui.connectingFrom=hit):addArrow(wx,wy)))
+  sub.appendChild(makeCtxItem('Connector',()=>{if(hit&&hit.type==='textBox'){_ui.connectingFrom={i:hit.i,type:'textBox'};_ui.activeTool=TOOLS.CONNECTION_LINE;updateToolUI()}else addConnector(wx,wy)}))
   const shapeSub=document.createElement('div'); shapeSub.className='context-submenu-trigger'; shapeSub.innerHTML='<button class="context-item has-submenu"><span>Shapes</span><span class="submenu-arrow">\u25b8</span></button>'
   const shapeItems=document.createElement('div'); shapeItems.className='context-submenu'
   shapeItems.appendChild(makeCtxItem('Rectangle',()=>addShapeAtCenter(wx,wy,'rectangle')))
@@ -1108,44 +1174,12 @@ function makeCtxItem(label, onClick, shortcut, isDanger) {
 }
 function closeContextMenu() { if(_ui&&_ui.contextMenu) _ui.contextMenu.style.display='none' }
 
-/* ─── Inline Editing ─── */
-function startInlineEdit(idx) {
-  if (_ui.inlineEditState) commitInlineEdit()
-  const tb=_canvasData.textBoxes[idx], original={title:tb.title,text:tb.text}
-  const el=document.createElement('div'); el.className='canvas-inline-editor'
-  el.style.cssText='position:absolute;background:'+(tb.color||'#1a1a1a')+';border:2px solid '+getAccentColor()+';border-radius:6px;padding:6px;z-index:100;box-sizing:border-box;'
-  const titleInput=document.createElement('input'); titleInput.value=tb.title||''; titleInput.placeholder='Title'; titleInput.style.cssText='display:block;width:100%;border:none;background:transparent;color:'+(tb.titleColor||'#e7e7e7')+';font-size:'+((tb.fontSize||14)+2)+'px;font-weight:bold;outline:none;margin-bottom:4px;padding:2px 4px;box-sizing:border-box;'
-  const textArea=document.createElement('textarea'); textArea.value=tb.text||''; textArea.placeholder='Content...'; textArea.style.cssText='display:block;width:100%;border:none;background:transparent;color:'+(tb.textColor||'#ddd')+';font-size:'+(tb.fontSize||14)+'px;resize:none;outline:none;font-family:sans-serif;min-height:60px;padding:2px 4px;box-sizing:border-box;'
-  el.appendChild(titleInput); el.appendChild(textArea)
-
-  const sp=worldToScreen(tb.x,tb.y); const cw=_ui.canvasArea.clientWidth
-  el.style.left=sp.x+'px'; el.style.top=sp.y+'px'; el.style.width=Math.max(tb.w*_ui.scale,200)+'px'; el.style.minHeight=Math.max(tb.h*_ui.scale,100)+'px'
-  _ui.entityLayer.appendChild(el)
-
-  const onBlur=()=>{ setTimeout(()=>{ if(!el.contains(document.activeElement)) commitInlineEdit() },100) }
-  titleInput.addEventListener('blur',onBlur); textArea.addEventListener('blur',onBlur)
-  const onKey=e=>{ if(e.key==='Escape'){cancelInlineEdit()} else if(e.key==='Enter'&&!e.shiftKey&&e.target===titleInput){e.preventDefault();textArea.focus()} }
-  el.addEventListener('keydown',onKey)
-  titleInput.focus()
-  _ui.inlineEditState={el,idx,original,titleInput,textArea,onBlur,onKey}
-}
-function commitInlineEdit() {
-  if (!_ui.inlineEditState) return
-  const {el,idx,original,titleInput,textArea,onBlur,onKey}=_ui.inlineEditState; _ui.inlineEditState=null
-  titleInput.removeEventListener('blur',onBlur); textArea.removeEventListener('blur',onBlur); el.removeEventListener('keydown',onKey)
-  el.remove()
-  const tb=_canvasData.textBoxes[idx], newTitle=titleInput.value, newText=textArea.value
-  if (original.title!==newTitle||original.text!==newText) {
-    _history.push({undo(){const t=_canvasData.textBoxes[idx];if(t){t.title=original.title;t.text=original.text}},redo(){const t=_canvasData.textBoxes[idx];if(t){t.title=newTitle;t.text=newText}},description:'Edit Text Box'})
-    tb.title=newTitle; tb.text=newText; saveData(); updateSidePanel()
-  }
-}
-function cancelInlineEdit() {
-  if (!_ui.inlineEditState) return
-  const {el,original,titleInput,textArea,onBlur,onKey,idx}=_ui.inlineEditState; _ui.inlineEditState=null
-  titleInput.removeEventListener('blur',onBlur); textArea.removeEventListener('blur',onBlur); el.removeEventListener('keydown',onKey)
-  el.remove()
-  const tb=_canvasData.textBoxes[idx]; tb.title=original.title; tb.text=original.text; updateSidePanel()
+/* ─── Persistent Text Box Overlays (continue) ─── */
+function wireOverlayInput(tb, o) {
+  const onInput=()=>{ tb.title=o.titleInput.value; tb.text=o.textArea.value }
+  const onKey=e=>{ if(e.key==='Enter'&&!e.shiftKey&&e.target===o.titleInput){e.preventDefault();o.textArea.focus()} }
+  o.titleInput.addEventListener('input',onInput); o.textArea.addEventListener('input',onInput)
+  o.el.addEventListener('keydown',onKey)
 }
 function startConnectionEdit(idx) {
   const conn=_canvasData.connections[idx], origText=conn.text
@@ -1298,14 +1332,14 @@ function addTextBox(wx, wy, w, h) { w=w||200; h=h||120; const tb={id:_ui.nextTex
 function addShapeAtCenter(wx, wy, shapeType, optW, optH) { const w=optW||120,h=optH||80; const shape={id:_ui.nextShapeId++,shapeType:shapeType||'rectangle',x:wx-w/2,y:wy-h/2,w,h,color:'#2b2b2b',borderColor:getAccentColor(),borderWidth:2,cornerRadius:4,image:null,locked:false}; const idx=_canvasData.shapes.length; _canvasData.shapes.push(shape); _parentTree.register('shape',shape.id,shape); clearSelection(); _ui.selectedShapes.add(idx); _history.push({undo(){_canvasData.shapes.splice(idx,1);_parentTree.unregister('shape',shape.id);clearSelection()},redo(){_canvasData.shapes.splice(idx,0,shape);_parentTree.register('shape',shape.id,shape);clearSelection();_ui.selectedShapes.add(idx)},description:'Add Shape'}); updateSidePanel(); saveData() }
 function addImageContainer(wx, wy, optW, optH) { addShapeAtCenter(wx,wy,'rectangle',optW||280,optH||220); const s=_canvasData.shapes[_canvasData.shapes.length-1]; if(s){s.color='#1e1e1e';s.borderColor='#3a3a3a';s.borderWidth=1;s.cornerRadius=8} }
 function addShapeWithImage(wx, wy, dataUrl) { addImageContainer(wx,wy); const s=_canvasData.shapes[_canvasData.shapes.length-1]; if(s) s.image=dataUrl }
-function addArrow(wx, wy) { const off=60/_ui.scale; const a={id:_ui.nextArrowId++,x1:wx-off,y1:wy,x2:wx+off,y2:wy,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); clearSelection(); _ui.selectedArrows.add(idx); _history.push({undo(){_canvasData.arrows.splice(idx,1);clearSelection()},redo(){_canvasData.arrows.splice(idx,0,a);clearSelection();_ui.selectedArrows.add(idx)},description:'Add Arrow'}); saveData() }
-function addArrowFromTo(x1, y1, x2, y2) { const a={id:_ui.nextArrowId++,x1,y1,x2,y2,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); clearSelection(); _ui.selectedArrows.add(idx); _history.push({undo(){_canvasData.arrows.splice(idx,1);clearSelection()},redo(){_canvasData.arrows.splice(idx,0,a);clearSelection();_ui.selectedArrows.add(idx)},description:'Add Arrow'}); saveData() }
-function addArrowBetween(fromIdx, toIdx) { const ft=_canvasData.textBoxes[fromIdx], tt=_canvasData.textBoxes[toIdx]; if(!ft||!tt) return; const s=getRectEdgePoint(ft.x,ft.y,ft.w,ft.h,tt.x+tt.w/2,tt.y+tt.h/2), e2=getRectEdgePoint(tt.x,tt.y,tt.w,tt.h,ft.x+ft.w/2,ft.y+ft.h/2); const a={id:_ui.nextArrowId++,x1:s.x,y1:s.y,x2:e2.x,y2:e2.y,connectedFrom:fromIdx,connectedTo:toIdx,connectedFromType:'textBox',connectedToType:'textBox',color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); _history.push({undo(){_canvasData.arrows.splice(idx,1)},redo(){_canvasData.arrows.splice(idx,0,a)},description:'Add Arrow'}); saveData() }
+function addArrow(wx, wy) { const off=60/_ui.scale; let x1=wx-off,y1=wy,x2=wx+off,y2=wy; let connectedFrom=null,connectedTo=null,connectedFromType=null,connectedToType=null; const startHit=getTopHitAt(x1,y1), endHit=getTopHitAt(x2,y2); if(startHit&&(startHit.type==='textBox'||startHit.type==='shape')){connectedFrom=startHit.i;connectedFromType=startHit.type;const arr=startHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes;const p=getRectEdgePoint(arr[startHit.i].x,arr[startHit.i].y,arr[startHit.i].w,arr[startHit.i].h,x2,y2);x1=p.x;y1=p.y} if(endHit&&(endHit.type==='textBox'||endHit.type==='shape')&&!(startHit&&startHit.type===endHit.type&&startHit.i===endHit.i)){connectedTo=endHit.i;connectedToType=endHit.type;const arr=endHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes;const p=getRectEdgePoint(arr[endHit.i].x,arr[endHit.i].y,arr[endHit.i].w,arr[endHit.i].h,x1,y1);x2=p.x;y2=p.y} const a={id:_ui.nextArrowId++,x1,y1,x2,y2,connectedFrom,connectedTo,connectedFromType,connectedToType,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); clearSelection(); _ui.selectedArrows.add(idx); _history.push({undo(){_canvasData.arrows.splice(idx,1);clearSelection()},redo(){_canvasData.arrows.splice(idx,0,a);clearSelection();_ui.selectedArrows.add(idx)},description:'Add Arrow'}); saveData() }
+function addArrowFromTo(x1, y1, x2, y2) { let connectedFrom=null,connectedTo=null,connectedFromType=null,connectedToType=null; const startHit=getTopHitAt(x1,y1), endHit=getTopHitAt(x2,y2); if(startHit&&(startHit.type==='textBox'||startHit.type==='shape')){connectedFrom=startHit.i;connectedFromType=startHit.type;const arr=startHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes;const p=getRectEdgePoint(arr[startHit.i].x,arr[startHit.i].y,arr[startHit.i].w,arr[startHit.i].h,x2,y2);x1=p.x;y1=p.y} if(endHit&&(endHit.type==='textBox'||endHit.type==='shape')&&!(startHit&&startHit.type===endHit.type&&startHit.i===endHit.i)){connectedTo=endHit.i;connectedToType=endHit.type;const arr=endHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes;const p=getRectEdgePoint(arr[endHit.i].x,arr[endHit.i].y,arr[endHit.i].w,arr[endHit.i].h,x1,y1);x2=p.x;y2=p.y} const a={id:_ui.nextArrowId++,x1,y1,x2,y2,connectedFrom,connectedTo,connectedFromType,connectedToType,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); clearSelection(); _ui.selectedArrows.add(idx); _history.push({undo(){_canvasData.arrows.splice(idx,1);clearSelection()},redo(){_canvasData.arrows.splice(idx,0,a);clearSelection();_ui.selectedArrows.add(idx)},description:'Add Arrow'}); saveData() }
+function addArrowBetween(fromHit, toHit) { const fromArr=fromHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes; const toArr=toHit.type==='shape'?_canvasData.shapes:_canvasData.textBoxes; const ft=fromArr[fromHit.i], tt=toArr[toHit.i]; if(!ft||!tt) return; const s=getRectEdgePoint(ft.x,ft.y,ft.w,ft.h,tt.x+tt.w/2,tt.y+tt.h/2), e2=getRectEdgePoint(tt.x,tt.y,tt.w,tt.h,ft.x+ft.w/2,ft.y+ft.h/2); const a={id:_ui.nextArrowId++,x1:s.x,y1:s.y,x2:e2.x,y2:e2.y,connectedFrom:fromHit.i,connectedTo:toHit.i,connectedFromType:fromHit.type,connectedToType:toHit.type,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); _history.push({undo(){_canvasData.arrows.splice(idx,1)},redo(){_canvasData.arrows.splice(idx,0,a)},description:'Add Arrow'}); saveData() }
 function addConnector(wx, wy) { const off=60/_ui.scale; const c={id:_ui.nextConnectorId++,x1:wx-off,y1:wy,x2:wx+off,y2:wy,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',locked:false}; const idx=_canvasData.connectors.length; _canvasData.connectors.push(c); clearSelection(); _ui.selectedConnectors.add(idx); _history.push({undo(){_canvasData.connectors.splice(idx,1);clearSelection()},redo(){_canvasData.connectors.splice(idx,0,c);clearSelection();_ui.selectedConnectors.add(idx)},description:'Add Connector'}); saveData() }
 function addConnectorFromTo(x1, y1, x2, y2) { const c={id:_ui.nextConnectorId++,x1,y1,x2,y2,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',locked:false}; const idx=_canvasData.connectors.length; _canvasData.connectors.push(c); clearSelection(); _ui.selectedConnectors.add(idx); _history.push({undo(){_canvasData.connectors.splice(idx,1);clearSelection()},redo(){_canvasData.connectors.splice(idx,0,c);clearSelection();_ui.selectedConnectors.add(idx)},description:'Add Connector'}); saveData() }
 function addConnectionCmd(fromIdx, toIdx) { const conn={id:_ui.nextConnectionId++,from:fromIdx,to:toIdx,color:'#6bb5ff',text:'',locked:false}; _canvasData.connections.push(conn); _history.push({undo(){const i=_canvasData.connections.findIndex(c=>c.id===conn.id);if(i!==-1)_canvasData.connections.splice(i,1)},redo(){_canvasData.connections.push(conn)},description:'Add Connection'}); saveData() }
 
-function clearSelection() { _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear(); _ui.selectedArrows.clear(); _ui.selectedConnectors.clear(); _ui.selectedConnection=null; updateSidePanel() }
+function clearSelection() { _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear(); _ui.selectedArrows.clear(); _ui.selectedConnectors.clear(); _ui.selectedConnection=null; updateSidePanel(); requestRender() }
 function deleteSelected() {
   const dt=[], ds=[], da=[], dc=[], dcn=[]
   for (const idx of _ui.selectedTextBoxes) dt.push({entity:_canvasData.textBoxes[idx],index:idx})
@@ -1397,7 +1431,6 @@ function buildTextBoxPanel(tb) {
     '<label>Font Size</label><input class="canvas-panel-input" type="number" id="pFontSize" value="'+(tb.fontSize||14)+'" min="8" max="48">'+
     '<div style="display:flex;gap:4px;margin-top:4px;">'+
     '<button class="canvas-panel-btn" id="pLock">'+(tb.locked?'\u{1F512} Unlock':'\u{1F513} Lock')+'</button>'+
-    '<button class="canvas-panel-btn" id="pEdit">Edit Content</button>'+
     '</div>'+
     '<div class="canvas-panel-info">X:'+Math.round(tb.x)+' Y:'+Math.round(tb.y)+' W:'+Math.round(tb.w)+' H:'+Math.round(tb.h)+'</div>'+
     '</div>'
@@ -1428,18 +1461,36 @@ function wirePanelEvents() {
   panel.querySelectorAll('.panel-color-swatch').forEach(el=>{ initColorSwatch(el,{onSelect:hex=>{const prop=el.id==='cpColor'?'color':el.id==='cpBorder'?'borderColor':el.id==='cpTitleColor'?'titleColor':el.id==='cpTextColor'?'textColor':'color';let e;if(_ui.selectedTextBoxes.size===1)e=_canvasData.textBoxes[Array.from(_ui.selectedTextBoxes)[0]];else if(_ui.selectedShapes.size===1)e=_canvasData.shapes[Array.from(_ui.selectedShapes)[0]];else if(_ui.selectedArrows.size===1)e=_canvasData.arrows[Array.from(_ui.selectedArrows)[0]];else if(_ui.selectedConnection!==null)e=_canvasData.connections[_ui.selectedConnection];if(!e)return;const ov=e[prop];e[prop]=hex;_history.push({undo(){e[prop]=ov},redo(){e[prop]=hex},description:'Change Color'});saveData()}}) })
   panel.querySelectorAll('.canvas-panel-input').forEach(el=>{ el.addEventListener('change',()=>{const id2=el.id;let e;if(id2==='pTitle'||id2==='pFontSize'){if(_ui.selectedTextBoxes.size===1)e=_canvasData.textBoxes[Array.from(_ui.selectedTextBoxes)[0]]}else if(id2==='pBorderW'){if(_ui.selectedShapes.size===1)e=_canvasData.shapes[Array.from(_ui.selectedShapes)[0]]}else if(id2==='pLineW'||id2==='pHeadSz'){if(_ui.selectedArrows.size===1)e=_canvasData.arrows[Array.from(_ui.selectedArrows)[0]]}else if(id2==='pConnText'){if(_ui.selectedConnection!==null)e=_canvasData.connections[_ui.selectedConnection]};if(!e)return;const prop=id2==='pTitle'?'title':id2==='pFontSize'?'fontSize':id2==='pBorderW'?'borderWidth':id2==='pLineW'?'lineWidth':id2==='pHeadSz'?'headSize':id2==='pConnText'?'text':'color';const oldVal=e[prop],newVal=el.type==='number'?parseInt(el.value)||0:el.value;e[prop]=newVal;_history.push({undo(){e[prop]=oldVal},redo(){e[prop]=newVal},description:'Change '+prop});saveData()}) })
   const lockBtn=document.getElementById('pLock'); if(lockBtn) lockBtn.addEventListener('click',()=>{if(_ui.selectedTextBoxes.size===1)toggleLock('textBox',Array.from(_ui.selectedTextBoxes)[0]);else if(_ui.selectedShapes.size===1)toggleLock('shape',Array.from(_ui.selectedShapes)[0]);else if(_ui.selectedArrows.size===1)toggleLock('arrow',Array.from(_ui.selectedArrows)[0]);else if(_ui.selectedConnectors.size===1)toggleLock('connector',Array.from(_ui.selectedConnectors)[0])})
-  const editBtn=document.getElementById('pEdit'); if(editBtn) editBtn.addEventListener('click',()=>{if(_ui.selectedTextBoxes.size===1)startInlineEdit(Array.from(_ui.selectedTextBoxes)[0])})
 }
 
 /* ─── Animation & Resize ─── */
+function requestRender() {
+  _renderDirty = true
+  if (!_animationId) _animationId = requestAnimationFrame(animate)
+}
+
 function resizeCanvases() {
   if (!_ui||!_ui.canvasArea) return
   const dpr=window.devicePixelRatio||1, rect=_ui.canvasArea.getBoundingClientRect(), w=rect.width, h=rect.height
+  if (w === _lastCanvasW && h === _lastCanvasH) return
+  _lastCanvasW = w; _lastCanvasH = h
   _ui.mainCanvas.style.width=w+'px'; _ui.mainCanvas.style.height=h+'px'; _ui.mainCanvas.width=w*dpr; _ui.mainCanvas.height=h*dpr
   _ui.arrowCanvas.style.width=w+'px'; _ui.arrowCanvas.style.height=h+'px'; _ui.arrowCanvas.width=w*dpr; _ui.arrowCanvas.height=h*dpr
 }
-function animate() { if(!_ui) return; _ui.offsetX+=(_ui.targetOffsetX-_ui.offsetX)*0.3; _ui.offsetY+=(_ui.targetOffsetY-_ui.offsetY)*0.3; _ui.scale+=(_ui.targetScale-_ui.scale)*0.3; _parentTree.recomputeDirty(); resizeCanvases(); drawEntities(); drawArrowsAndConnectors(); _animationId=requestAnimationFrame(animate) }
-function saveData() { if(!_currentCanvasId||!_canvasData) return; _canvasData.viewport={offsetX:_ui.targetOffsetX,offsetY:_ui.targetOffsetY,scale:_ui.targetScale}; _canvasData.nextTextBoxId=_ui.nextTextBoxId; _canvasData.nextShapeId=_ui.nextShapeId; _canvasData.nextArrowId=_ui.nextArrowId; _canvasData.nextConnectorId=_ui.nextConnectorId; _canvasData.nextConnectionId=_ui.nextConnectionId; markDirty() }
+function animate() {
+  if(!_ui) { _animationId=null; return }
+  const settled=Math.abs(_ui.offsetX-_ui.targetOffsetX)<0.5&&Math.abs(_ui.offsetY-_ui.targetOffsetY)<0.5&&Math.abs(_ui.scale-_ui.targetScale)<0.0005
+  if (settled&&!_renderDirty) {
+    _ui.offsetX=_ui.targetOffsetX; _ui.offsetY=_ui.targetOffsetY; _ui.scale=_ui.targetScale
+    _animationId=null; return
+  }
+  _renderDirty=false
+  _ui.offsetX+=(_ui.targetOffsetX-_ui.offsetX)*0.3; _ui.offsetY+=(_ui.targetOffsetY-_ui.offsetY)*0.3; _ui.scale+=(_ui.targetScale-_ui.scale)*0.3
+  _parentTree.recomputeDirty()
+  resizeCanvases(); drawEntities(); drawArrowsAndConnectors(); updateTextBoxOverlays()
+  _animationId=requestAnimationFrame(animate)
+}
+function saveData() { if(!_currentCanvasId||!_canvasData) return; _canvasData.viewport={offsetX:_ui.targetOffsetX,offsetY:_ui.targetOffsetY,scale:_ui.targetScale}; _canvasData.nextTextBoxId=_ui.nextTextBoxId; _canvasData.nextShapeId=_ui.nextShapeId; _canvasData.nextArrowId=_ui.nextArrowId; _canvasData.nextConnectorId=_ui.nextConnectorId; _canvasData.nextConnectionId=_ui.nextConnectionId; markDirty(); requestRender() }
 
 /* ─── Destroy ─── */
 export function destroyCanvas() {
@@ -1447,5 +1498,7 @@ export function destroyCanvas() {
   for (const l of _listeners) { l.el.removeEventListener(l.type,l.fn,l.opts) }; _listeners=[]
   const area=document.getElementById('boardArea')
   if (area) { area.style.padding=''; area.style.overflow=''; area.style.background=''; area.style.position='' }
+  if (_ui&&_ui._textBoxOverlays) { for (const [id] of _ui._textBoxOverlays) removeTextBoxOverlay(id); _ui._textBoxOverlays.clear() }
   _currentCanvasId=null; _canvasData=null; _ui=null; _ctx=null; _arrowCtx=null; _history=null; _renderedCanvasId=null; _parentTree=null
+  _cachedGridRgb=null; _cachedThemeBg=null; _cachedAccent=null; _cachedPanelBg=null; _lastCanvasW=0; _lastCanvasH=0
 }

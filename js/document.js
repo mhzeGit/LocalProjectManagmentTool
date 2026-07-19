@@ -256,7 +256,7 @@ export async function renderDocument(documentId) {
   const paperEl = document.getElementById('editor-' + doc.id)
   const paperSelect = document.getElementById('paperSize-' + doc.id)
   const zoomSelect = document.getElementById('paperZoom-' + doc.id)
-  const initialSize = doc.paperSize || 'free'
+  const initialSize = doc.paperSize || 'a4'
   const initialZoom = doc.paperZoom || 1.0
   if (paperSelect) paperSelect.value = initialSize
   if (zoomSelect) zoomSelect.value = String(initialZoom)
@@ -264,7 +264,7 @@ export async function renderDocument(documentId) {
     applyPaperSize(paperEl, containerEl, initialSize, initialZoom)
     setupResizeObserver(paperEl, containerEl, function() {
       return {
-        size: paperSelect ? paperSelect.value : 'free',
+        size: paperSelect ? paperSelect.value : 'a4',
         zoom: zoomSelect ? parseFloat(zoomSelect.value) : 1.0
       }
     })
@@ -282,7 +282,7 @@ export async function renderDocument(documentId) {
   if (zoomSelect && containerEl && paperEl) {
     zoomSelect.addEventListener('change', function() {
       const zoom = parseFloat(this.value)
-      const size = paperSelect ? paperSelect.value : 'free'
+      const size = paperSelect ? paperSelect.value : 'a4'
       doc.paperZoom = zoom
       applyPaperSize(paperEl, containerEl, size, zoom)
       if (window.__autoSave) window.__autoSave()
