@@ -375,7 +375,7 @@ class ParentTree {
     this._ensureDepths(); const items=[]
     for (let i=0; i<_canvasData.shapes.length; i++) { const d=this._depths.get('shape:'+_canvasData.shapes[i].id)||0; items.push({type:'shape',i,area:_canvasData.shapes[i].w*_canvasData.shapes[i].h,depth:d}) }
     for (let i=0; i<_canvasData.textBoxes.length; i++) { const d=this._depths.get('textBox:'+_canvasData.textBoxes[i].id)||0; items.push({type:'textBox',i,area:_canvasData.textBoxes[i].w*_canvasData.textBoxes[i].h,depth:d}) }
-    items.sort((a,b)=>a.depth===b.depth?b.area-a.area:a.depth-b.depth); return items
+    items.sort((a,b)=>a.depth===b.depth?a.i-b.i:a.depth-b.depth); return items
   }
   getDescendants(type,id) {
     const results=[], stack=[type+':'+id], seen=new Set()
@@ -465,8 +465,8 @@ function drawEntities() {
   }
 
   if (_ui.activeTool===TOOLS.SHAPES&&_ui.drawingPreview) {
-    const dp=_ui.drawingPreview; ctx.save(); ctx.fillStyle='rgba(79,70,229,0.15)'; ctx.strokeStyle=getAccentColor()
-    ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale])
+    const dp=_ui.drawingPreview; ctx.save(); ctx.fillStyle='rgba(79,70,229,0.25)'; ctx.strokeStyle=getAccentColor()
+    ctx.lineWidth=3/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale])
     if (dp.shapeType==='circle') { ctx.beginPath(); ctx.ellipse(dp.x+dp.w/2,dp.y+dp.h/2,dp.w/2,dp.h/2,0,0,Math.PI*2) }
     else if (dp.shapeType==='triangle') { ctx.beginPath(); ctx.moveTo(dp.x+dp.w/2,dp.y); ctx.lineTo(dp.x+dp.w,dp.y+dp.h); ctx.lineTo(dp.x,dp.y+dp.h); ctx.closePath() }
     else if (dp.shapeType==='diamond') { ctx.beginPath(); ctx.moveTo(dp.x+dp.w/2,dp.y); ctx.lineTo(dp.x+dp.w,dp.y+dp.h/2); ctx.lineTo(dp.x+dp.w/2,dp.y+dp.h); ctx.lineTo(dp.x,dp.y+dp.h/2); ctx.closePath() }
@@ -474,13 +474,13 @@ function drawEntities() {
     ctx.fill(); ctx.stroke(); ctx.setLineDash([]); ctx.restore()
   }
   if (_ui.activeTool===TOOLS.TEXT&&_ui.drawingPreview) {
-    const dp=_ui.drawingPreview; ctx.save(); ctx.fillStyle='rgba(79,70,229,0.1)'; ctx.strokeStyle=getAccentColor()
-    ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale]); drawRoundedRect(ctx,dp.x,dp.y,dp.w,dp.h,6)
+    const dp=_ui.drawingPreview; ctx.save(); ctx.fillStyle='rgba(79,70,229,0.2)'; ctx.strokeStyle=getAccentColor()
+    ctx.lineWidth=3/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale]); drawRoundedRect(ctx,dp.x,dp.y,dp.w,dp.h,6)
     ctx.fill(); ctx.stroke(); ctx.setLineDash([]); ctx.restore()
   }
   if (_ui.activeTool===TOOLS.IMAGE_CONTAINER&&_ui.drawingPreview) {
-    const dp=_ui.drawingPreview; ctx.save(); ctx.fillStyle='rgba(79,70,229,0.08)'; ctx.strokeStyle=getAccentColor()
-    ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale]); ctx.strokeRect(dp.x,dp.y,dp.w,dp.h)
+    const dp=_ui.drawingPreview; ctx.save(); ctx.fillStyle='rgba(79,70,229,0.2)'; ctx.strokeStyle=getAccentColor()
+    ctx.lineWidth=3/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale]); ctx.strokeRect(dp.x,dp.y,dp.w,dp.h)
     ctx.stroke(); ctx.setLineDash([]); ctx.restore()
   }
 
@@ -575,6 +575,8 @@ function drawArrowsAndConnectors() {
   for (let i=0; i<_canvasData.connectors.length; i++) drawConnector(i)
   for (let i=0; i<_canvasData.connections.length; i++) drawConnection(i)
   if (_ui.connectingFrom!==null) drawConnectionPreview(_ui.connectingFrom, _ui.connectingMouseWorld)
+  else if (_ui.isDrawing&&_ui.activeTool===TOOLS.ARROW) drawArrowPreview(_ui.drawingStartX,_ui.drawingStartY,_ui.lastWorldMouse.x,_ui.lastWorldMouse.y)
+  else if (_ui.isDrawing&&_ui.activeTool===TOOLS.CONNECTION_LINE) drawConnectorPreview(_ui.drawingStartX,_ui.drawingStartY,_ui.lastWorldMouse.x,_ui.lastWorldMouse.y)
   ctx.restore()
 }
 
@@ -630,6 +632,22 @@ function drawConnectionPreview(fromIdx, mouseWorld) {
   const ft=_canvasData.textBoxes[fromIdx]; if (!ft) return
   const fp=getNodeEdgePoint(ft,mouseWorld.x,mouseWorld.y)
   ctx.save(); ctx.strokeStyle='rgba(79,70,229,0.5)'; ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale]); ctx.beginPath(); ctx.moveTo(fp.x,fp.y); ctx.lineTo(mouseWorld.x,mouseWorld.y); ctx.stroke(); ctx.setLineDash([]); ctx.restore()
+}
+function drawArrowPreview(x1, y1, x2, y2) {
+  const ctx=_ui.arrowCanvas.getContext('2d'), dpr=window.devicePixelRatio||1
+  ctx.save(); ctx.strokeStyle='rgba(79,70,229,0.5)'; ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale])
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([])
+  const angle=Math.atan2(y2-y1,x2-x1), hLen=14/_ui.scale, hAng=Math.PI/6
+  ctx.fillStyle='rgba(79,70,229,0.5)'; ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-hLen*Math.cos(angle-hAng),y2-hLen*Math.sin(angle-hAng)); ctx.lineTo(x2-hLen*Math.cos(angle+hAng),y2-hLen*Math.sin(angle+hAng)); ctx.closePath(); ctx.fill()
+  ctx.restore()
+}
+function drawConnectorPreview(x1, y1, x2, y2) {
+  const ctx=_ui.arrowCanvas.getContext('2d'), dpr=window.devicePixelRatio||1
+  ctx.save(); ctx.strokeStyle='rgba(79,70,229,0.5)'; ctx.lineWidth=2/_ui.scale; ctx.setLineDash([6/_ui.scale,4/_ui.scale])
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([])
+  ctx.beginPath(); ctx.arc(x1,y1,4/_ui.scale,0,Math.PI*2); ctx.fillStyle='rgba(79,70,229,0.5)'; ctx.fill()
+  ctx.beginPath(); ctx.arc(x2,y2,4/_ui.scale,0,Math.PI*2); ctx.fill()
+  ctx.restore()
 }
 
 /* ─── Main Entry ─── */
@@ -733,7 +751,7 @@ function buildToolbar(canvasId) {
   return sideToolbar
 }
 
-function setActiveTool(tool) { _ui.activeTool=tool; _ui.canvasArea.style.cursor=tool===TOOLS.CURSOR?'default':tool===TOOLS.TEXT?'text':'crosshair'; updateToolUI() }
+function setActiveTool(tool) { _ui.activeTool=tool; _ui.canvasArea.style.cursor=tool===TOOLS.CURSOR?'default':'crosshair'; updateToolUI() }
 function setShapeSubType(type) { _ui.shapeSubType=type }
 function updateToolUI() {
   if (!_ui||!_ui.sideToolbar) return
@@ -760,12 +778,27 @@ function onPointerDown(e) {
   if (e.button===2) { _ui.rmbDownTime=performance.now(); _ui.rmbMoved=false; _ui.rmbPending=true; return }
   if (e.button===1||(e.button===0&&e.altKey)) { _ui.isPanning=true; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing'; return }
 
-  if (_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.TEXT||_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
+  if (_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
     _ui.drawingStartX=wx; _ui.drawingStartY=wy; _ui.isDrawing=true; _ui.canvasArea.setPointerCapture(e.pointerId); return
   }
 
-  if (_ui.activeTool===TOOLS.ARROW) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else addArrow(wx,wy); return }
-  if (_ui.activeTool===TOOLS.CONNECTION_LINE) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else addConnector(wx,wy); return }
+  if (_ui.activeTool===TOOLS.TEXT) {
+    const tb={id:_ui.nextTextBoxId++,x:wx,y:wy,w:200,h:120,text:'',title:'',color:'#1a1a1a',borderColor:'#444',textColor:'#ddd',titleColor:'#e7e7e7',fontSize:14,locked:false}
+    const idx=_canvasData.textBoxes.length
+    _canvasData.textBoxes.push(tb)
+    _parentTree.register('textBox',tb.id,tb)
+    clearSelection()
+    _ui.selectedTextBoxes.add(idx)
+    _ui.drawingStartX=wx; _ui.drawingStartY=wy
+    _ui._tbDragIdx=idx
+    _ui._tbDragOrig={x:wx,y:wy,w:200,h:120}
+    _ui.isDrawing=true
+    _ui.canvasArea.setPointerCapture(e.pointerId)
+    return
+  }
+
+  if (_ui.activeTool===TOOLS.ARROW) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else{_ui.drawingStartX=wx;_ui.drawingStartY=wy;_ui.isDrawing=true;_ui.canvasArea.setPointerCapture(e.pointerId)}; return }
+  if (_ui.activeTool===TOOLS.CONNECTION_LINE) { const h=getTopHitAt(wx,wy); if(h&&h.type==='textBox'){_ui.connectingFrom=h.i;_ui.connectingMouseWorld={x:wx,y:wy}}else{_ui.drawingStartX=wx;_ui.drawingStartY=wy;_ui.isDrawing=true;_ui.canvasArea.setPointerCapture(e.pointerId)}; return }
 
   const edgeTb=getEdgeAt(wx,wy,_canvasData.textBoxes), edgeSh=edgeTb?null:getEdgeAt(wx,wy,_canvasData.shapes), edge=edgeTb||edgeSh
   if (edge) {
@@ -798,11 +831,20 @@ function onPointerMove(e) {
   if (_ui.isDraggingArrowEnd&&_ui.arrowDragTarget!==null) { const a=_canvasData.arrows[_ui.arrowDragTarget]; if(a){ const snap=_ui.dragArrowEndSnapshot, fd=Math.hypot(wx-snap.x1,wy-snap.y1), td=Math.hypot(wx-snap.x2,wy-snap.y2); if(fd<td){a.x1=wx;a.y1=wy}else{a.x2=wx;a.y2=wy} }; return }
   if (_ui.connectingFrom!==null&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) { _ui.connectingMouseWorld={x:wx,y:wy}; return }
   if (_ui.isDrawing) {
+    if (_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE) return
+    if (_ui.activeTool===TOOLS.TEXT&&_ui._tbDragIdx!==undefined) {
+      const tb=_canvasData.textBoxes[_ui._tbDragIdx]
+      if (tb) {
+        const x=Math.min(_ui.drawingStartX,wx), y=Math.min(_ui.drawingStartY,wy)
+        const w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
+        if (w>5||h2>5) { tb.x=x; tb.y=y; tb.w=Math.max(w,20); tb.h=Math.max(h2,20) }
+      }
+      return
+    }
     const dx=Math.abs(wx-_ui.drawingStartX), dy=Math.abs(wy-_ui.drawingStartY)
     if (dx>2||dy>2) {
       const x=Math.min(_ui.drawingStartX,wx), y=Math.min(_ui.drawingStartY,wy), w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
       if (_ui.activeTool===TOOLS.SHAPES) _ui.drawingPreview={x,y,w,h2,shapeType:_ui.shapeSubType}
-      else if (_ui.activeTool===TOOLS.TEXT) _ui.drawingPreview={x,y,w,h2}
       else _ui.drawingPreview={x,y,w,h2}
     } else _ui.drawingPreview=null
     return
@@ -819,13 +861,36 @@ function onPointerUp(e) {
   if (_ui.isDraggingArrowEnd) { finishArrowDrag(); return }
   if (_ui.connectingFrom!==null) { const hit=getTopHitAt(wx,wy); if(hit&&hit.type==='textBox'&&hit.i!==_ui.connectingFrom){ if(_ui.activeTool===TOOLS.ARROW)addArrowBetween(_ui.connectingFrom,hit.i); else if(_ui.activeTool===TOOLS.CONNECTION_LINE)addConnectionCmd(_ui.connectingFrom,hit.i) }; _ui.connectingFrom=null; saveData(); return }
   if (_ui.isSelectingBox) { finishSelectBox(); return }
-  if (_ui.isDrawing&&(_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER||_ui.activeTool===TOOLS.TEXT)) {
+  if (_ui.isDrawing&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) {
+    const dx=wx-_ui.drawingStartX, dy=wy-_ui.drawingStartY
+    if (Math.abs(dx)>5||Math.abs(dy)>5) {
+      if (_ui.activeTool===TOOLS.ARROW) addArrowFromTo(_ui.drawingStartX,_ui.drawingStartY,wx,wy)
+      else addConnectorFromTo(_ui.drawingStartX,_ui.drawingStartY,wx,wy)
+    } else {
+      if (_ui.activeTool===TOOLS.ARROW) addArrow(wx,wy)
+      else addConnector(wx,wy)
+    }
+    _ui.isDrawing=false; saveData(); return
+  }
+  if (_ui.isDrawing&&_ui.activeTool===TOOLS.TEXT) {
+    if (_ui._tbDragIdx!==undefined) {
+      const tb=_canvasData.textBoxes[_ui._tbDragIdx]
+      if (tb&&_ui._tbDragOrig) {
+        const orig=_ui._tbDragOrig
+        if (orig.x!==tb.x||orig.y!==tb.y||orig.w!==tb.w||orig.h!==tb.h) {
+          const idx=_ui._tbDragIdx
+          _history.push({undo(){const t=_canvasData.textBoxes[idx];if(t){t.x=orig.x;t.y=orig.y;t.w=orig.w;t.h=orig.h}},redo(){const t=_canvasData.textBoxes[idx];if(t){t.x=tb.x;t.y=tb.y;t.w=tb.w;t.h=tb.h}},description:'Add Text Box'})
+        }
+      }
+    }
+    _ui.isDrawing=false; _ui._tbDragIdx=undefined; _ui._tbDragOrig=undefined; saveData(); return
+  }
+  if (_ui.isDrawing&&(_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER)) {
     if (_ui.drawingPreview) {
       const dp=_ui.drawingPreview
       if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(dp.x+dp.w/2,dp.y+dp.h/2,_ui.shapeSubType,dp.w,dp.h)
-      else if (_ui.activeTool===TOOLS.TEXT) addTextBox(dp.x,dp.y,dp.w,dp.h)
       else addImageContainer(dp.x,dp.y,dp.w,dp.h)
-    } else { if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(wx,wy,_ui.shapeSubType); else if (_ui.activeTool===TOOLS.TEXT) addTextBox(wx,wy); else addImageContainer(wx,wy) }
+    } else { if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(wx,wy,_ui.shapeSubType); else addImageContainer(wx,wy) }
     _ui.isDrawing=false; _ui.drawingPreview=null; saveData(); return
   }
 }
@@ -1033,8 +1098,10 @@ function addShapeAtCenter(wx, wy, shapeType, optW, optH) { const w=optW||120,h=o
 function addImageContainer(wx, wy, optW, optH) { addShapeAtCenter(wx,wy,'rectangle',optW||280,optH||220); const s=_canvasData.shapes[_canvasData.shapes.length-1]; if(s){s.color='#1e1e1e';s.borderColor='#3a3a3a';s.borderWidth=1;s.cornerRadius=8} }
 function addShapeWithImage(wx, wy, dataUrl) { addImageContainer(wx,wy); const s=_canvasData.shapes[_canvasData.shapes.length-1]; if(s) s.image=dataUrl }
 function addArrow(wx, wy) { const off=60/_ui.scale; const a={id:_ui.nextArrowId++,x1:wx-off,y1:wy,x2:wx+off,y2:wy,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); clearSelection(); _ui.selectedArrows.add(idx); _history.push({undo(){_canvasData.arrows.splice(idx,1);clearSelection()},redo(){_canvasData.arrows.splice(idx,0,a);clearSelection();_ui.selectedArrows.add(idx)},description:'Add Arrow'}); saveData() }
+function addArrowFromTo(x1, y1, x2, y2) { const a={id:_ui.nextArrowId++,x1,y1,x2,y2,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); clearSelection(); _ui.selectedArrows.add(idx); _history.push({undo(){_canvasData.arrows.splice(idx,1);clearSelection()},redo(){_canvasData.arrows.splice(idx,0,a);clearSelection();_ui.selectedArrows.add(idx)},description:'Add Arrow'}); saveData() }
 function addArrowBetween(fromIdx, toIdx) { const ft=_canvasData.textBoxes[fromIdx], tt=_canvasData.textBoxes[toIdx]; if(!ft||!tt) return; const s=getRectEdgePoint(ft.x,ft.y,ft.w,ft.h,tt.x+tt.w/2,tt.y+tt.h/2), e2=getRectEdgePoint(tt.x,tt.y,tt.w,tt.h,ft.x+ft.w/2,ft.y+ft.h/2); const a={id:_ui.nextArrowId++,x1:s.x,y1:s.y,x2:e2.x,y2:e2.y,connectedFrom:fromIdx,connectedTo:toIdx,connectedFromType:'textBox',connectedToType:'textBox',color:'#6bb5ff',lineWidth:2,headSize:14,locked:false}; const idx=_canvasData.arrows.length; _canvasData.arrows.push(a); _history.push({undo(){_canvasData.arrows.splice(idx,1)},redo(){_canvasData.arrows.splice(idx,0,a)},description:'Add Arrow'}); saveData() }
 function addConnector(wx, wy) { const off=60/_ui.scale; const c={id:_ui.nextConnectorId++,x1:wx-off,y1:wy,x2:wx+off,y2:wy,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',locked:false}; const idx=_canvasData.connectors.length; _canvasData.connectors.push(c); clearSelection(); _ui.selectedConnectors.add(idx); _history.push({undo(){_canvasData.connectors.splice(idx,1);clearSelection()},redo(){_canvasData.connectors.splice(idx,0,c);clearSelection();_ui.selectedConnectors.add(idx)},description:'Add Connector'}); saveData() }
+function addConnectorFromTo(x1, y1, x2, y2) { const c={id:_ui.nextConnectorId++,x1,y1,x2,y2,connectedFrom:null,connectedTo:null,connectedFromType:null,connectedToType:null,color:'#6bb5ff',locked:false}; const idx=_canvasData.connectors.length; _canvasData.connectors.push(c); clearSelection(); _ui.selectedConnectors.add(idx); _history.push({undo(){_canvasData.connectors.splice(idx,1);clearSelection()},redo(){_canvasData.connectors.splice(idx,0,c);clearSelection();_ui.selectedConnectors.add(idx)},description:'Add Connector'}); saveData() }
 function addConnectionCmd(fromIdx, toIdx) { const conn={id:_ui.nextConnectionId++,from:fromIdx,to:toIdx,color:'#6bb5ff',text:'',locked:false}; _canvasData.connections.push(conn); _history.push({undo(){const i=_canvasData.connections.findIndex(c=>c.id===conn.id);if(i!==-1)_canvasData.connections.splice(i,1)},redo(){_canvasData.connections.push(conn)},description:'Add Connection'}); saveData() }
 
 function clearSelection() { _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear(); _ui.selectedArrows.clear(); _ui.selectedConnectors.clear(); _ui.selectedConnection=null; updateSidePanel() }
