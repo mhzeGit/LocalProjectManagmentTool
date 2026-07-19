@@ -775,8 +775,8 @@ function getEventWorld(e) { const r=_ui.canvasArea.getBoundingClientRect(); cons
 
 function onPointerDown(e) {
   const {sx,sy,wx,wy}=getEventWorld(e); _ui.lastWorldMouse={x:wx,y:wy}; _ui.dragStartX=sx; _ui.dragStartY=sy
-  if (e.button===2) { _ui.rmbDownTime=performance.now(); _ui.rmbMoved=false; _ui.rmbPending=true; return }
-  if (e.button===1||(e.button===0&&e.altKey)) { _ui.isPanning=true; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing'; return }
+  if (e.button===2) { _ui.rmbDownTime=performance.now(); _ui.rmbMoved=false; _ui.rmbPending=true; _ui.lastPanX=sx; _ui.lastPanY=sy; return }
+  if (e.button===0&&e.altKey) { _ui.isPanning=true; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing'; return }
 
   if (_ui.activeTool===TOOLS.SHAPES) {
     const defW=120, defH=80
@@ -857,7 +857,7 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   const {sx,sy,wx,wy}=getEventWorld(e); _ui.lastWorldMouse={x:wx,y:wy}
-  if (_ui.rmbPending&&(Math.abs(sx-_ui.dragStartX)>3||Math.abs(sy-_ui.dragStartY)>3)) _ui.rmbMoved=true
+  if (_ui.rmbPending&&(Math.abs(sx-_ui.dragStartX)>3||Math.abs(sy-_ui.dragStartY)>3)) { _ui.rmbMoved=true; _ui.isPanning=true; _ui.rmbPending=false; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing' }
   if (_ui.isPanning) { const dx=sx-_ui.lastPanX, dy=sy-_ui.lastPanY; _ui.targetOffsetX+=dx; _ui.targetOffsetY+=dy; _ui.lastPanX=sx; _ui.lastPanY=sy; return }
   if (_ui.isResizing) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale, b=_ui.resizeStartBounds; if(!b)return; const h=_ui.resizeHandle; let nx=b.x,ny=b.y,nw=b.w,nh=b.h; if(h.includes('l')){nx=b.x+dx;nw=b.w-dx} if(h.includes('r'))nw=b.w+dx; if(h.includes('t')){ny=b.y+dy;nh=b.h-dy} if(h.includes('b'))nh=b.h+dy; if(nw<20){if(h.includes('l'))nx=b.x+b.w-20;nw=20} if(nh<20){if(h.includes('t'))ny=b.y+b.h-20;nh=20}; const entity=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx]; if(entity){entity.x=nx;entity.y=ny;entity.w=nw;entity.h=nh}; return }
   if (_ui.isDragging) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale; for(const item of _ui._dragState){ const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i]; if(e){e.x=item.sx+dx;e.y=item.sy+dy} }; return }
@@ -941,15 +941,10 @@ function onPointerUp(e) {
 
 function onWheel(e) {
   e.preventDefault()
-  if (e.ctrlKey || e.metaKey) {
-    const rect=_ui.canvasArea.getBoundingClientRect(), sx=e.clientX-rect.left, sy=e.clientY-rect.top
-    const factor=e.deltaY>0?0.92:1.08, newScale=clamp(_ui.targetScale*factor,0.05,5)
-    const wx=(sx-_ui.offsetX)/_ui.scale, wy=(sy-_ui.offsetY)/_ui.scale
-    _ui.targetOffsetX=sx-wx*newScale; _ui.targetOffsetY=sy-wy*newScale; _ui.targetScale=newScale
-  } else {
-    _ui.targetOffsetX -= e.deltaX
-    _ui.targetOffsetY -= e.deltaY
-  }
+  const rect=_ui.canvasArea.getBoundingClientRect(), sx=e.clientX-rect.left, sy=e.clientY-rect.top
+  const factor=e.deltaY>0?0.92:1.08, newScale=clamp(_ui.targetScale*factor,0.05,5)
+  const wx=(sx-_ui.offsetX)/_ui.scale, wy=(sy-_ui.offsetY)/_ui.scale
+  _ui.targetOffsetX=sx-wx*newScale; _ui.targetOffsetY=sy-wy*newScale; _ui.targetScale=newScale
 }
 
 function onDoubleClick(e) {
@@ -985,10 +980,10 @@ function onKeyDown(e) {
     if (e.key==='d') { e.preventDefault(); duplicateSelection(); return }
     if (e.key==='s'&&e.shiftKey) { e.preventDefault(); if(window.__saveAs)window.__saveAs(); return }
     if (e.key==='s') { e.preventDefault(); if(window.__save)window.__save(); return }
-    if (e.key===']'&&!e.shiftKey) { e.preventDefault(); bringForward(); return }
-    if (e.key==='['&&!e.shiftKey) { e.preventDefault(); sendBackward(); return }
-    if (e.key===']'&&e.shiftKey) { e.preventDefault(); bringToFront(); return }
-    if (e.key==='['&&e.shiftKey) { e.preventDefault(); sendToBack(); return }
+    if (e.key===']') { e.preventDefault(); bringForward(); return }
+    if (e.key==='[') { e.preventDefault(); sendBackward(); return }
+    if (e.key==='}') { e.preventDefault(); bringToFront(); return }
+    if (e.key==='{') { e.preventDefault(); sendToBack(); return }
     return
   }
   if (e.key==='Delete'||e.key==='Backspace') { e.preventDefault(); deleteSelected(); return }
