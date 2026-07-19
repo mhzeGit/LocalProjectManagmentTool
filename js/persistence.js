@@ -658,7 +658,6 @@ export function setupUserDirectory() {
     state.selectedWorkspaceId = null
     state.selectedProjectId = null
     state.selectedBoardId = null
-    updateSaveUI()
     render()
     showNotification('User file set up')
   }).catch(function(e) {
@@ -714,7 +713,6 @@ export function openUserFile() {
         state.selectedBoardId = null
         state.selectedDocumentId = null
         state.selectedCanvasId = null
-        updateSaveUI()
         render()
         showNotification('User file opened')
       }
@@ -1009,18 +1007,6 @@ export function saveNow() {
   })
 }
 
-function updateSaveUI() {
-  var btn = document.getElementById('openFolderBtn')
-  if (!btn) return
-  if (_saveMode === 'user' && _userFileHandle) {
-    btn.textContent = 'User: Open'
-    btn.title = 'Open a different user file'
-  } else {
-    btn.textContent = 'Open User File'
-    btn.title = 'Open a user.json file'
-  }
-}
-
 export function closeUserDirectory() {
   _userFileHandle = null
   _workspaceFileHandles = {}
@@ -1050,7 +1036,6 @@ export function closeUserDirectory() {
   state.selectedCanvasId = null
   state.selfMemberId = null
 
-  updateSaveUI()
   render()
   showNotification('User file closed')
 }
@@ -1103,11 +1088,8 @@ export function initPersistence() {
         return null
       })
     })
-  }).then(function() {
-    updateSaveUI()
   }).catch(function(err) {
     console.error('Persistence init error:', err)
-    updateSaveUI()
   })
 }
 
