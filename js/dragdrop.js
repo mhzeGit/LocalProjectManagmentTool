@@ -1,5 +1,6 @@
 import { findBoard, findColumn, findCard, findCardColumn, state } from './data.js'
 import { openCardDetail } from './modal.js'
+import { pushCommand } from './history.js'
 
 let _dragActive = false
 let _dragCardHeight = 0
@@ -15,6 +16,8 @@ let _colFlipTimer = null
 let _colDraggedId = null
 let _colGrabOffsetX = 0
 let _colDomLeft = 0
+let _cardDragData = null
+let _colOrderSnapshot = null
 
 export function initDragDrop(renderFn) {
   _renderFn = renderFn
@@ -30,6 +33,11 @@ export function initDragDrop(renderFn) {
       _dragCardHeight = card.offsetHeight
       e.dataTransfer.effectAllowed = 'move'
       e.dataTransfer.setData('text/x-card', card.dataset.cardId)
+      const srcCard = findCard(card.dataset.cardId)
+      const srcCol = srcCard ? findCardColumn(srcCard.id) : null
+      if (srcCard && srcCol) {
+        _cardDragData = { cardId: srcCard.id, srcColId: srcCol.id, srcIdx: srcCol.cards.indexOf(srcCard) }
+      }
       const img = new Image()
       img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
       e.dataTransfer.setDragImage(img, 0, 0)
@@ -59,6 +67,8 @@ export function initDragDrop(renderFn) {
       const colRect = col.getBoundingClientRect()
       _colGrabOffsetX = e.clientX - colRect.left
       _colDomLeft = colRect.left
+      const b = findBoard(state.selectedBoardId)
+      if (b) _colOrderSnapshot = b.columns.map(c => c.id)
       const container = board.querySelector('.board-columns')
       if (container) {
         const allCols = container.querySelectorAll('.board-column:not(.add-column)')
@@ -84,6 +94,8 @@ export function initDragDrop(renderFn) {
     _dragActive = false
     _dragCardHeight = 0
     if (_dragGhostEl) { _dragGhostEl.remove(); _dragGhostEl = null }
+    _cardDragData = null
+    _colOrderSnapshot = null
     _colOriginalIdx = -1
     _colCurrentPosKey = null
     _colDraggedId = null
@@ -340,7 +352,39 @@ export function initDragDrop(renderFn) {
       if (sourceCol.id === targetCol.id && idx < insertIdx) insertIdx--
       if (insertIdx < 0) insertIdx = 0
       if (insertIdx > targetCol.cards.length) insertIdx = targetCol.cards.length
+      const prevTargetLength = targetCol.cards.length
       targetCol.cards.splice(insertIdx, 0, card)
+
+      const dragData = _cardDragData
+      _cardDragData = null
+      if (dragData) {
+        pushCommand({
+          undo() {
+            const movedCard = findCard(cardId)
+            const tCol = findColumn(dragData.srcColId === targetCol.id ? targetCol.id : (targetCol.id === dragData.srcColId ? targetCol.id : targetCol.id))
+            if (!movedCard) return
+            const src = findColumn(dragData.srcColId)
+            const tgt = findColumn(targetCol.id)
+            if (src && tgt) {
+              const ti = tgt.cards.indexOf(movedCard)
+              if (ti !== -1) tgt.cards.splice(ti, 1)
+              const si = dragData.srcIdx <= src.cards.length ? dragData.srcIdx : src.cards.length
+              src.cards.splice(si, 0, movedCard)
+            }
+          },
+          redo() {
+            const movedCard = findCard(cardId)
+            const src = findColumn(dragData.srcColId)
+            const tgt = findColumn(targetCol.id)
+            if (!movedCard || !src || !tgt) return
+            const si = src.cards.indexOf(movedCard)
+            if (si !== -1) src.cards.splice(si, 1)
+            const ti = insertIdx <= tgt.cards.length ? insertIdx : tgt.cards.length
+            tgt.cards.splice(ti, 0, movedCard)
+          },
+          description: 'Move Card'
+        })
+      }
 
       if (sourceCol.id === targetCol.id) {
         const cardEl = document.querySelector('.card[data-card-id="' + cardId + '"]')
@@ -419,6 +463,33 @@ export function initDragDrop(renderFn) {
       if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
         const moved = b.columns.splice(oldIdx, 1)[0]
         b.columns.splice(newIdx, 0, moved)
+      }
+
+      const colSnapshot = _colOrderSnapshot
+      _colOrderSnapshot = null
+      if (colSnapshot) {
+        const currentOrder = b.columns.map(function(c) { return c.id })
+        if (JSON.stringify(colSnapshot) !== JSON.stringify(currentOrder)) {
+          pushCommand({
+            undo() {
+              const bb = findBoard(state.selectedBoardId)
+              if (!bb) return
+              const reordered = colSnapshot.map(function(id) { return bb.columns.find(function(c) { return c.id === id }) }).filter(Boolean)
+              const remaining = bb.columns.filter(function(c) { return !colSnapshot.includes(c.id) })
+              bb.columns.length = 0
+              bb.columns.push(...reordered, ...remaining)
+            },
+            redo() {
+              const bb = findBoard(state.selectedBoardId)
+              if (!bb) return
+              const reordered = currentOrder.map(function(id) { return bb.columns.find(function(c) { return c.id === id }) }).filter(Boolean)
+              const remaining = bb.columns.filter(function(c) { return !currentOrder.includes(c.id) })
+              bb.columns.length = 0
+              bb.columns.push(...reordered, ...remaining)
+            },
+            description: 'Reorder Columns'
+          })
+        }
       }
 
       _colOriginalIdx = -1

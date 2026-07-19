@@ -1,8 +1,9 @@
 import { state } from './data.js'
-import { openFolder, saveNow } from './persistence.js'
+import { createWorkspaceFile, openWorkspaceFile, closeWorkspace, saveNow } from './persistence.js'
 import { openModal } from './modal.js'
 import { openPreferences } from './preferences.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
+import { performUndo, performRedo } from './history.js'
 let openMenuIndex = -1
 let isMenuOpen = false
 
@@ -44,9 +45,11 @@ const menuDefs = [
   {
     label: 'File',
     items: [
-      { label: 'New Workspace', shortcut: 'Ctrl+Shift+N', action: () => openModal('workspace') },
+      { label: 'New Workspace', shortcut: 'Ctrl+Shift+N', action: () => createWorkspaceFile().then(() => { if (state.selectedWorkspaceId) openModal('workspace') }) },
       { separator: true },
-      { label: 'Open Workspace\u2026', shortcut: 'Ctrl+O', action: () => openFolder() },
+      { label: 'Open Workspace\u2026', shortcut: 'Ctrl+O', action: () => openWorkspaceFile() },
+      { separator: true },
+      { label: 'Close Workspace', action: () => closeWorkspace() },
       { separator: true },
       { label: 'Save', shortcut: 'Ctrl+S', action: () => saveNow() },
       { separator: true },
@@ -57,6 +60,9 @@ const menuDefs = [
   {
     label: 'Edit',
     items: [
+      { label: 'Undo', shortcut: 'Ctrl+Z', action: () => performUndo() },
+      { label: 'Redo', shortcut: 'Ctrl+Y', action: () => performRedo() },
+      { separator: true },
       { label: 'Preferences\u2026', shortcut: 'Ctrl+,', action: () => openPreferences() },
     ]
   },
@@ -69,7 +75,7 @@ const menuDefs = [
   {
     label: 'Workspace',
     items: [
-      { label: 'New Project', shortcut: 'Ctrl+Shift+P', action: () => { if (state.selectedWorkspaceId) openModal('project', state.selectedWorkspaceId) } },
+      { label: 'New Project', shortcut: 'Ctrl+Shift+P', action: () => { if (state.selectedWorkspaceId) addProjectFolder() } },
       { separator: true },
       { label: 'Workspace Colors\u2026', action: () => openPreferences('colors') },
       { label: 'Workspace Tags\u2026', action: () => openPreferences('tags') },

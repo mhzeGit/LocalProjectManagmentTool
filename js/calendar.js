@@ -1,8 +1,9 @@
-import { state, findBoard, findCard, genId } from './data.js'
+import { state, findBoard, findCard, genId, findCardColumn, findColumn } from './data.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
+import { pushCommand } from './history.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -123,7 +124,13 @@ export function calendarAddCard(dateStr) {
     members: [],
     checklists: []
   }
-  b.columns[0].cards.push(card)
+  const col = b.columns[0]
+  col.cards.push(card)
+  pushCommand({
+    undo() { const ci = col.cards.findIndex(x => x.id === card.id); if (ci !== -1) col.cards.splice(ci, 1) },
+    redo() { col.cards.push(card) },
+    description: 'Add Card'
+  })
   renderCalendar()
 }
 
@@ -214,8 +221,27 @@ function initCalendarDrag() {
     const newDate = parseDate(cell.dataset.date)
     if (!newDate) return
 
+    const oldStart = card.startDate
+    const oldEnd = card.endDate
+    const oldColId = findCardColumn(card.id)?.id
+
     card.startDate = formatDate(newDate)
     card.endDate = formatDate(newDate)
+
+    pushCommand({
+      undo() {
+        const c = findCard(id)
+        if (!c) return
+        c.startDate = oldStart; c.endDate = oldEnd
+      },
+      redo() {
+        const c = findCard(id)
+        if (!c) return
+        c.startDate = formatDate(newDate); c.endDate = formatDate(newDate)
+      },
+      description: 'Schedule Card'
+    })
+
     renderCalendar()
   })
 
@@ -486,6 +512,8 @@ document.addEventListener('mouseup', function(ev) {
       var startIdx2 = (_resizing.origRow - 1) * 7 + (_resizing.origStartCol - 1)
       var endIdx2 = (_resizing.origEndRow - 1) * 7 + (_resizing.origEndCol - 2)
       var mouseIdx2 = (mRow - 1) * 7 + (mCol - 1)
+      const oldStart = card.startDate
+      const oldEnd = card.endDate
       if (_resizing.dir === 'start') {
         if (mouseIdx2 >= endIdx2) mouseIdx2 = endIdx2
         card.startDate = formatDate(cellIndexToDate(mouseIdx2))
@@ -494,6 +522,15 @@ document.addEventListener('mouseup', function(ev) {
         if (mouseIdx2 <= startIdx2) mouseIdx2 = startIdx2
         card.startDate = formatDate(cellIndexToDate(startIdx2))
         card.endDate = formatDate(cellIndexToDate(mouseIdx2 + 1))
+      }
+      const newStart = card.startDate
+      const newEnd = card.endDate
+      if (oldStart !== newStart || oldEnd !== newEnd) {
+        pushCommand({
+          undo() { const c = findCard(_resizing.cardId); if (c) { c.startDate = oldStart; c.endDate = oldEnd } },
+          redo() { const c = findCard(_resizing.cardId); if (c) { c.startDate = newStart; c.endDate = newEnd } },
+          description: 'Resize Card'
+        })
       }
     }
     if (_resizing.el) _resizing.el.style.opacity = ''
@@ -523,10 +560,21 @@ document.addEventListener('mouseup', function(ev) {
       const finalRow = parseInt(gr)
       const card = findCard(_moving.cardId)
       if (card) {
+        const oldStart = card.startDate
+        const oldEnd = card.endDate
         const dates = gridPosToDates(finalCol, finalCol + _moving.durCols, finalRow)
         if (dates.start && dates.end) {
           card.startDate = formatDate(dates.start)
           card.endDate = formatDate(new Date(dates.end.getTime() + 86400000))
+        }
+        const newStart = card.startDate
+        const newEnd = card.endDate
+        if (oldStart !== newStart || oldEnd !== newEnd) {
+          pushCommand({
+            undo() { const c = findCard(_moving.cardId); if (c) { c.startDate = oldStart; c.endDate = oldEnd } },
+            redo() { const c = findCard(_moving.cardId); if (c) { c.startDate = newStart; c.endDate = newEnd } },
+            description: 'Move Card'
+          })
         }
       }
     }
@@ -784,6 +832,12 @@ export function calendarPasteCard(dateStr) {
   const duration = s && e ? daysBetween(s, e) : 0
   newEnd.setDate(newEnd.getDate() + duration)
   pasteCard.endDate = formatDate(newEnd)
-  b.columns[0].cards.push(pasteCard)
+  const col = b.columns[0]
+  col.cards.push(pasteCard)
+  pushCommand({
+    undo() { const ci = col.cards.findIndex(x => x.id === pasteCard.id); if (ci !== -1) col.cards.splice(ci, 1) },
+    redo() { col.cards.push(pasteCard) },
+    description: 'Paste Card'
+  })
   renderCalendar()
 }

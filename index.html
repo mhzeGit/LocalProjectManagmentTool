@@ -37,9 +37,14 @@
   <div class="topbar">
     <div class="topbar-left">
       <span class="breadcrumb" id="breadcrumb"></span>
-      <button class="save-btn" id="openFolderBtn" onclick="openFolder()">Open Folder</button>
+      <button class="save-btn" id="openFolderBtn" onclick="openWorkspaceFile()">Open Workspace</button>
     </div>
     <div class="topbar-right">
+
+      <div class="board-undo-group">
+        <button class="btn-board-io" id="undoBtn" onclick="performUndo()" title="Undo (Ctrl+Z)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+        <button class="btn-board-io" id="redoBtn" onclick="performRedo()" title="Redo (Ctrl+Y)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+      </div>
 
       <div class="board-io hidden" id="boardIO">
         <button class="btn-board-io" onclick="exportBoardCSV()" title="Export all tasks on this board as CSV"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>

@@ -3,6 +3,7 @@ import { escapeHtml, getProgressColor, countChecklistItems, countCompletedCheckl
 import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
+import { pushCommand } from './history.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const PRIORITY_COLORS = {
@@ -535,9 +536,28 @@ function initTimelineDrag() {
       const draggedIdx = b.columns.findIndex(function(c) { return c.id === draggedColId })
       const targetIdx = b.columns.findIndex(function(c) { return c.id === targetColId })
       if (draggedIdx === -1 || targetIdx === -1) return
+      const oldOrder = b.columns.map(function(c) { return c.id })
       const [moved] = b.columns.splice(draggedIdx, 1)
       const newTargetIdx = b.columns.findIndex(function(c) { return c.id === targetColId })
       b.columns.splice(insertBefore ? newTargetIdx : newTargetIdx + 1, 0, moved)
+      const newOrder = b.columns.map(function(c) { return c.id })
+      pushCommand({
+        undo() {
+          const bb = findBoard(state.selectedBoardId)
+          if (!bb) return
+          const reordered = oldOrder.map(function(id) { return bb.columns.find(function(c) { return c.id === id }) }).filter(Boolean)
+          const remaining = bb.columns.filter(function(c) { return !oldOrder.includes(c.id) })
+          bb.columns.length = 0; bb.columns.push(...reordered, ...remaining)
+        },
+        redo() {
+          const bb = findBoard(state.selectedBoardId)
+          if (!bb) return
+          const reordered = newOrder.map(function(id) { return bb.columns.find(function(c) { return c.id === id }) }).filter(Boolean)
+          const remaining = bb.columns.filter(function(c) { return !newOrder.includes(c.id) })
+          bb.columns.length = 0; bb.columns.push(...reordered, ...remaining)
+        },
+        description: 'Reorder Rows'
+      })
       renderTimeline()
       return
     }
@@ -717,6 +737,14 @@ document.addEventListener('click', function(e) {
         const endDate = existing ? parseDate(existing.endDate) || parseDate(existing.startDate) || new Date(date.getTime() + 86400000) : new Date(date.getTime() + 86400000)
         const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: '3', tags: [], members: [], checklists: [] }
         col.cards.push(card)
+        pushCommand({
+          undo() {
+            const ci = col.cards.findIndex(x => x.id === card.id)
+            if (ci !== -1) col.cards.splice(ci, 1)
+          },
+          redo() { col.cards.push(card) },
+          description: 'Add Card'
+        })
         renderTimeline()
       } else if (action === 'copy') {
         window.copyCard(menu.dataset.cardId)
@@ -733,6 +761,14 @@ document.addEventListener('click', function(e) {
         newEnd.setDate(newEnd.getDate() + duration)
         pasteCard.endDate = formatDate(newEnd)
         col.cards.push(pasteCard)
+        pushCommand({
+          undo() {
+            const ci = col.cards.findIndex(x => x.id === pasteCard.id)
+            if (ci !== -1) col.cards.splice(ci, 1)
+          },
+          redo() { col.cards.push(pasteCard) },
+          description: 'Paste Card'
+        })
         renderTimeline()
       } else if (action === 'paste' && menu.dataset.cardId && window.getCopiedCard()) {
         window.pasteCard(menu.dataset.cardId)
@@ -901,6 +937,8 @@ document.addEventListener('mouseup', function() {
       const newWidth = snapPx(bar.offsetLeft + bar.offsetWidth) - newLeft
       const card = findCard(cardId)
       if (card) {
+        const oldStart = card.startDate
+        const oldEnd = card.endDate
         if (dir === 'start') {
           card.startDate = formatDate(pixelToDate(newLeft))
           if (card.endDate) {
@@ -915,6 +953,15 @@ document.addEventListener('mouseup', function() {
             const endD = parseDate(card.endDate)
             if (endD < startD) card.startDate = card.endDate
           }
+        }
+        const newStart = card.startDate
+        const newEnd = card.endDate
+        if (oldStart !== newStart || oldEnd !== newEnd) {
+          pushCommand({
+            undo() { const c = findCard(cardId); if (c) { c.startDate = oldStart; c.endDate = oldEnd } },
+            redo() { const c = findCard(cardId); if (c) { c.startDate = newStart; c.endDate = newEnd } },
+            description: 'Resize Card'
+          })
         }
         bar.classList.remove('resizing')
         renderTimeline()
@@ -935,6 +982,10 @@ document.addEventListener('mouseup', function() {
 
     const card = findCard(_moving.cardId)
     if (card && _moving.virtualLeft !== null && (_moving.targetColId || _moving.targetUnscheduled)) {
+      const oldStart = card.startDate
+      const oldEnd = card.endDate
+      const oldColId = findCardColumn(card.id)?.id || _moving.sourceColId
+
       if (_moving.targetUnscheduled) {
         card.startDate = null
         card.endDate = null
@@ -950,15 +1001,52 @@ document.addEventListener('mouseup', function() {
         card.endDate = formatDate(newEnd)
       }
 
-      if (_moving.targetColId && _moving.targetColId !== _moving.sourceColId) {
+      const targetColId = _moving.targetColId
+      if (targetColId && targetColId !== oldColId) {
         const sourceCol = findCardColumn(card.id)
         if (sourceCol) {
           const idx = sourceCol.cards.indexOf(card)
           if (idx !== -1) sourceCol.cards.splice(idx, 1)
         }
-        const targetCol = findColumn(_moving.targetColId)
+        const targetCol = findColumn(targetColId)
         if (targetCol) targetCol.cards.push(card)
       }
+
+      const finalColId = findCardColumn(card.id)?.id || oldColId
+      const newStart = card.startDate
+      const newEnd = card.endDate
+
+      pushCommand({
+        undo() {
+          const c = findCard(_moving.cardId)
+          if (!c) return
+          c.startDate = oldStart; c.endDate = oldEnd
+          if (targetColId && targetColId !== oldColId) {
+            const src = findColumn(finalColId)
+            const tgt = findColumn(oldColId)
+            if (src && tgt) {
+              const ci = src.cards.indexOf(c)
+              if (ci !== -1) src.cards.splice(ci, 1)
+              tgt.cards.push(c)
+            }
+          }
+        },
+        redo() {
+          const c = findCard(_moving.cardId)
+          if (!c) return
+          c.startDate = newStart; c.endDate = newEnd
+          if (targetColId && targetColId !== oldColId) {
+            const src = findColumn(oldColId)
+            const tgt = findColumn(targetColId)
+            if (src && tgt) {
+              const ci = src.cards.indexOf(c)
+              if (ci !== -1) src.cards.splice(ci, 1)
+              tgt.cards.push(c)
+            }
+          }
+        },
+        description: 'Move Card'
+      })
 
       renderTimeline()
     } else if (card && _moving.virtualLeft === null) {
@@ -1012,6 +1100,10 @@ function handleUndatedCardDrop(cardId, targetColId, e, track) {
   const card = findCard(cardId)
   if (!card) return
 
+  const oldStart = card.startDate
+  const oldEnd = card.endDate
+  const oldColId = findCardColumn(cardId)?.id
+
   const trackRect = track.getBoundingClientRect()
   const x = e.clientX - trackRect.left
   let newPx = snapPx(x)
@@ -1028,6 +1120,34 @@ function handleUndatedCardDrop(cardId, targetColId, e, track) {
   }
   const targetCol = findColumn(targetColId)
   if (targetCol) targetCol.cards.push(card)
+
+  pushCommand({
+    undo() {
+      const c = findCard(cardId)
+      if (!c) return
+      c.startDate = oldStart; c.endDate = oldEnd
+      const tgt = findColumn(targetColId)
+      const src = findColumn(oldColId)
+      if (tgt && src) {
+        const ci = tgt.cards.indexOf(c)
+        if (ci !== -1) tgt.cards.splice(ci, 1)
+        src.cards.push(c)
+      }
+    },
+    redo() {
+      const c = findCard(cardId)
+      if (!c) return
+      c.startDate = dateStr; c.endDate = dateStr
+      const src = findColumn(oldColId)
+      const tgt = findColumn(targetColId)
+      if (src && tgt) {
+        const ci = src.cards.indexOf(c)
+        if (ci !== -1) src.cards.splice(ci, 1)
+        tgt.cards.push(c)
+      }
+    },
+    description: 'Schedule Card'
+  })
 
   renderTimeline()
 }

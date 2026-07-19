@@ -90,7 +90,7 @@ export function renderBoard() {
       '<p class="onboarding-desc">Organize your projects, manage tasks, and collaborate with your team. Get started by creating a new workspace or opening an existing one.</p>' +
       '<div class="onboarding-actions">' +
       '  <button class="btn-create onboarding-btn" onclick="onboardingCreateWorkspace()">+ Create New Workspace</button>' +
-      '  <button class="btn-open onboarding-btn" onclick="onboardingOpenWorkspace()">Open Workspace</button>' +
+      '  <button class="btn-open onboarding-btn" onclick="onboardingOpenWorkspace()">Open Workspace File</button>' +
       '</div>' +
       '</div>'
     return
@@ -298,18 +298,33 @@ export function renderBoard() {
 
 function renderWorkspacePage(area, w) {
   let html = '<div class="page-view" oncontextmenu="showWsCtxMenu(event,\'' + w.id + '\')">'
-  html += '<div class="page-header"><h2>Projects</h2><button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button></div>'
+  html += '<div class="page-header">'
+  html += '<h2>Projects</h2>'
+  html += '<div class="page-header-actions">'
+  html += '<button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button>'
+  html += '<button class="btn-secondary" onclick="window.locateExistingProject()" title="Load an existing project from its folder">Locate Project</button>'
+  html += '</div>'
+  html += '</div>'
   if (w.projects.length === 0) {
-    html += '<div class="empty-state"><p>No projects yet</p></div>'
+    html += '<div class="empty-state"><p>No projects yet. Create a new project or locate an existing one.</p></div>'
   } else {
     html += '<div class="page-grid">'
     for (const p of w.projects) {
       const count = p.boards.length
+      const isLoaded = !p._loadError
       const colorStyle = p.color ? 'border-top:5px solid ' + p.color + ';background:linear-gradient(180deg,' + p.color + '25, #1e1e2e 100%);' : ''
-      html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
-      html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
-      html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
-      html += '</div>'
+      if (isLoaded) {
+        html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
+        html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
+        html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
+        html += '</div>'
+      } else {
+        html += '<div class="page-card page-card-unloaded" style="border-top:5px solid #555;opacity:0.7">'
+        html += '<h3>' + p.name + '</h3>'
+        html += '<p class="count" style="color:var(--text-dim)">Project folder not located</p>'
+        html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();window.locateProjectFolder(\'' + p.id + '\')">Locate Folder</button>'
+        html += '</div>'
+      }
     }
     html += '</div>'
   }
@@ -324,7 +339,12 @@ export function showWsCtxMenu(e, workspaceId) {
   menu.className = 'tl-ctx-menu'
   menu.style.left = e.clientX + 'px'
   menu.style.top = e.clientY + 'px'
-  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>'
+  menu.innerHTML =
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();locateExistingProject()">Locate Project</button>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();closeWorkspace()">Close Workspace</button>' +
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }

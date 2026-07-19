@@ -22,10 +22,14 @@ import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, c
 import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember } from './members.js'
 import { initFilterEvents, resetFilters, filterCards, getActiveFilterCount } from './filters.js'
 import { openPreferences, closePreferences, initTheme, initGlowMultiplier } from './preferences.js'
-import { initPersistence, handleKeyDown, openFolder, closeFolder, getSaveMode } from './persistence.js'
+import { initPersistence, handleKeyDown, createWorkspaceFile, openWorkspaceFile, addProjectFolder, locateExistingProject, locateProjectFolder, closeWorkspace, getSaveMode, hasProjectHandle } from './persistence.js'
 import { getCurrentWorkspace, state } from './data.js'
 import { initMenuBar } from './menubar.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
+import { performUndo, performRedo } from './history.js'
+import { isCanvasActive } from './canvas.js'
+window.__isCanvasActive = isCanvasActive
+import { setCloseWorkspaceFn } from './store.js'
 
 import './dragscroll.js'
 
@@ -34,14 +38,28 @@ initGlowMultiplier()
 setInlineEditRender(render)
 setupModalKeyboard()
 initSelfMember()
+setCloseWorkspaceFn(closeWorkspace)
 initPersistence()
 initMenuBar()
 
 document.addEventListener('keydown', handleKeyDown)
 
+document.addEventListener('keydown', function(e) {
+  if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.isContentEditable) return
+  if (isCanvasActive()) return
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    e.preventDefault(); performUndo()
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+    e.preventDefault(); performRedo()
+  }
+})
+
 initFilterEvents()
 
 Object.assign(window, {
+  performUndo,
+  performRedo,
   selectWorkspace,
   selectProject,
   selectBoard,
@@ -109,21 +127,20 @@ Object.assign(window, {
   removeMember,
   openPreferences,
   closePreferences,
-  closeFolder,
+  closeWorkspace,
   exportBoardCSV,
   importBoardCSV,
 })
 
 async function onboardingCreateWorkspace() {
-  if (getSaveMode() !== 'file') {
-    await openFolder()
-    if (getSaveMode() !== 'file') return
+  await createWorkspaceFile()
+  if (getSaveMode() === 'workspace') {
+    openModal('workspace')
   }
-  openModal('workspace')
 }
 
 async function onboardingOpenWorkspace() {
-  await openFolder()
+  await openWorkspaceFile()
   const w = getCurrentWorkspace()
   if (w && w.members.length > 0 && !state.selfMemberId) {
     openPreferences('members')
@@ -131,6 +148,12 @@ async function onboardingOpenWorkspace() {
 }
 
 Object.assign(window, {
+  createWorkspaceFile,
+  openWorkspaceFile,
+  addProjectFolder,
+  locateExistingProject,
+  locateProjectFolder,
+  hasProjectHandle,
   onboardingCreateWorkspace,
   onboardingOpenWorkspace,
 })

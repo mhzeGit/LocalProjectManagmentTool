@@ -22,6 +22,8 @@
 #boardIO.hidden { display: none; }
 .btn-board-io { display: flex; align-items: center; justify-content: center; padding: 6px; font-size: 11px; font-weight: 500; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-surface-hover); color: var(--text-secondary); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
 .btn-board-io:hover { background: var(--accent-subtle); color: var(--text-primary); border-color: var(--accent); }
+.board-undo-group { display: flex; align-items: center; gap: 4px; margin-right: 8px; }
+.board-undo-group .btn-board-io { padding: 4px 6px; }
 .board-area.grabbing { cursor: grabbing; }
 .board-area::-webkit-scrollbar { height: 8px; }
 .board-area::-webkit-scrollbar-track { background: var(--scrollbar-track); }
@@ -106,13 +108,19 @@
 .page-view { padding: 0; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .page-header h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+.page-header-actions { display: flex; align-items: center; gap: 8px; }
 .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .page-card { background: var(--bg-panel-alt); border-radius: 8px; padding: 28px; border: 1px solid var(--border); cursor: pointer; transition: border-color .15s, background .15s; }
 .page-card:hover { border-color: var(--accent); background: var(--bg-surface-hover); }
 .page-card h3 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
 .page-card .count { font-size: 13px; color: var(--text-secondary); }
+.page-card-unloaded { display: flex; flex-direction: column; gap: 8px; }
+.page-card-unloaded h3 { font-size: 16px; font-weight: 600; color: var(--text-dim); margin-bottom: 4px; }
 .btn-create { padding: 8px 16px; background: var(--accent); color: var(--text-white); border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; border: none; }
 .btn-create:hover { background: var(--accent-hover); }
+.btn-secondary { padding: 8px 16px; background: var(--bg-panel-alt); color: var(--text-secondary); border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s, border-color .15s; border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg-surface-hover); border-color: var(--accent); color: var(--text-primary); }
+.btn-sm { padding: 4px 12px; font-size: 12px; }
 
 .col-count { font-size: 11px; font-weight: 600; color: var(--text-dim); background: var(--bg-elevated); padding: 1px 7px; border-radius: 10px; line-height: 18px; margin-right: -4px; margin-top: -2px; }
 .empty-col { text-align: center; color: var(--text-muted); padding: 20px 0; font-size: 13px; }
