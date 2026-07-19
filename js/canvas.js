@@ -778,8 +778,36 @@ function onPointerDown(e) {
   if (e.button===2) { _ui.rmbDownTime=performance.now(); _ui.rmbMoved=false; _ui.rmbPending=true; return }
   if (e.button===1||(e.button===0&&e.altKey)) { _ui.isPanning=true; _ui.lastPanX=sx; _ui.lastPanY=sy; _ui.canvasArea.style.cursor='grabbing'; return }
 
-  if (_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
-    _ui.drawingStartX=wx; _ui.drawingStartY=wy; _ui.isDrawing=true; _ui.canvasArea.setPointerCapture(e.pointerId); return
+  if (_ui.activeTool===TOOLS.SHAPES) {
+    const defW=120, defH=80
+    const shape={id:_ui.nextShapeId++,shapeType:_ui.shapeSubType||'rectangle',x:wx-defW/2,y:wy-defH/2,w:defW,h:defH,color:'#2b2b2b',borderColor:getAccentColor(),borderWidth:2,cornerRadius:4,image:null,locked:false}
+    const idx=_canvasData.shapes.length
+    _canvasData.shapes.push(shape)
+    _parentTree.register('shape',shape.id,shape)
+    clearSelection()
+    _ui.selectedShapes.add(idx)
+    _ui.drawingStartX=wx; _ui.drawingStartY=wy
+    _ui._shapeDragIdx=idx
+    _ui._shapeDragOrig={x:shape.x,y:shape.y,w:defW,h:defH}
+    _ui.isDrawing=true
+    _ui.canvasArea.setPointerCapture(e.pointerId)
+    return
+  }
+
+  if (_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
+    const defW=280, defH=220
+    const shape={id:_ui.nextShapeId++,shapeType:'rectangle',x:wx-defW/2,y:wy-defH/2,w:defW,h:defH,color:'#1e1e1e',borderColor:'#3a3a3a',borderWidth:1,cornerRadius:8,image:null,locked:false}
+    const idx=_canvasData.shapes.length
+    _canvasData.shapes.push(shape)
+    _parentTree.register('shape',shape.id,shape)
+    clearSelection()
+    _ui.selectedShapes.add(idx)
+    _ui.drawingStartX=wx; _ui.drawingStartY=wy
+    _ui._shapeDragIdx=idx
+    _ui._shapeDragOrig={x:shape.x,y:shape.y,w:defW,h:defH}
+    _ui.isDrawing=true
+    _ui.canvasArea.setPointerCapture(e.pointerId)
+    return
   }
 
   if (_ui.activeTool===TOOLS.TEXT) {
@@ -841,11 +869,19 @@ function onPointerMove(e) {
       }
       return
     }
+    if ((_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER)&&_ui._shapeDragIdx!==undefined) {
+      const shape=_canvasData.shapes[_ui._shapeDragIdx]
+      if (shape) {
+        const x=Math.min(_ui.drawingStartX,wx), y=Math.min(_ui.drawingStartY,wy)
+        const w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
+        if (w>5||h2>5) { shape.x=x; shape.y=y; shape.w=Math.max(w,20); shape.h=Math.max(h2,20) }
+      }
+      return
+    }
     const dx=Math.abs(wx-_ui.drawingStartX), dy=Math.abs(wy-_ui.drawingStartY)
     if (dx>2||dy>2) {
       const x=Math.min(_ui.drawingStartX,wx), y=Math.min(_ui.drawingStartY,wy), w=Math.abs(wx-_ui.drawingStartX), h2=Math.abs(wy-_ui.drawingStartY)
-      if (_ui.activeTool===TOOLS.SHAPES) _ui.drawingPreview={x,y,w,h2,shapeType:_ui.shapeSubType}
-      else _ui.drawingPreview={x,y,w,h2}
+      _ui.drawingPreview={x,y,w,h2,shapeType:_ui.shapeSubType}
     } else _ui.drawingPreview=null
     return
   }
@@ -885,13 +921,16 @@ function onPointerUp(e) {
     }
     _ui.isDrawing=false; _ui._tbDragIdx=undefined; _ui._tbDragOrig=undefined; saveData(); return
   }
-  if (_ui.isDrawing&&(_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER)) {
-    if (_ui.drawingPreview) {
-      const dp=_ui.drawingPreview
-      if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(dp.x+dp.w/2,dp.y+dp.h/2,_ui.shapeSubType,dp.w,dp.h)
-      else addImageContainer(dp.x,dp.y,dp.w,dp.h)
-    } else { if (_ui.activeTool===TOOLS.SHAPES) addShapeAtCenter(wx,wy,_ui.shapeSubType); else addImageContainer(wx,wy) }
-    _ui.isDrawing=false; _ui.drawingPreview=null; saveData(); return
+  if (_ui.isDrawing&&(_ui.activeTool===TOOLS.SHAPES||_ui.activeTool===TOOLS.IMAGE_CONTAINER)&&_ui._shapeDragIdx!==undefined) {
+    const shape=_canvasData.shapes[_ui._shapeDragIdx]
+    if (shape&&_ui._shapeDragOrig) {
+      const orig=_ui._shapeDragOrig
+      if (orig.x!==shape.x||orig.y!==shape.y||orig.w!==shape.w||orig.h!==shape.h) {
+        const idx=_ui._shapeDragIdx
+        _history.push({undo(){const s=_canvasData.shapes[idx];if(s){s.x=orig.x;s.y=orig.y;s.w=orig.w;s.h=orig.h}},redo(){const s=_canvasData.shapes[idx];if(s){s.x=shape.x;s.y=shape.y;s.w=shape.w;s.h=shape.h}},description:'Add Shape'})
+      }
+    }
+    _ui.isDrawing=false; _ui._shapeDragIdx=undefined; _ui._shapeDragOrig=undefined; saveData(); return
   }
 }
 
