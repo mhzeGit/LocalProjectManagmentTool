@@ -139,6 +139,7 @@ function getUserFileData() {
       return {
         id: w.id,
         name: w.name,
+        color: w.color || null,
         tags: w.tags || [],
         members: (w.members || []).map(function(m) {
           return { id: m.id, name: m.name, avatar: m.avatar || '' }
@@ -165,6 +166,7 @@ function getWorkspaceFileData(workspace) {
     workspace: {
       id: workspace.id,
       name: workspace.name,
+      color: workspace.color || null,
       tags: workspace.tags || [],
       members: (workspace.members || []).map(function(m) { return { id: m.id, name: m.name, avatar: m.avatar || '' } })
     },
@@ -201,6 +203,7 @@ function buildWorkspaceFromData(wsData) {
   var ws = {
     id: w.id,
     name: w.name,
+    color: w.color || null,
     tags: w.tags || [],
     members: (w.members || []).map(function(m) {
       return { id: m.id, name: m.name, avatar: m.avatar || '' }
@@ -531,15 +534,16 @@ function loadAllFromUser() {
     for (var wi = 0; wi < wsRefs.length; wi++) {
       (function(wRef) {
         var ws = {
-          id: wRef.id,
-          name: wRef.name || 'Workspace',
-          tags: wRef.tags || [],
-          members: (wRef.members || []).map(function(m) {
-            return { id: m.id, name: m.name, avatar: m.avatar || '' }
-          }),
-          projects: [],
-          _loadError: false
-        }
+      id: wRef.id,
+      name: wRef.name || 'Workspace',
+      color: wRef.color || null,
+      tags: wRef.tags || [],
+      members: (wRef.members || []).map(function(m) {
+        return { id: m.id, name: m.name, avatar: m.avatar || '' }
+      }),
+      projects: [],
+      _loadError: false
+    }
 
         var projectRefs = wRef.projects || []
         for (var pi = 0; pi < projectRefs.length; pi++) {
@@ -804,6 +808,7 @@ export function createWorkspaceInUser() {
     var ws = {
       id: genId(),
       name: 'New Workspace',
+      color: null,
       tags: [],
       members: [],
       projects: []

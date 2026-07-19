@@ -634,6 +634,19 @@ export function setProjectColor(id, color) {
   }
 }
 
+export function setWorkspaceColor(id, color) {
+  const w = findWorkspace(id)
+  if (!w) return
+  const oldColor = w.color
+  w.color = color || null
+  render()
+  pushCommand({
+    undo() { w.color = oldColor; render() },
+    redo() { w.color = color || null; render() },
+    description: 'Set Workspace Color'
+  })
+}
+
 export function setCardColor(cardId, color) {
   const c = findCard(cardId)
   if (!c) return

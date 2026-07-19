@@ -21,3 +21,9 @@
 .nav-child:hover { background: var(--bg-surface-hover); color: var(--text-bright); }
 .nav-child.active { background: var(--editor-btn-active-bg); color: var(--text-bright); }
 .sidebar-hint { padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
+
+.item-icon { flex-shrink: 0; color: var(--text-dim); }
+.nav-child.active .item-icon { color: var(--text-bright); }
+.item-icon-board { color: #3b82f6; }
+.item-icon-document { color: #22c55e; }
+.item-icon-canvas { color: #a855f7; }

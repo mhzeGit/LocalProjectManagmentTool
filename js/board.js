@@ -362,7 +362,8 @@ function renderWorkspacesPage(area) {
       var isLoaded = !ws._loadError
       var wsName = ws.name || 'Workspace'
       if (isLoaded) {
-        html += '<div class="page-card" onclick="selectWorkspace(\'' + ws.id + '\')" oncontextmenu="event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')">'
+        const colorStyle = ws.color ? 'border-top:5px solid ' + ws.color + ';background:linear-gradient(180deg,' + ws.color + '25, #1e1e2e 100%);' : ''
+        html += '<div class="page-card" onclick="selectWorkspace(\'' + ws.id + '\')" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')" style="' + colorStyle + '">'
         html += '<h3 id="workspaceTitle-' + ws.id + '" ondblclick="startRenameWorkspace(\'' + ws.id + '\')">' + wsName + '</h3>'
         html += '<p class="count">' + (ws.projects ? ws.projects.length : 0) + ' project' + ((ws.projects ? ws.projects.length : 0) !== 1 ? 's' : '') + '</p>'
         html += '</div>'
@@ -381,7 +382,7 @@ function renderWorkspacesPage(area) {
 }
 
 function renderWorkspacePage(area, w) {
-  let html = '<div class="page-view" oncontextmenu="showWsCtxMenu(event,\'' + w.id + '\')">'
+  let html = '<div class="page-view" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + w.id + '\')">'
   html += '<div class="page-header"><div class="page-header-actions">'
   html += '<button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button>'
   html += '<button class="btn-secondary" onclick="window.locateExistingProjectInWorkspace(\'' + w.id + '\')" title="Load an existing project from its folder">Locate Project</button>'
@@ -395,7 +396,7 @@ function renderWorkspacePage(area, w) {
       const isLoaded = !p._loadError
       const colorStyle = p.color ? 'border-top:5px solid ' + p.color + ';background:linear-gradient(180deg,' + p.color + '25, #1e1e2e 100%);' : ''
       if (isLoaded) {
-        html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
+        html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.preventDefault();event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
         html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
         html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
         html += '</div>'
@@ -426,6 +427,8 @@ export function selectWorkspaceHome() {
   render()
 }
 
+const WORKSPACE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#78716c','#a1a1aa']
+
 export function showWsCtxMenu(e, workspaceId) {
   e.preventDefault()
   document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
@@ -433,11 +436,20 @@ export function showWsCtxMenu(e, workspaceId) {
   menu.className = 'tl-ctx-menu'
   menu.style.left = e.clientX + 'px'
   menu.style.top = e.clientY + 'px'
+
+  let colorSwatches = ''
+  for (const c of WORKSPACE_COLORS) {
+    colorSwatches += '<button class="ps-color-swatch" data-color="' + c + '" style="background:' + c + '" onclick="event.stopPropagation();setWorkspaceColor(\'' + workspaceId + '\',\'' + c + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'
+  }
+  colorSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setWorkspaceColor(\'' + workspaceId + '\',null);this.closest(\'.tl-ctx-menu\').remove()" title="None">✕</button>'
+
   menu.innerHTML =
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();selectWorkspace(\'' + workspaceId + '\')">Open</button>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>' +
     '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
+    '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }
