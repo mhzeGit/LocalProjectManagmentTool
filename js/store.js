@@ -3,79 +3,22 @@ import { render } from './sidebar.js'
 import { closeModal } from './modal.js'
 import { pushCommand } from './history.js'
 
-let _closeWorkspaceFn = null
-
-export function setCloseWorkspaceFn(fn) {
-  _closeWorkspaceFn = fn
-}
-
 export function createWorkspace() {
-  const name = document.getElementById('modalInput').value.trim()
-  if (!name) return
-  let w = data.workspaces[0]
-  const isNew = !w
-  if (w) {
-    const oldName = w.name
-    w.name = name
-    closeModal()
-    state.selectedWorkspaceId = w.id
-    state.selectedProjectId = null
-    state.selectedBoardId = null
-    render()
-    pushCommand({
-      undo() { w.name = oldName; render() },
-      redo() { w.name = name; render() },
-      description: 'Rename Workspace'
-    })
-  } else {
-    w = { id: genId(), name, members: [], tags: [], projects: [] }
-    data.workspaces.push(w)
-    closeModal()
-    state.selectedWorkspaceId = w.id
-    state.selectedProjectId = null
-    state.selectedBoardId = null
-    render()
-    pushCommand({
-      undo() {
-        const idx = data.workspaces.findIndex(x => x.id === w.id)
-        if (idx !== -1) data.workspaces.splice(idx, 1)
-        state.selectedWorkspaceId = data.workspaces.length > 0 ? data.workspaces[0].id : null
-        state.selectedProjectId = null; state.selectedBoardId = null
-      },
-      redo() { data.workspaces.push(w); state.selectedWorkspaceId = w.id; state.selectedProjectId = null; state.selectedBoardId = null },
-      description: 'Create Workspace'
-    })
-  }
-  if (!state.selfMemberId) {
-    setTimeout(() => window.openPreferences('members'), 100)
-  }
+  window.createWorkspaceInUser()
 }
 
 export function deleteWorkspace(id) {
   if (!confirm('Delete this workspace and all its project references?')) return
-  if (_closeWorkspaceFn) {
-    _closeWorkspaceFn()
-  } else {
-    const idx = data.workspaces.findIndex(w => w.id === id)
-    if (idx === -1) return
-    const removed = data.workspaces[idx]
-    data.workspaces.splice(idx, 1)
-    const prevSelected = state.selectedWorkspaceId
-    state.selectedWorkspaceId = null
+  const idx = data.workspaces.findIndex(w => w.id === id)
+  if (idx === -1) return
+  const removed = data.workspaces[idx]
+  data.workspaces.splice(idx, 1)
+  if (state.selectedWorkspaceId === id) {
+    state.selectedWorkspaceId = data.workspaces.length > 0 ? data.workspaces[0].id : null
     state.selectedProjectId = null
     state.selectedBoardId = null
-    render()
-    pushCommand({
-      undo() { data.workspaces.splice(idx, 0, removed); if (prevSelected) state.selectedWorkspaceId = prevSelected },
-      redo() {
-        const ri = data.workspaces.findIndex(x => x.id === removed.id)
-        if (ri !== -1) data.workspaces.splice(ri, 1)
-        state.selectedWorkspaceId = data.workspaces.length > 0 ? data.workspaces[0].id : null
-        state.selectedProjectId = null; state.selectedBoardId = null
-      },
-      description: 'Delete Workspace'
-    })
   }
+  render()
 }
 
 export function createProject(workspaceId) {
@@ -176,7 +119,7 @@ export function deleteBoard(id) {
 export function addColumnDirect(boardId) {
   const b = findBoard(boardId)
   if (!b) return
-  const col = { id: genId(), name: 'New Column', cards: [] }
+  const col = { id: genId(), name: 'New Column', cards: [], color: null }
   b.columns.push(col)
   render()
   pushCommand({
@@ -624,7 +567,7 @@ export function toggleCardCompleted(cardId) {
 export function addProjectDirect(workspaceId) {
   const w = findWorkspace(workspaceId)
   if (!w) return
-  window.addProjectFolder()
+  window.addProjectToWorkspace(workspaceId)
 }
 
 export function addCardDirect(columnId) {
@@ -701,6 +644,19 @@ export function setCardColor(cardId, color) {
     undo() { c.color = oldColor; render() },
     redo() { c.color = color || null; render() },
     description: 'Set Card Color'
+  })
+}
+
+export function setColumnColor(columnId, color) {
+  const col = findColumn(columnId)
+  if (!col) return
+  const oldColor = col.color
+  col.color = color || null
+  render()
+  pushCommand({
+    undo() { col.color = oldColor; render() },
+    redo() { col.color = color || null; render() },
+    description: 'Set Column Color'
   })
 }
 

@@ -1,6 +1,5 @@
 import { state } from './data.js'
-import { createWorkspaceFile, openWorkspaceFile, closeWorkspace, saveNow } from './persistence.js'
-import { openModal } from './modal.js'
+import { setupUserDirectory, openUserFile, createWorkspaceInUser, addExistingWorkspace, closeUserDirectory, saveNow } from './persistence.js'
 import { openPreferences } from './preferences.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
 import { performUndo, performRedo } from './history.js'
@@ -45,11 +44,11 @@ const menuDefs = [
   {
     label: 'File',
     items: [
-      { label: 'New Workspace', shortcut: 'Ctrl+Shift+N', action: () => createWorkspaceFile().then(() => { if (state.selectedWorkspaceId) openModal('workspace') }) },
+      { label: 'New Workspace', shortcut: 'Ctrl+Shift+N', action: () => createWorkspaceInUser() },
       { separator: true },
-      { label: 'Open Workspace\u2026', shortcut: 'Ctrl+O', action: () => openWorkspaceFile() },
+      { label: 'Open User File\u2026', shortcut: 'Ctrl+O', action: () => openUserFile() },
       { separator: true },
-      { label: 'Close Workspace', action: () => closeWorkspace() },
+      { label: 'Close User File', action: () => closeUserDirectory() },
       { separator: true },
       { label: 'Save', shortcut: 'Ctrl+S', action: () => saveNow() },
       { separator: true },
@@ -75,7 +74,7 @@ const menuDefs = [
   {
     label: 'Workspace',
     items: [
-      { label: 'New Project', shortcut: 'Ctrl+Shift+P', action: () => { if (state.selectedWorkspaceId) addProjectFolder() } },
+      { label: 'New Project', shortcut: 'Ctrl+Shift+P', action: () => { if (state.selectedWorkspaceId) window.addProjectToWorkspace(state.selectedWorkspaceId) } },
       { separator: true },
       { label: 'Workspace Colors\u2026', action: () => openPreferences('colors') },
       { label: 'Workspace Tags\u2026', action: () => openPreferences('tags') },

@@ -7,7 +7,7 @@ import { updateMenuBar } from './menubar.js'
 
 export function render() {
   const sidebarEl = document.getElementById('sidebar')
-  if (state.selectedProjectId) {
+  if (state.selectedProjectId && state.selectedWorkspaceId) {
     sidebarEl.classList.remove('hidden')
   } else {
     sidebarEl.classList.add('hidden')

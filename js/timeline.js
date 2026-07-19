@@ -239,13 +239,14 @@ export function renderTimeline() {
     const trackPadV = numLanes > 1 ? 6 : Math.floor((52 - laneBarH) / 2)
     const trackHeight = Math.max(52, trackPadV * 2 + (numLanes + 1) * laneBarH + numLanes * laneGap)
 
-    html += '<div class="tl-row" data-col-id="' + col.id + '">'
+    const tlColColorStyle = col.color ? '--column-color:' + col.color + ';' : ''
+    html += '<div class="tl-row" data-col-id="' + col.id + '" style="' + tlColColorStyle + '">'
     html += '  <div class="tl-row-label" draggable="true" data-col-id="' + col.id + '" style="min-height:' + trackHeight + 'px">'
     html += '    <span class="tl-row-name">' + escapeHtml(col.name) + '</span>'
     html += '    <span class="tl-row-count">' + (colFilteredCounts[col.id] != null ? colFilteredCounts[col.id] + '/' + col.cards.length : col.cards.length) + '</span>'
     html += '  </div>'
     const gridStops = 'transparent 0px, transparent ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + (DAY_WIDTH - 1) + 'px, rgba(255,255,255,0.025) ' + DAY_WIDTH + 'px'
-    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px;height:' + trackHeight + 'px;background-image:repeating-linear-gradient(90deg,' + gridStops + ')">'
+    html += '  <div class="tl-track tl-track-grid" data-col-id="' + col.id + '" style="width:' + totalWidth + 'px;height:' + trackHeight + 'px;background-image:repeating-linear-gradient(90deg,' + gridStops + ');' + tlColColorStyle + '">'
 
     for (const m of monthBoundaries) {
       html += '    <div class="tl-month-marker-body" style="left:' + m.left + 'px"></div>'
@@ -313,7 +314,8 @@ export function renderTimeline() {
   html += '  <div class="tl-us-body">'
   for (const col of b.columns) {
     const colUndated = undatedItems.filter(x => x.columnId === col.id)
-    html += '<div class="tl-us-row" data-col-id="' + col.id + '">'
+    const usColColorStyle = col.color ? '--column-color:' + col.color + ';' : ''
+    html += '<div class="tl-us-row" data-col-id="' + col.id + '" style="' + usColColorStyle + '">'
     html += '  <div class="tl-us-label" draggable="true">' + escapeHtml(col.name) + '</div>'
     html += '  <div class="tl-us-cards">'
     for (const item of colUndated) {

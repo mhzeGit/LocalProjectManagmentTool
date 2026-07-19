@@ -1,4 +1,4 @@
-import { state, findBoard, findProject, findWorkspace, findDocument, findCanvas, getTagColor, PREDEFINED_COLORS } from './data.js'
+import { data, state, findBoard, findProject, findWorkspace, findDocument, findCanvas, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { getResolvedAvatar } from './persistence.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
@@ -48,7 +48,7 @@ export function renderBoard() {
   const d = state.selectedDocumentId ? findDocument(state.selectedDocumentId) : null
 
   let bc = ''
-  if (w) bc += `<span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
+  if (w) bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span> <span>›</span> <span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
   if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
   if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
   if (d) bc += ` <span>›</span> <span class="bc-link" onclick="selectDocument('${d.id}')">${d.name}</span>`
@@ -78,8 +78,9 @@ export function renderBoard() {
   }
 
   const topbarEl = document.querySelector('.topbar')
+  const saveMode = window.__getSaveMode ? window.__getSaveMode() : 'memory'
 
-  if (!w) {
+  if (!w && saveMode !== 'user') {
     if (topbarEl) topbarEl.style.display = 'none'
     destroyEditor()
     area.innerHTML =
@@ -88,12 +89,34 @@ export function renderBoard() {
       '  <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>' +
       '</div>' +
       '<h1 class="onboarding-title">Welcome to Task Board</h1>' +
-      '<p class="onboarding-desc">Organize your projects, manage tasks, and collaborate with your team. Get started by creating a new workspace or opening an existing one.</p>' +
+      '<p class="onboarding-desc">Set up a user directory to store workspaces and projects across your device.</p>' +
       '<div class="onboarding-actions">' +
-      '  <button class="btn-create onboarding-btn" onclick="onboardingCreateWorkspace()">+ Create New Workspace</button>' +
-      '  <button class="btn-open onboarding-btn" onclick="onboardingOpenWorkspace()">Open Workspace File</button>' +
+      '  <button class="btn-create onboarding-btn" onclick="setupUserDirectory()">+ Set Up User File</button>' +
+      '  <button class="btn-open onboarding-btn" onclick="openUserFile()">Open Existing User File</button>' +
       '</div>' +
       '</div>'
+    return
+  }
+
+  if (!w && data.workspaces.length === 0 && saveMode === 'user') {
+    if (topbarEl) topbarEl.style.display = 'none'
+    destroyEditor()
+    area.innerHTML =
+      '<div class="page-view">' +
+      '<div class="page-header"><h2>Workspaces</h2>' +
+      '<div class="page-header-actions">' +
+      '<button class="btn-create" onclick="createWorkspaceInUser()">+ Create Workspace</button>' +
+      '<button class="btn-secondary" onclick="addExistingWorkspace()">Add Workspace</button>' +
+      '</div></div>' +
+      '<div class="empty-state"><p>No workspaces yet. Create a new workspace or locate an existing one.</p></div>' +
+      '</div>'
+    return
+  }
+
+  if (!w && data.workspaces.length > 0 && saveMode === 'user') {
+    if (topbarEl) topbarEl.style.display = 'none'
+    destroyEditor()
+    renderWorkspacesPage(area)
     return
   }
 
@@ -157,7 +180,8 @@ export function renderBoard() {
     }
     const countStr = filteredCardIds ? visibleCards + '/' + totalCards : '' + totalCards
 
-    html += '<div class="board-column" draggable="true" data-column-id="' + col.id + '">'
+    const colColorStyle = col.color ? '--column-color:' + col.color + ';' : ''
+    html += '<div class="board-column" draggable="true" data-column-id="' + col.id + '" style="' + colColorStyle + '">'
     html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
     html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
     html += '  <span class="col-count">' + countStr + '</span>'
@@ -165,6 +189,13 @@ export function renderBoard() {
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();copyColumn(\'' + col.id + '\')">Copy</button>'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();pasteColumn(\'' + col.id + '\')">Paste</button>'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();duplicateColumn(\'' + col.id + '\')">Duplicate</button>'
+    html += '    <div class="col-menu-sep"></div>'
+    let colSwatches = ''
+    for (const pc of PREDEFINED_COLORS) {
+      colSwatches += '<button class="ps-color-swatch" data-color="' + pc.value + '" style="background:' + pc.value + '" onclick="event.stopPropagation();setColumnColor(\'' + col.id + '\',\'' + pc.value + '\');closeAllColumnMenus()"></button>'
+    }
+    colSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setColumnColor(\'' + col.id + '\',null);closeAllColumnMenus()" title="None">✕</button>'
+    html += '    <div class="col-menu-item col-menu-sub-wrap">Set Color<div class="ps-color-submenu">' + colSwatches + '</div></div>'
     html += '    <div class="col-menu-sep"></div>'
     html += '    <button class="col-menu-item danger" onclick="closeAllColumnMenus();archiveColumn(\'' + col.id + '\')">Archive</button>'
     html += '  </div>'
@@ -312,13 +343,52 @@ export function renderBoard() {
 
 }
 
+function renderWorkspacesPage(area) {
+  const topbarEl = document.querySelector('.topbar')
+  if (topbarEl) topbarEl.style.display = 'none'
+
+  let html = '<div class="page-view">'
+  html += '<div class="page-header">'
+  html += '<h2>Workspaces</h2>'
+  html += '<div class="page-header-actions">'
+  html += '<button class="btn-create" onclick="createWorkspaceInUser()">+ Create Workspace</button>'
+  html += '<button class="btn-secondary" onclick="addExistingWorkspace()">Add Workspace</button>'
+  html += '</div>'
+  html += '</div>'
+
+  if (data.workspaces.length === 0) {
+    html += '<div class="empty-state"><p>No workspaces yet.</p></div>'
+  } else {
+    html += '<div class="page-grid">'
+    for (const ws of data.workspaces) {
+      var isLoaded = !ws._loadError
+      var wsName = ws.name || 'Workspace'
+      if (isLoaded) {
+        html += '<div class="page-card" onclick="selectWorkspace(\'' + ws.id + '\')" oncontextmenu="event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')">'
+        html += '<h3 id="workspaceTitle-' + ws.id + '" ondblclick="startRenameWorkspace(\'' + ws.id + '\')">' + wsName + '</h3>'
+        html += '<p class="count">' + (ws.projects ? ws.projects.length : 0) + ' project' + ((ws.projects ? ws.projects.length : 0) !== 1 ? 's' : '') + '</p>'
+        html += '</div>'
+      } else {
+        html += '<div class="page-card page-card-unloaded" style="border-top:5px solid #555;opacity:0.7">'
+        html += '<h3>' + wsName + '</h3>'
+        html += '<p class="count" style="color:var(--text-dim)">Workspace folder not located</p>'
+        html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();window.locateWorkspaceFile(\'' + ws.id + '\')">Locate File</button>'
+        html += '</div>'
+      }
+    }
+    html += '</div>'
+  }
+  html += '</div>'
+  area.innerHTML = html
+}
+
 function renderWorkspacePage(area, w) {
   let html = '<div class="page-view" oncontextmenu="showWsCtxMenu(event,\'' + w.id + '\')">'
   html += '<div class="page-header">'
   html += '<h2>Projects</h2>'
   html += '<div class="page-header-actions">'
   html += '<button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button>'
-  html += '<button class="btn-secondary" onclick="window.locateExistingProject()" title="Load an existing project from its folder">Locate Project</button>'
+  html += '<button class="btn-secondary" onclick="window.locateExistingProjectInWorkspace(\'' + w.id + '\')" title="Load an existing project from its folder">Locate Project</button>'
   html += '</div>'
   html += '</div>'
   if (w.projects.length === 0) {
@@ -348,6 +418,19 @@ function renderWorkspacePage(area, w) {
   area.innerHTML = html
 }
 
+export function selectWorkspaceHome() {
+  state.selectedWorkspaceId = null
+  state.selectedProjectId = null
+  state.selectedBoardId = null
+  state.selectedDocumentId = null
+  state.selectedCanvasId = null
+  state.selectedDashboard = false
+  const f = state.filters
+  f.search = ''; f.members = []; f.tags = []; f.priority = []
+  f.startDateFrom = ''; f.startDateTo = ''; f.endDateFrom = ''; f.endDateTo = ''; f.completed = 'all'
+  render()
+}
+
 export function showWsCtxMenu(e, workspaceId) {
   e.preventDefault()
   document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
@@ -356,11 +439,10 @@ export function showWsCtxMenu(e, workspaceId) {
   menu.style.left = e.clientX + 'px'
   menu.style.top = e.clientY + 'px'
   menu.innerHTML =
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();selectWorkspace(\'' + workspaceId + '\')">Open</button>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();locateExistingProject()">Locate Project</button>' +
     '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();closeWorkspace()">Close Workspace</button>' +
-    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }

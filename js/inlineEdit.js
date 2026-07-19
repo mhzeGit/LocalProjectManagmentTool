@@ -1,4 +1,4 @@
-import { findColumn, findCard, findProject, findDocument, findCanvas } from './data.js'
+import { findColumn, findCard, findProject, findDocument, findCanvas, findWorkspace } from './data.js'
 import { pushCommand } from './history.js'
 
 let _renderFn = null
@@ -121,6 +121,31 @@ export function startRenameCanvas(canvasId) {
         redo() { c.name = val; if (_renderFn) _renderFn() },
         description: 'Rename Canvas'
       })
+    } else if (_renderFn) _renderFn()
+  }
+  input.addEventListener('blur', finish)
+  input.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
+    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+  })
+}
+
+export function startRenameWorkspace(workspaceId) {
+  const span = document.getElementById('workspaceTitle-' + workspaceId)
+  const w = findWorkspace(workspaceId)
+  if (!span || !w) return
+  const oldName = w.name
+  const input = document.createElement('input')
+  input.value = w.name
+  input.style.cssText = 'background:#12121e;border:1px solid #4f46e5;border-radius:4px;color:#e0e0e8;font-size:18px;font-weight:600;padding:2px 6px;width:100%;outline:none;'
+  span.replaceWith(input)
+  input.focus()
+  input.select()
+  function finish() {
+    const val = input.value.trim()
+    if (val && val !== oldName) {
+      w.name = val
+      if (_renderFn) _renderFn()
     } else if (_renderFn) _renderFn()
   }
   input.addEventListener('blur', finish)

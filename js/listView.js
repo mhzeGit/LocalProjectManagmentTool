@@ -62,7 +62,7 @@ export function renderListView() {
   const allItems = []
   for (const col of b.columns) {
     for (const c of col.cards) {
-      allItems.push({ card: c, columnName: col.name, columnId: col.id })
+      allItems.push({ card: c, columnName: col.name, columnId: col.id, columnColor: col.color })
     }
   }
 
@@ -145,7 +145,8 @@ export function renderListView() {
     html += '  <div class="lv-cell lv-cell-check"><div class="lv-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="lv-check-circle"><svg class="lv-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div></div>'
     html += '  <div class="lv-cell lv-cell-color"><div class="lv-color-dot" style="background:' + (c.color || 'transparent') + '"></div></div>'
     html += '  <div class="lv-cell lv-cell-title"><span class="lv-title-text">' + escapeHtml(c.title || 'Untitled') + '</span></div>'
-    html += '  <div class="lv-cell lv-cell-column"><span class="lv-column-name">' + escapeHtml(item.columnName) + '</span></div>'
+    const colNameStyle = item.columnColor ? '--column-color:' + item.columnColor + ';' : ''
+    html += '  <div class="lv-cell lv-cell-column" style="' + colNameStyle + '"><span class="lv-column-name">' + escapeHtml(item.columnName) + '</span></div>'
     html += '  <div class="lv-cell lv-cell-priority">'
     html += '    <div class="lv-priority-bars">'
     for (let i = 0; i < 5; i++) {

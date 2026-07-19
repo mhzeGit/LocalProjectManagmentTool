@@ -162,6 +162,24 @@
   background: var(--tl-row-bg);
 }
 
+.tl-row[style*="--column-color"] .tl-row-label {
+  border-left: 4px solid var(--column-color);
+  padding-left: 12px;
+}
+.tl-row[style*="--column-color"] .tl-row-name {
+  color: var(--column-color);
+}
+.tl-track[style*="--column-color"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--column-color);
+  opacity: 0.06;
+  pointer-events: none;
+}
 .tl-row-label {
   flex: 0 0 200px;
   position: sticky;
@@ -206,6 +224,12 @@
   opacity: 0.35;
 }
 
+.tl-us-row[style*="--column-color"] {
+  border-left: 4px solid var(--column-color);
+}
+.tl-us-row[style*="--column-color"] .tl-us-label {
+  color: var(--column-color);
+}
 .tl-us-label {
   cursor: grab;
 }

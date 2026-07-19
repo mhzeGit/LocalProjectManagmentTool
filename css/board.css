@@ -22,15 +22,29 @@
 #boardIO.hidden { display: none; }
 .btn-board-io { display: flex; align-items: center; justify-content: center; padding: 6px; font-size: 11px; font-weight: 500; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-surface-hover); color: var(--text-secondary); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
 .btn-board-io:hover { background: var(--accent-subtle); color: var(--text-primary); border-color: var(--accent); }
-.board-undo-group { display: flex; align-items: center; gap: 4px; margin-right: 8px; }
-.board-undo-group .btn-board-io { padding: 4px 6px; }
+
 .board-area.grabbing { cursor: grabbing; }
 .board-area::-webkit-scrollbar { height: 8px; }
 .board-area::-webkit-scrollbar-track { background: var(--scrollbar-track); }
 .board-area::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 .board-area::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 .board-columns { display: flex; gap: 16px; align-items: flex-start; min-height: 300px; }
-.board-column { background: var(--bg-panel-alt); border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid var(--border); }
+.board-column { background: var(--bg-panel-alt); border-radius: 8px; min-width: 280px; max-width: 320px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
+.board-column[style*="--column-color"] { border-left: 4px solid var(--column-color); }
+.board-column[style*="--column-color"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--column-color);
+  opacity: 0.06;
+  pointer-events: none;
+}
+.board-column[style*="--column-color"] .column-header { color: var(--column-color); }
+.board-column[style*="--column-color"] .col-count { background: var(--column-color); color: var(--text-white); }
 .board-column.add-column { min-width: 280px; max-width: 320px; height: 6vh; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed var(--border); background: transparent; }
 .column-header { padding: 12px 16px 8px; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color: var(--text-primary); position: relative; }
 .col-menu { display: none; position: fixed; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 6px; min-width: 140px; box-shadow: 0 4px 16px var(--shadow-md); z-index: 10; }
@@ -39,6 +53,10 @@
 .col-menu-item:hover { background: var(--bg-surface-hover); }
 .col-menu-item.danger { color: var(--danger); }
 .col-menu-item.danger:hover { background: var(--danger-bg); }
+.col-menu-sub-wrap { position: relative; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.col-menu-sub-wrap:hover { background: var(--bg-surface-hover); }
+.col-menu-sub-wrap .ps-color-submenu { display: none; position: absolute; left: 100%; top: -8px; background: var(--bg-panel-alt); border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px; box-shadow: 0 4px 16px var(--shadow-md); z-index: 10; width: 152px; flex-wrap: wrap; gap: 4px; }
+.col-menu-sub-wrap:hover .ps-color-submenu { display: flex; }
 .col-menu-sep { height: 1px; background: var(--border-strong); margin: 4px 0; }
 .column-cards { flex: 1; padding: 0 8px 4px; min-height: 0; }
 .column-footer { padding: 4px 8px 8px; }
@@ -210,6 +228,7 @@
 .lv-color-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .lv-title-text { font-size: 13px; font-weight: 500; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lv-column-name { font-size: 12px; color: var(--text-secondary); }
+.lv-cell-column[style*="--column-color"] .lv-column-name { color: var(--column-color); }
 .lv-priority-bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
 .lv-priority-bar { width: 4px; height: 12px; border-radius: 1px; }
 .lv-priority-bar.filled { opacity: 1; box-shadow: 0 0 calc(3px * var(--glow-multiplier)) currentColor; }

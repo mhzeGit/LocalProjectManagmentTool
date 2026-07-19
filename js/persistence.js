@@ -1,15 +1,15 @@
 import { data, state, genId, setUid } from './data.js'
 import { render } from './sidebar.js'
 
-const DB_NAME = 'kanboard-workspace-v2'
+const DB_NAME = 'kanboard-user-v3'
 const DB_VERSION = 1
 const STORE_NAME = 'handles'
 const SAVE_DELAY = 500
 
-let _workspaceHandle = null
+let _userFileHandle = null
+let _workspaceFileHandles = {}
 let _projectDirHandles = {}
 let _saveMode = 'memory'
-let _lastSavedTimestamp = null
 let _dirty = false
 let _saveTimer = null
 let _initialized = false
@@ -88,14 +88,6 @@ function writeFile(handle, name, obj) {
   })
 }
 
-function writeToFileHandle(fileHandle, obj) {
-  return fileHandle.createWritable().then(function(writable) {
-    return writable.write(new TextEncoder().encode(JSON.stringify(obj, null, 2))).then(function() {
-      return writable.close()
-    })
-  })
-}
-
 function readFile(handle, name) {
   return handle.getFileHandle(name).then(function(fileHandle) {
     return fileHandle.getFile().then(function(file) {
@@ -111,6 +103,23 @@ function readJSON(handle, name) {
   })
 }
 
+function writeToFileHandle(fileHandle, obj) {
+  return fileHandle.createWritable().then(function(writable) {
+    return writable.write(new TextEncoder().encode(JSON.stringify(obj, null, 2))).then(function() {
+      return writable.close()
+    })
+  })
+}
+
+function readJSONFromFileHandle(fileHandle) {
+  return fileHandle.getFile().then(function(file) {
+    return file.text()
+  }).then(function(text) {
+    if (!text) return null
+    try { return JSON.parse(text) } catch { return null }
+  })
+}
+
 function verifyHandlePermission(handle) {
   return handle.queryPermission({ mode: 'readwrite' }).then(function(perm) {
     if (perm === 'granted') return true
@@ -120,40 +129,127 @@ function verifyHandlePermission(handle) {
   })
 }
 
+/* ======== USER FILE ======== */
+
+function getUserFileData() {
+  return {
+    version: 1,
+    selfMemberId: state.selfMemberId || null,
+    workspaces: data.workspaces.map(function(w) {
+      return { id: w.id, name: w.name }
+    })
+  }
+}
+
+function saveUserFile() {
+  if (!_userFileHandle) return Promise.resolve()
+  return writeToFileHandle(_userFileHandle, getUserFileData())
+}
+
 /* ======== WORKSPACE FILE ======== */
 
-function getWorkspaceFileData() {
-  var w = data.workspaces[0]
-  if (!w) return null
+function getWorkspaceFileData(workspace) {
+  if (!workspace) return null
   return {
     version: 1,
     workspace: {
-      id: w.id,
-      name: w.name,
-      tags: w.tags || [],
-      members: (w.members || []).map(function(m) { return { id: m.id, name: m.name, avatar: m.avatar || '' } })
+      id: workspace.id,
+      name: workspace.name,
+      tags: workspace.tags || [],
+      members: (workspace.members || []).map(function(m) { return { id: m.id, name: m.name, avatar: m.avatar || '' } })
     },
-    projects: (w.projects || []).map(function(p) {
+    projects: (workspace.projects || []).map(function(p) {
       return { id: p.id, name: p.name, color: p.color || null, path: p.path || '' }
     }),
     state: {
-      selectedWorkspaceId: state.selectedWorkspaceId,
       selectedProjectId: state.selectedProjectId,
       selectedBoardId: state.selectedBoardId,
       selectedDocumentId: state.selectedDocumentId,
       selectedCanvasId: state.selectedCanvasId,
-      selectedView: state.selectedView,
-      selfMemberId: state.selfMemberId
+      selectedView: state.selectedView
     }
   }
 }
 
-function saveWorkspaceFile() {
-  if (!_workspaceHandle) return Promise.resolve()
-  var wsData = getWorkspaceFileData()
+function saveWorkspaceFile(workspace) {
+  var fileHandle = _workspaceFileHandles[workspace.id]
+  if (!fileHandle) return Promise.resolve()
+  var wsData = getWorkspaceFileData(workspace)
   if (!wsData) return Promise.resolve()
-  return writeToFileHandle(_workspaceHandle, wsData).then(function() {
-    _lastSavedTimestamp = Date.now()
+  return writeToFileHandle(fileHandle, wsData)
+}
+
+function loadWorkspaceFromFile(fileHandle) {
+  return readJSONFromFileHandle(fileHandle).then(function(wsData) {
+    if (!wsData || !wsData.workspace) return null
+    return buildWorkspaceFromData(wsData)
+  })
+}
+
+function buildWorkspaceFromData(wsData) {
+  var w = wsData.workspace
+  var ws = {
+    id: w.id,
+    name: w.name,
+    tags: w.tags || [],
+    members: (w.members || []).map(function(m) {
+      return { id: m.id, name: m.name, avatar: m.avatar || '' }
+    }),
+    projects: []
+  }
+
+  var projectList = wsData.projects || []
+  var loadPromises = []
+
+  for (var pi = 0; pi < projectList.length; pi++) {
+    (function(pRef) {
+      var p = {
+        id: pRef.id,
+        name: pRef.name,
+        color: pRef.color || null,
+        path: pRef.path || '',
+        boards: [],
+        documents: [],
+        canvasBoards: [],
+        _loadError: false
+      }
+
+      var dirHandle2 = _projectDirHandles[pRef.id]
+      if (dirHandle2) {
+        loadPromises.push(
+          loadProjectFromDir(dirHandle2).then(function(loaded) {
+            if (loaded) {
+              p.boards = loaded.boards || []
+              p.documents = loaded.documents || []
+              p.canvasBoards = loaded.canvasBoards || []
+            }
+          }).catch(function() {
+            p._loadError = true
+          })
+        )
+      } else {
+        p._loadError = true
+      }
+
+      ws.projects.push(p)
+    })(projectList[pi])
+  }
+
+  return Promise.all(loadPromises).then(function() {
+    if (wsData.state) {
+      var s = wsData.state
+      if (s.selectedView !== undefined) state.selectedView = s.selectedView
+    }
+    return preloadMemberAvatars(ws.members).then(function() {
+      return ws
+    })
+  })
+}
+
+function loadWorkspaceFromDir(dirHandle) {
+  return readJSON(dirHandle, 'workspace.json').then(function(wsData) {
+    if (!wsData || !wsData.workspace) return null
+    return buildWorkspaceFromData(wsData)
   })
 }
 
@@ -405,101 +501,74 @@ function reconstructProject(pMeta, allData) {
   return project
 }
 
-/* ======== LOAD WORKSPACE FROM FILE ======== */
+/* ======== LOAD ALL FROM USER ======== */
 
-function loadWorkspaceFromHandle(fileHandle) {
-  var _lastModified = Date.now()
-  return fileHandle.getFile().then(function(file) {
-    _lastModified = file.lastModified || Date.now()
-    return file.text()
-  }).then(function(text) {
-    var wsData = JSON.parse(text)
-    if (!wsData || !wsData.workspace) return null
+function loadAllFromUser() {
+  if (!_userFileHandle) return Promise.resolve(null)
 
-    var w = wsData.workspace
-    var ws = {
-      id: w.id,
-      name: w.name,
-      tags: w.tags || [],
-      members: (w.members || []).map(function(m) {
-        return { id: m.id, name: m.name, avatar: m.avatar || '' }
-      }),
-      projects: []
+  return readJSONFromFileHandle(_userFileHandle).then(function(userData) {
+    if (!userData) return null
+
+    if (userData.selfMemberId) {
+      state.selfMemberId = userData.selfMemberId
+      try { localStorage.setItem('kanboard_self_member', JSON.stringify(userData.selfMemberId)) } catch {}
     }
 
-    var loadPromises = []
-    var projectList = wsData.projects || []
+    var wsRefs = userData.workspaces || []
+    var wsLoadPromises = []
 
-    for (var pi = 0; pi < projectList.length; pi++) {
-      (function(pRef) {
-        var p = {
-          id: pRef.id,
-          name: pRef.name,
-          color: pRef.color || null,
-          path: pRef.path || '',
-          boards: [],
-          documents: [],
-          canvasBoards: [],
+    for (var wi = 0; wi < wsRefs.length; wi++) {
+      (function(wRef) {
+        var wsPlaceholder = {
+          id: wRef.id,
+          name: wRef.name,
+          tags: [],
+          members: [],
+          projects: [],
           _loadError: false
         }
 
-        var dirHandle = _projectDirHandles[pRef.id]
-        if (dirHandle) {
-          loadPromises.push(
-            loadProjectFromDir(dirHandle).then(function(loaded) {
+        var fileHandle = _workspaceFileHandles[wRef.id]
+        if (fileHandle) {
+          wsLoadPromises.push(
+            loadWorkspaceFromFile(fileHandle).then(function(loaded) {
               if (loaded) {
-                p.boards = loaded.boards || []
-                p.documents = loaded.documents || []
-                p.canvasBoards = loaded.canvasBoards || []
+                wsPlaceholder.tags = loaded.tags || []
+                wsPlaceholder.members = loaded.members || []
+                wsPlaceholder.projects = loaded.projects || []
               }
             }).catch(function() {
-              p._loadError = true
+              wsPlaceholder._loadError = true
             })
           )
         } else {
-          p._loadError = true
+          wsPlaceholder._loadError = true
         }
 
-        ws.projects.push(p)
-      })(projectList[pi])
+        data.workspaces.push(wsPlaceholder)
+      })(wsRefs[wi])
     }
 
-    return Promise.all(loadPromises).then(function() {
-      data.workspaces.splice(0, data.workspaces.length)
-      data.workspaces.push(ws)
-
-      if (wsData.state) {
-        var s = wsData.state
-        if (s.selectedWorkspaceId !== undefined) state.selectedWorkspaceId = s.selectedWorkspaceId
-        if (s.selfMemberId !== undefined) {
-          state.selfMemberId = s.selfMemberId
-          if (s.selfMemberId) {
-            try { localStorage.setItem('kanboard_self_member', JSON.stringify(s.selfMemberId)) } catch {}
-          }
-        }
-        if (s.selectedView !== undefined) state.selectedView = s.selectedView
-      }
-      state.selectedProjectId = null
-      state.selectedBoardId = null
-      state.selectedDocumentId = null
-      state.selectedCanvasId = null
-      state.selectedDashboard = false
-
+    return Promise.all(wsLoadPromises).then(function() {
       var allIds = []
-      for (var pi2 = 0; pi2 < ws.projects.length; pi2++) {
-        var pp = ws.projects[pi2]
-        allIds.push(pp.id)
-        for (var bi = 0; bi < (pp.boards || []).length; bi++) {
-          allIds.push(pp.boards[bi].id)
-          for (var ci = 0; ci < (pp.boards[bi].columns || []).length; ci++) {
-            allIds.push(pp.boards[bi].columns[ci].id)
-            for (var cdi = 0; cdi < (pp.boards[bi].columns[ci].cards || []).length; cdi++) {
-              allIds.push(pp.boards[bi].columns[ci].cards[cdi].id)
+      for (var wi2 = 0; wi2 < data.workspaces.length; wi2++) {
+        var ws2 = data.workspaces[wi2]
+        allIds.push(ws2.id)
+        for (var pi = 0; pi < (ws2.projects || []).length; pi++) {
+          var pp = ws2.projects[pi]
+          allIds.push(pp.id)
+          for (var bi = 0; bi < (pp.boards || []).length; bi++) {
+            allIds.push(pp.boards[bi].id)
+            for (var ci = 0; ci < (pp.boards[bi].columns || []).length; ci++) {
+              allIds.push(pp.boards[bi].columns[ci].id)
+              for (var cdi = 0; cdi < (pp.boards[bi].columns[ci].cards || []).length; cdi++) {
+                allIds.push(pp.boards[bi].columns[ci].cards[cdi].id)
+              }
             }
           }
+          for (var di = 0; di < (pp.documents || []).length; di++) allIds.push(pp.documents[di].id)
+          for (var cai = 0; cai < (pp.canvasBoards || []).length; cai++) allIds.push(pp.canvasBoards[cai].id)
         }
-        for (var di = 0; di < (pp.documents || []).length; di++) allIds.push(pp.documents[di].id)
-        for (var cai = 0; cai < (pp.canvasBoards || []).length; cai++) allIds.push(pp.canvasBoards[cai].id)
       }
       var maxNum = 100
       for (var idi = 0; idi < allIds.length; idi++) {
@@ -508,12 +577,7 @@ function loadWorkspaceFromHandle(fileHandle) {
       }
       setUid(maxNum)
 
-      _workspaceHandle = fileHandle
-      _lastSavedTimestamp = _lastModified
-
-      return preloadMemberAvatars(ws.members).then(function() {
-        return ws
-      })
+      return data.workspaces
     })
   })
 }
@@ -521,33 +585,152 @@ function loadWorkspaceFromHandle(fileHandle) {
 /* ======== SAVE ALL ======== */
 
 function saveAll() {
-  if (_saveMode !== 'workspace' || !_workspaceHandle) return Promise.resolve()
+  if (_saveMode !== 'user' || !_userFileHandle) return Promise.resolve()
 
   var promises = []
-  var w = data.workspaces[0]
 
-  if (w) {
-    for (var pi = 0; pi < (w.projects || []).length; pi++) {
-      var p = w.projects[pi]
-      var dirHandle = _projectDirHandles[p.id]
-      if (dirHandle) {
-        promises.push(saveProjectToDir(p, dirHandle))
+  for (var wi = 0; wi < data.workspaces.length; wi++) {
+    var w = data.workspaces[wi]
+    if (_workspaceFileHandles[w.id]) {
+      promises.push(saveWorkspaceFile(w))
+      for (var pi = 0; pi < (w.projects || []).length; pi++) {
+        var p = w.projects[pi]
+        var pDir = _projectDirHandles[p.id]
+        if (pDir) {
+          promises.push(saveProjectToDir(p, pDir))
+        }
       }
     }
   }
 
-  promises.push(saveWorkspaceFile())
+  promises.push(saveUserFile())
 
   return Promise.all(promises).then(function() {
     showNotification('Auto-saved')
   })
 }
 
+/* ======== COUNT WORKSPACES FOR UID CHECK ======== */
+
+function collectAllIds() {
+  var allIds = []
+  for (var wi = 0; wi < data.workspaces.length; wi++) {
+    var w = data.workspaces[wi]
+    allIds.push(w.id)
+    for (var pi = 0; pi < (w.projects || []).length; pi++) {
+      var p = w.projects[pi]
+      allIds.push(p.id)
+      for (var bi = 0; bi < (p.boards || []).length; bi++) {
+        allIds.push(p.boards[bi].id)
+        for (var ci = 0; ci < (p.boards[bi].columns || []).length; ci++) {
+          allIds.push(p.boards[bi].columns[ci].id)
+          for (var cdi = 0; cdi < (p.boards[bi].columns[ci].cards || []).length; cdi++) {
+            allIds.push(p.boards[bi].columns[ci].cards[cdi].id)
+          }
+        }
+      }
+      for (var di = 0; di < (p.documents || []).length; di++) allIds.push(p.documents[di].id)
+      for (var cai = 0; cai < (p.canvasBoards || []).length; cai++) allIds.push(p.canvasBoards[cai].id)
+    }
+  }
+  return allIds
+}
+
 /* ======== PUBLIC API ======== */
 
-export function createWorkspaceFile() {
+export function setupUserDirectory() {
   if (!window.showSaveFilePicker) {
     showNotification('Your browser does not support the File System Access API. Use Chrome or Edge.', 4000)
+    return Promise.resolve()
+  }
+
+  return window.showSaveFilePicker({
+    suggestedName: 'user.json',
+    types: [{ description: 'User File', accept: { 'application/json': ['.json'] } }]
+  }).then(function(fileHandle) {
+    _userFileHandle = fileHandle
+    data.workspaces.splice(0, data.workspaces.length)
+    return saveUserFile().then(function() {
+      return saveHandleToDB('user_file', fileHandle)
+    })
+  }).then(function() {
+    _saveMode = 'user'
+    state.selectedWorkspaceId = null
+    state.selectedProjectId = null
+    state.selectedBoardId = null
+    updateSaveUI()
+    render()
+    showNotification('User file set up')
+  }).catch(function(e) {
+    if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+      console.error('Error setting up user file:', e)
+      showNotification('Error: ' + e.message, 3000)
+    }
+  })
+}
+
+export function openUserFile() {
+  if (!window.showOpenFilePicker) {
+    showNotification('Your browser does not support the File System Access API.', 4000)
+    return Promise.resolve()
+  }
+
+  return window.showOpenFilePicker({
+    types: [{ description: 'User File', accept: { 'application/json': ['.json'] } }],
+    multiple: false
+  }).then(function(handles) {
+    _userFileHandle = handles[0]
+    _workspaceFileHandles = {}
+    _projectDirHandles = {}
+    data.workspaces.splice(0, data.workspaces.length)
+    return getAllKeys().then(function(keys) {
+      var handlePromises = []
+      for (var i = 0; i < (keys || []).length; i++) {
+        (function(k) {
+          if (k === 'user_file') return
+          handlePromises.push(
+            getHandleFromDB(k).then(function(h) {
+              if (!h) return
+              return verifyHandlePermission(h).then(function(ok) {
+                if (!ok) return
+                if (typeof k === 'string' && k.startsWith('workspace_')) {
+                  _workspaceFileHandles[k.replace('workspace_', '')] = h
+                } else if (typeof k === 'string' && k.startsWith('project_')) {
+                  _projectDirHandles[k.replace('project_', '')] = h
+                }
+              })
+            })
+          )
+        })(keys[i])
+      }
+      return Promise.all(handlePromises)
+    }).then(function() {
+      return loadAllFromUser()
+    }).then(function(result) {
+      if (result) {
+        _saveMode = 'user'
+        state.selectedWorkspaceId = null
+        state.selectedProjectId = null
+        state.selectedBoardId = null
+        state.selectedDocumentId = null
+        state.selectedCanvasId = null
+        updateSaveUI()
+        render()
+        showNotification('User file opened')
+      }
+      return null
+    })
+  }).catch(function(e) {
+    if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+      console.error('Error opening user file:', e)
+      showNotification('Error: ' + e.message, 3000)
+    }
+  })
+}
+
+export function createWorkspaceInUser() {
+  if (!window.showSaveFilePicker) {
+    showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
   }
 
@@ -555,24 +738,28 @@ export function createWorkspaceFile() {
     suggestedName: 'workspace.json',
     types: [{ description: 'Workspace File', accept: { 'application/json': ['.json'] } }]
   }).then(function(fileHandle) {
-    _workspaceHandle = fileHandle
-    data.workspaces.splice(0, data.workspaces.length)
-    data.workspaces.push({
+    var ws = {
       id: genId(),
       name: 'New Workspace',
       tags: [],
       members: [],
       projects: []
+    }
+
+    data.workspaces.push(ws)
+    _workspaceFileHandles[ws.id] = fileHandle
+
+    return writeToFileHandle(fileHandle, getWorkspaceFileData(ws)).then(function() {
+      return saveHandleToDB('workspace_' + ws.id, fileHandle)
+    }).then(function() {
+      return saveUserFile()
+    }).then(function() {
+      state.selectedWorkspaceId = null
+      state.selectedProjectId = null
+      state.selectedBoardId = null
+      render()
+      showNotification('Workspace created: ' + ws.name)
     })
-    state.selectedWorkspaceId = data.workspaces[0].id
-    return saveWorkspaceFile().then(function() {
-      return saveHandleToDB('workspace', fileHandle)
-    })
-  }).then(function() {
-    _saveMode = 'workspace'
-    updateSaveUI()
-    render()
-    showNotification('Workspace created')
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
       console.error('Error creating workspace:', e)
@@ -581,9 +768,9 @@ export function createWorkspaceFile() {
   })
 }
 
-export function openWorkspaceFile() {
+export function addExistingWorkspace() {
   if (!window.showOpenFilePicker) {
-    showNotification('Your browser does not support the File System Access API. Use Chrome or Edge.', 4000)
+    showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
   }
 
@@ -591,36 +778,99 @@ export function openWorkspaceFile() {
     types: [{ description: 'Workspace File', accept: { 'application/json': ['.json'] } }],
     multiple: false
   }).then(function(handles) {
-    _workspaceHandle = handles[0]
-    _projectDirHandles = {}
-    return loadWorkspaceFromHandle(_workspaceHandle)
-  }).then(function(result) {
-    if (result) {
-      return saveHandleToDB('workspace', _workspaceHandle).then(function() {
-        _saveMode = 'workspace'
-        updateSaveUI()
-        render()
-        showNotification('Workspace opened')
+    var fileHandle = handles[0]
+    return readJSONFromFileHandle(fileHandle).then(function(wsData) {
+      if (!wsData || !wsData.workspace) {
+        showNotification('Not a valid workspace file', 3000)
+        return null
+      }
+      var existing = data.workspaces.find(function(w) { return w.id === wsData.workspace.id })
+      if (existing) {
+        showNotification('Workspace already loaded', 2000)
+        return existing
+      }
+      _workspaceFileHandles[wsData.workspace.id] = fileHandle
+      return saveHandleToDB('workspace_' + wsData.workspace.id, fileHandle).then(function() {
+        return loadWorkspaceFromFile(fileHandle).then(function(loaded) {
+          if (!loaded) return null
+          data.workspaces.push(loaded)
+          return saveUserFile().then(function() {
+            state.selectedWorkspaceId = null
+            state.selectedProjectId = null
+            render()
+            showNotification('Workspace added: ' + loaded.name)
+            return loaded
+          })
+        })
       })
-    }
+    })
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
-      console.error('Error opening workspace:', e)
-      showNotification('Error opening workspace: ' + e.message, 3000)
+      console.error('Error adding workspace:', e)
+      showNotification('Error: ' + e.message, 3000)
     }
   })
 }
 
-export function addProjectFolder() {
+export function locateWorkspaceFile(workspaceId) {
+  if (!window.showOpenFilePicker) {
+    showNotification('Your browser does not support the File System Access API.', 4000)
+    return Promise.resolve()
+  }
+
+  var w = data.workspaces.find(function(ws) { return ws.id === workspaceId })
+  if (!w) return Promise.resolve()
+
+  return window.showOpenFilePicker({
+    types: [{ description: 'Workspace File', accept: { 'application/json': ['.json'] } }],
+    multiple: false
+  }).then(function(handles) {
+    var fileHandle = handles[0]
+    _workspaceFileHandles[workspaceId] = fileHandle
+    return readJSONFromFileHandle(fileHandle).then(function(loadedData) {
+      if (loadedData && loadedData.workspace) {
+        w.name = loadedData.workspace.name || w.name
+        w.tags = loadedData.workspace.tags || []
+        w.members = (loadedData.workspace.members || []).map(function(m) {
+          return { id: m.id, name: m.name, avatar: m.avatar || '' }
+        })
+      }
+    }).then(function() {
+      return loadWorkspaceFromFile(fileHandle).then(function(loaded) {
+        if (loaded) {
+          w.projects = loaded.projects || []
+          w._loadError = false
+        }
+      })
+    }).then(function() {
+      return saveHandleToDB('workspace_' + workspaceId, fileHandle)
+    }).then(function() {
+      return saveUserFile()
+    }).then(function() {
+      state.selectedWorkspaceId = null
+      state.selectedProjectId = null
+      state.selectedBoardId = null
+      render()
+      showNotification('Workspace located')
+    })
+  }).catch(function(e) {
+    if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+      console.error('Error locating workspace:', e)
+      showNotification('Error: ' + e.message, 3000)
+    }
+  })
+}
+
+export function addProjectToWorkspace(workspaceId) {
   if (!window.showDirectoryPicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
   }
 
-  return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
-    var w = data.workspaces[0]
-    if (!w) return
+  var w = data.workspaces.find(function(ws) { return ws.id === workspaceId })
+  if (!w) return Promise.resolve()
 
+  return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
     var project = {
       id: genId(),
       name: dirHandle.name || 'New Project',
@@ -637,11 +887,13 @@ export function addProjectFolder() {
     return saveProjectToDir(project, dirHandle).then(function() {
       return saveHandleToDB('project_' + project.id, dirHandle)
     }).then(function() {
-      return saveWorkspaceFile()
+      return saveWorkspaceFile(w)
+    }).then(function() {
+      return saveUserFile()
     }).then(function() {
       state.selectedProjectId = project.id
       render()
-      showNotification('Project added: ' + project.name)
+      showNotification('Project added')
     })
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
@@ -651,11 +903,14 @@ export function addProjectFolder() {
   })
 }
 
-export function locateExistingProject() {
+export function locateExistingProjectInWorkspace(workspaceId) {
   if (!window.showDirectoryPicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
   }
+
+  var w = data.workspaces.find(function(ws) { return ws.id === workspaceId })
+  if (!w) return Promise.resolve()
 
   return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
     return readJSON(dirHandle, 'project.json').then(function(pMeta) {
@@ -664,18 +919,15 @@ export function locateExistingProject() {
         return null
       }
       return loadProjectFromDir(dirHandle).then(function(loaded) {
-        if (!loaded) {
-          showNotification('Failed to load project', 3000)
-          return null
-        }
-        var w = data.workspaces[0]
-        if (!w) return null
+        if (!loaded) { showNotification('Failed to load project', 3000); return null }
         loaded.path = dirHandle.name || ''
         loaded._loadError = false
         w.projects.push(loaded)
         _projectDirHandles[loaded.id] = dirHandle
         return saveHandleToDB('project_' + loaded.id, dirHandle).then(function() {
-          return saveWorkspaceFile()
+          return saveWorkspaceFile(w)
+        }).then(function() {
+          return saveUserFile()
         }).then(function() {
           state.selectedProjectId = loaded.id
           render()
@@ -685,39 +937,36 @@ export function locateExistingProject() {
     })
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
-      console.error('Error locating project:', e)
+      console.error('Error loading project:', e)
       showNotification('Error: ' + e.message, 3000)
     }
   })
 }
 
 export function locateProjectFolder(projectId) {
-  if (!window.showDirectoryPicker) {
-    showNotification('Your browser does not support the File System Access API.', 4000)
-    return Promise.resolve()
+  var found = null
+  for (var wi = 0; wi < data.workspaces.length; wi++) {
+    var p = data.workspaces[wi].projects.find(function(pj) { return pj.id === projectId })
+    if (p) { found = p; break }
   }
-
-  var w = data.workspaces[0]
-  if (!w) return Promise.resolve()
-  var p = w.projects.find(function(pj) { return pj.id === projectId })
-  if (!p) return Promise.resolve()
+  if (!found) return Promise.resolve()
 
   return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
     _projectDirHandles[projectId] = dirHandle
     return loadProjectFromDir(dirHandle).then(function(loaded) {
       if (loaded) {
-        p.boards = loaded.boards || []
-        p.documents = loaded.documents || []
-        p.canvasBoards = loaded.canvasBoards || []
-        p._loadError = false
-        p.name = loaded.name
-        p.color = loaded.color || null
-        p.path = dirHandle.name || ''
+        found.boards = loaded.boards || []
+        found.documents = loaded.documents || []
+        found.canvasBoards = loaded.canvasBoards || []
+        found._loadError = false
+        found.name = loaded.name
+        found.color = loaded.color || null
+        found.path = dirHandle.name || ''
       }
     }).then(function() {
       return saveHandleToDB('project_' + projectId, dirHandle)
     }).then(function() {
-      return saveWorkspaceFile()
+      return saveAll()
     }).then(function() {
       render()
       showNotification('Project located and loaded')
@@ -731,7 +980,7 @@ export function locateProjectFolder(projectId) {
 }
 
 export function markDirty() {
-  if (_saveMode !== 'workspace' || !_workspaceHandle) return
+  if (_saveMode !== 'user' || !_userFileHandle) return
   _dirty = true
   if (_saveTimer) return
   _saveTimer = setTimeout(function() {
@@ -746,7 +995,7 @@ export function markDirty() {
 }
 
 export function saveNow() {
-  if (_saveMode !== 'workspace' || !_workspaceHandle) return Promise.resolve()
+  if (_saveMode !== 'user' || !_userFileHandle) return Promise.resolve()
   if (_saveTimer) {
     clearTimeout(_saveTimer)
     _saveTimer = null
@@ -761,34 +1010,34 @@ export function saveNow() {
 }
 
 function updateSaveUI() {
-  var openBtn = document.getElementById('openFolderBtn')
-  if (openBtn) {
-    if (_saveMode === 'workspace' && _workspaceHandle) {
-      openBtn.textContent = 'Workspace: Open'
-      openBtn.title = 'Open a different workspace file'
-    } else {
-      openBtn.textContent = 'Open Workspace'
-      openBtn.title = 'Open a workspace file'
-    }
+  var btn = document.getElementById('openFolderBtn')
+  if (!btn) return
+  if (_saveMode === 'user' && _userFileHandle) {
+    btn.textContent = 'User: Open'
+    btn.title = 'Open a different user file'
+  } else {
+    btn.textContent = 'Open User File'
+    btn.title = 'Open a user.json file'
   }
 }
 
-export function closeWorkspace() {
-  _workspaceHandle = null
+export function closeUserDirectory() {
+  _userFileHandle = null
+  _workspaceFileHandles = {}
   _projectDirHandles = {}
-  _lastSavedTimestamp = null
   _dirty = false
   if (_saveTimer) {
     clearTimeout(_saveTimer)
     _saveTimer = null
   }
   _saveMode = 'memory'
-  removeHandleFromDB('workspace').catch(function() {})
+  removeHandleFromDB('user_file').catch(function() {})
 
   getAllKeys().then(function(keys) {
     for (var i = 0; i < (keys || []).length; i++) {
-      if (keys[i] !== 'workspace' && typeof keys[i] === 'string' && keys[i].startsWith('project_')) {
-        removeHandleFromDB(keys[i]).catch(function() {})
+      var k = keys[i]
+      if (typeof k === 'string' && (k.startsWith('workspace_') || k.startsWith('project_'))) {
+        removeHandleFromDB(k).catch(function() {})
       }
     }
   }).catch(function() {})
@@ -799,49 +1048,56 @@ export function closeWorkspace() {
   state.selectedBoardId = null
   state.selectedDocumentId = null
   state.selectedCanvasId = null
+  state.selfMemberId = null
 
   updateSaveUI()
   render()
-  showNotification('Workspace closed')
+  showNotification('User file closed')
 }
 
 export function initPersistence() {
   if (_initialized) return Promise.resolve()
   _initialized = true
 
-  return getHandleFromDB('workspace').then(function(handle) {
+  return getHandleFromDB('user_file').then(function(handle) {
     if (!handle) return
     return verifyHandlePermission(handle).then(function(valid) {
       if (!valid) {
-        return removeHandleFromDB('workspace')
+        return removeHandleFromDB('user_file')
       }
-      _workspaceHandle = handle
+      _userFileHandle = handle
+      _workspaceFileHandles = {}
+      _projectDirHandles = {}
+      data.workspaces.splice(0, data.workspaces.length)
       return getAllKeys().then(function(keys) {
-        var projectPromises = []
+        var handlePromises = []
         for (var i = 0; i < (keys || []).length; i++) {
-          var k = keys[i]
-          if (typeof k === 'string' && k.startsWith('project_')) {
-            projectPromises.push(
-              getHandleFromDB(k).then(function(dirHandle) {
-                if (dirHandle) {
-                  return verifyHandlePermission(dirHandle).then(function(ok) {
-                    if (ok) {
-                      _projectDirHandles[k.replace('project_', '')] = dirHandle
-                    } else {
-                      removeHandleFromDB(k).catch(function() {})
-                    }
-                  })
-                }
+          (function(k) {
+            if (k === 'user_file') return
+            handlePromises.push(
+              getHandleFromDB(k).then(function(h) {
+                if (!h) return
+                return verifyHandlePermission(h).then(function(ok) {
+                  if (!ok) { removeHandleFromDB(k).catch(function() {}); return }
+                  if (typeof k === 'string' && k.startsWith('workspace_')) {
+                    _workspaceFileHandles[k.replace('workspace_', '')] = h
+                  } else if (typeof k === 'string' && k.startsWith('project_')) {
+                    _projectDirHandles[k.replace('project_', '')] = h
+                  }
+                })
               })
             )
-          }
+          })(keys[i])
         }
-        return Promise.all(projectPromises)
+        return Promise.all(handlePromises)
       }).then(function() {
-        return loadWorkspaceFromHandle(_workspaceHandle)
+        return loadAllFromUser()
       }).then(function(result) {
         if (result) {
-          _saveMode = 'workspace'
+          _saveMode = 'user'
+          state.selectedWorkspaceId = null
+          state.selectedProjectId = null
+          state.selectedBoardId = null
           render()
         }
         return null
@@ -870,8 +1126,12 @@ export function hasProjectHandle(projectId) {
   return !!_projectDirHandles[projectId]
 }
 
-window.closeWorkspace = closeWorkspace
+export function hasWorkspaceFileHandle(workspaceId) {
+  return !!_workspaceFileHandles[workspaceId]
+}
+
 window.__autoSave = markDirty
+window.__getSaveMode = function() { return _saveMode }
 
 /* ======== AVATAR SUPPORT ======== */
 
@@ -880,18 +1140,13 @@ const _avatarBlobCache = {}
 export async function saveAvatarFile(memberId, file) {
   return new Promise(function(resolve, reject) {
     var reader = new FileReader()
-    reader.onload = function() {
-      resolve(reader.result)
-    }
-    reader.onerror = function() {
-      reject(reader.error)
-    }
+    reader.onload = function() { resolve(reader.result) }
+    reader.onerror = function() { reject(reader.error) }
     reader.readAsDataURL(file)
   })
 }
 
-export async function deleteAvatarFile(filename) {
-}
+export async function deleteAvatarFile(filename) {}
 
 export async function loadAvatarBlobUrl(memberId, dataUrl) {
   if (!dataUrl || dataUrl.indexOf('data:') !== 0) return null
