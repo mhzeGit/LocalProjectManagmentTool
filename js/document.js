@@ -126,14 +126,16 @@ export async function renderDocument(documentId) {
   html += '    </div>'
   html += '    <div class="editor-toolbar-sep"></div>'
   html += '    <div class="editor-toolbar-group">'
+  const initialSize = doc.paperSize || 'a4'
   html += '      <select class="paper-size-select" id="paperSize-' + doc.id + '" title="Paper Size">'
   for (const key in PAPER_CONFIG) {
-    html += '        <option value="' + key + '">' + PAPER_CONFIG[key].label + '</option>'
+    html += '        <option value="' + key + '"' + (key === initialSize ? ' selected' : '') + '>' + PAPER_CONFIG[key].label + '</option>'
   }
   html += '      </select>'
+  const initialZoom = doc.paperZoom || 1.0
   html += '      <select class="paper-zoom-select" id="paperZoom-' + doc.id + '" title="Zoom">'
   for (const z of ZOOM_LEVELS) {
-    html += '        <option value="' + z.value + '">' + z.label + '</option>'
+    html += '        <option value="' + z.value + '"' + (z.value === initialZoom ? ' selected' : '') + '>' + z.label + '</option>'
   }
   html += '      </select>'
   html += '    </div>'
@@ -143,6 +145,16 @@ export async function renderDocument(documentId) {
   html += '  </div>'
   html += '</div>'
   area.innerHTML = html
+
+  const containerEl = document.getElementById('editor-container-' + doc.id)
+  const paperEl = document.getElementById('editor-' + doc.id)
+  const paperSelect = document.getElementById('paperSize-' + doc.id)
+  const zoomSelect = document.getElementById('paperZoom-' + doc.id)
+  if (paperSelect) paperSelect.value = initialSize
+  if (zoomSelect) zoomSelect.value = String(initialZoom)
+  if (containerEl && paperEl) {
+    applyPaperSize(paperEl, containerEl, initialSize, initialZoom)
+  }
 
   const { Editor } = await import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION)
   const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@' + TIPTAP_VERSION)).default
@@ -160,7 +172,7 @@ export async function renderDocument(documentId) {
   const TableHeader = (await import('https://esm.sh/@tiptap/extension-table-header@' + TIPTAP_VERSION)).default
 
   _currentEditor = new Editor({
-    element: document.getElementById('editor-' + doc.id),
+    element: paperEl,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -252,16 +264,7 @@ export async function renderDocument(documentId) {
     })
   }
 
-  const containerEl = document.getElementById('editor-container-' + doc.id)
-  const paperEl = document.getElementById('editor-' + doc.id)
-  const paperSelect = document.getElementById('paperSize-' + doc.id)
-  const zoomSelect = document.getElementById('paperZoom-' + doc.id)
-  const initialSize = doc.paperSize || 'a4'
-  const initialZoom = doc.paperZoom || 1.0
-  if (paperSelect) paperSelect.value = initialSize
-  if (zoomSelect) zoomSelect.value = String(initialZoom)
   if (containerEl && paperEl) {
-    applyPaperSize(paperEl, containerEl, initialSize, initialZoom)
     setupResizeObserver(paperEl, containerEl, function() {
       return {
         size: paperSelect ? paperSelect.value : 'a4',
