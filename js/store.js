@@ -1,7 +1,28 @@
 import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument, findCanvas } from './data.js'
 import { render } from './sidebar.js'
-import { closeModal } from './modal.js'
+import { closeModal, openModal } from './modal.js'
 import { pushCommand } from './history.js'
+
+function ensureSidebarOrder(p) {
+  if (!p.sidebarOrder) {
+    p.sidebarOrder = []
+    for (const b of p.boards) p.sidebarOrder.push('board:' + b.id)
+    for (const d of (p.documents || [])) p.sidebarOrder.push('document:' + d.id)
+    for (const c of (p.canvasBoards || [])) p.sidebarOrder.push('canvas:' + c.id)
+  }
+  if (!p.folders) p.folders = []
+  for (const f of p.folders) {
+    if (!f.itemOrder) f.itemOrder = []
+  }
+}
+
+function getItemTypeAndId(p, itemKey) {
+  const [type, id] = itemKey.split(':')
+  if (type === 'board') return p.boards.find(b => b.id === id) ? { type, id } : null
+  if (type === 'document') return (p.documents || []).find(d => d.id === id) ? { type, id } : null
+  if (type === 'canvas') return (p.canvasBoards || []).find(c => c.id === id) ? { type, id } : null
+  return null
+}
 
 export function createWorkspace() {
   window.createWorkspaceInUser()
@@ -76,6 +97,8 @@ export function createBoard(projectId) {
   if (!p) return
   const b = { id: genId(), name, columns: [] }
   p.boards.push(b)
+  ensureSidebarOrder(p)
+  p.sidebarOrder.push('board:' + b.id)
   closeModal()
   state.selectedBoardId = b.id
   render()
@@ -97,6 +120,13 @@ export function deleteBoard(id) {
       if (idx !== -1) {
         const removed = p.boards[idx]
         p.boards.splice(idx, 1)
+        ensureSidebarOrder(p)
+        const oi = p.sidebarOrder.indexOf('board:' + id)
+        if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+        for (const f of p.folders) {
+          const fi = f.itemOrder.indexOf('board:' + id)
+          if (fi !== -1) f.itemOrder.splice(fi, 1)
+        }
         if (state.selectedBoardId === id) {
           state.selectedBoardId = p.boards.length > 0 ? p.boards[0].id : null
         }
@@ -681,6 +711,8 @@ export function createDocument(projectId) {
   if (!p.documents) p.documents = []
   const doc = { id: genId(), name, content: '<h1>' + name + '</h1><p></p>' }
   p.documents.push(doc)
+  ensureSidebarOrder(p)
+  p.sidebarOrder.push('document:' + doc.id)
   closeModal()
   state.selectedDocumentId = doc.id
   state.selectedBoardId = null
@@ -705,6 +737,13 @@ export function deleteDocument(id) {
       if (idx !== -1) {
         const removed = p.documents[idx]
         p.documents.splice(idx, 1)
+        ensureSidebarOrder(p)
+        const oi = p.sidebarOrder.indexOf('document:' + id)
+        if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+        for (const f of p.folders) {
+          const fi = f.itemOrder.indexOf('document:' + id)
+          if (fi !== -1) f.itemOrder.splice(fi, 1)
+        }
         if (state.selectedDocumentId === id) {
           state.selectedDocumentId = p.documents.length > 0 ? p.documents[0].id : null
         }
@@ -755,6 +794,8 @@ export function createCanvas(projectId) {
   if (!p.canvasBoards) p.canvasBoards = []
   const canvas = { id: genId(), name, data: getEmptyCanvasState() }
   p.canvasBoards.push(canvas)
+  ensureSidebarOrder(p)
+  p.sidebarOrder.push('canvas:' + canvas.id)
   closeModal()
   state.selectedCanvasId = canvas.id
   state.selectedBoardId = null
@@ -780,6 +821,13 @@ export function deleteCanvas(id) {
       if (idx !== -1) {
         const removed = p.canvasBoards[idx]
         p.canvasBoards.splice(idx, 1)
+        ensureSidebarOrder(p)
+        const oi = p.sidebarOrder.indexOf('canvas:' + id)
+        if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+        for (const f of p.folders) {
+          const fi = f.itemOrder.indexOf('canvas:' + id)
+          if (fi !== -1) f.itemOrder.splice(fi, 1)
+        }
         if (state.selectedCanvasId === id) {
           state.selectedCanvasId = p.canvasBoards.length > 0 ? p.canvasBoards[0].id : null
         }
@@ -837,9 +885,22 @@ export function copyProject(id) {
     const copy = JSON.parse(JSON.stringify(orig))
     copy.id = genId()
     copy.name = orig.name + ' (copy)'
-    copy.boards.forEach(b => { b.id = genId(); b.columns.forEach(c => { c.id = genId(); c.cards.forEach(cd => cd.id = genId()) }) })
-    if (copy.documents) copy.documents.forEach(d => { d.id = genId() })
-    if (copy.canvasBoards) copy.canvasBoards.forEach(c => { c.id = genId() })
+    const idMap = {}
+    copy.boards.forEach(b => { const oldId = b.id; b.id = genId(); idMap['board:' + oldId] = 'board:' + b.id; b.columns.forEach(c => { c.id = genId(); c.cards.forEach(cd => cd.id = genId()) }) })
+    if (copy.documents) copy.documents.forEach(d => { const oldId = d.id; d.id = genId(); idMap['document:' + oldId] = 'document:' + d.id })
+    if (copy.canvasBoards) copy.canvasBoards.forEach(c => { const oldId = c.id; c.id = genId(); idMap['canvas:' + oldId] = 'canvas:' + c.id })
+    if (copy.sidebarOrder) {
+      copy.sidebarOrder = copy.sidebarOrder.map(function(entry) {
+        if (entry.startsWith('folder:')) return entry
+        return idMap[entry] || entry
+      })
+    }
+    if (copy.folders) {
+      copy.folders.forEach(function(f) {
+        f.id = genId()
+        f.itemOrder = f.itemOrder.map(function(entry) { return idMap[entry] || entry })
+      })
+    }
     w.projects.splice(idx + 1, 0, copy)
     render()
     pushCommand({
@@ -852,4 +913,208 @@ export function copyProject(id) {
     })
     return
   }
+}
+
+export function createFolder(projectId) {
+  const p = findProject(projectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  const name = prompt('Folder name:')
+  if (!name || !name.trim()) return
+  const folder = { id: genId(), name: name.trim(), itemOrder: [] }
+  p.folders.push(folder)
+  p.sidebarOrder.push('folder:' + folder.id)
+  render()
+  pushCommand({
+    undo() {
+      const fi = p.folders.findIndex(x => x.id === folder.id)
+      if (fi !== -1) p.folders.splice(fi, 1)
+      const oi = p.sidebarOrder.indexOf('folder:' + folder.id)
+      if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+    },
+    redo() {
+      p.folders.push(folder)
+      p.sidebarOrder.push('folder:' + folder.id)
+    },
+    description: 'Create Folder'
+  })
+}
+
+export function createFolderFromModal(projectId) {
+  const p = findProject(projectId)
+  if (!p) return
+  const name = document.getElementById('modalInput').value.trim()
+  if (!name) return
+  ensureSidebarOrder(p)
+  const folder = { id: genId(), name, itemOrder: [] }
+  p.folders.push(folder)
+  p.sidebarOrder.push('folder:' + folder.id)
+  closeModal()
+  render()
+  pushCommand({
+    undo() {
+      const fi = p.folders.findIndex(x => x.id === folder.id)
+      if (fi !== -1) p.folders.splice(fi, 1)
+      const oi = p.sidebarOrder.indexOf('folder:' + folder.id)
+      if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+    },
+    redo() {
+      p.folders.push(folder)
+      p.sidebarOrder.push('folder:' + folder.id)
+    },
+    description: 'Create Folder'
+  })
+}
+
+export function deleteFolder(id) {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  if (!confirm('Delete this folder? Items inside will be moved to the root level.')) return
+  ensureSidebarOrder(p)
+  const fi = p.folders.findIndex(f => f.id === id)
+  if (fi === -1) return
+  const folder = p.folders[fi]
+  const snapshot = {
+    sidebarOrder: p.sidebarOrder.slice(),
+    folders: JSON.parse(JSON.stringify(p.folders)),
+    folderItems: folder.itemOrder.slice()
+  }
+  for (const itemKey of folder.itemOrder) {
+    p.sidebarOrder.push(itemKey)
+  }
+  const oi = p.sidebarOrder.indexOf('folder:' + id)
+  if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+  p.folders.splice(fi, 1)
+  render()
+  pushCommand({
+    undo() {
+      p.sidebarOrder = snapshot.sidebarOrder
+      p.folders = snapshot.folders
+    },
+    redo() {
+      ensureSidebarOrder(p)
+      for (const itemKey of snapshot.folderItems) {
+        const ri = p.sidebarOrder.indexOf(itemKey)
+        if (ri !== -1) p.sidebarOrder.splice(ri, 1)
+      }
+      const sf = p.folders.find(f => f.id === id)
+      if (!sf) {
+        p.folders.push(folder)
+        p.sidebarOrder.splice(p.sidebarOrder.length, 0, 'folder:' + id)
+      }
+    },
+    description: 'Delete Folder'
+  })
+}
+
+export function renameFolder(id) {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  const folder = (p.folders || []).find(f => f.id === id)
+  if (!folder) return
+  const oldName = folder.name
+  const newName = prompt('Rename folder:', folder.name)
+  if (!newName || !newName.trim() || newName.trim() === oldName) return
+  folder.name = newName.trim()
+  render()
+  pushCommand({
+    undo() { folder.name = oldName; render() },
+    redo() { folder.name = newName.trim(); render() },
+    description: 'Rename Folder'
+  })
+}
+
+export function moveItemToFolder(itemKey, folderId) {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  const folder = p.folders.find(f => f.id === folderId)
+  if (!folder) return
+  const info = getItemTypeAndId(p, itemKey)
+  if (!info) return
+  const snapshot = {
+    sidebarOrder: p.sidebarOrder.slice(),
+    folderOrder: folder.itemOrder.slice()
+  }
+  const oi = p.sidebarOrder.indexOf(itemKey)
+  if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+  if (!folder.itemOrder.includes(itemKey)) {
+    folder.itemOrder.push(itemKey)
+  }
+  render()
+  pushCommand({
+    undo() {
+      p.sidebarOrder = snapshot.sidebarOrder
+      folder.itemOrder = snapshot.folderOrder
+    },
+    redo() {
+      const ri = p.sidebarOrder.indexOf(itemKey)
+      if (ri !== -1) p.sidebarOrder.splice(ri, 1)
+      if (!folder.itemOrder.includes(itemKey)) {
+        folder.itemOrder.push(itemKey)
+      }
+    },
+    description: 'Move Item to Folder'
+  })
+}
+
+export function removeItemFromFolder(itemKey, folderId) {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  const folder = p.folders.find(f => f.id === folderId)
+  if (!folder) return
+  const info = getItemTypeAndId(p, itemKey)
+  if (!info) return
+  const snapshot = {
+    sidebarOrder: p.sidebarOrder.slice(),
+    folderOrder: folder.itemOrder.slice()
+  }
+  const fi = folder.itemOrder.indexOf(itemKey)
+  if (fi !== -1) folder.itemOrder.splice(fi, 1)
+  p.sidebarOrder.push(itemKey)
+  render()
+  pushCommand({
+    undo() {
+      p.sidebarOrder = snapshot.sidebarOrder
+      folder.itemOrder = snapshot.folderOrder
+    },
+    redo() {
+      const ri = p.sidebarOrder.indexOf(itemKey)
+      if (ri !== -1) p.sidebarOrder.splice(ri, 1)
+      if (!folder.itemOrder.includes(itemKey)) {
+        folder.itemOrder.push(itemKey)
+      }
+    },
+    description: 'Remove Item from Folder'
+  })
+}
+
+export function reorderSidebar(projectId, newOrder) {
+  const p = findProject(projectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  const oldOrder = p.sidebarOrder.slice()
+  p.sidebarOrder = newOrder
+  render()
+  pushCommand({
+    undo() { p.sidebarOrder = oldOrder; render() },
+    redo() { p.sidebarOrder = newOrder.slice(); render() },
+    description: 'Reorder Sidebar'
+  })
+}
+
+export function reorderFolderItems(folderId, newOrder) {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  const folder = (p.folders || []).find(f => f.id === folderId)
+  if (!folder) return
+  const oldOrder = folder.itemOrder.slice()
+  folder.itemOrder = newOrder
+  render()
+  pushCommand({
+    undo() { folder.itemOrder = oldOrder; render() },
+    redo() { folder.itemOrder = newOrder.slice(); render() },
+    description: 'Reorder Folder Items'
+  })
 }

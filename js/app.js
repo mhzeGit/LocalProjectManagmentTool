@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu, showSidebarContextMenu, showFolderContextMenu, toggleFolder } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -12,7 +12,9 @@ import {
   createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor, moveCardToBoardColumn,
   addProjectDirect, addCardDirect, addColumnDirect,
   createDocument, deleteDocument, setDocumentPaperSize,
-  createCanvas, deleteCanvas, renameCanvas
+  createCanvas, deleteCanvas, renameCanvas,
+  createFolder, createFolderFromModal, deleteFolder, renameFolder,
+  moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems
 } from './store.js'
 import { startRenameColumn, startRenameCard, startRenameProject, startRenameWorkspace, startRenameDocument, startRenameCanvas } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
@@ -111,6 +113,9 @@ Object.assign(window, {
   startRenameDocument,
   startRenameCanvas,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
+  showSidebarContextMenu, showFolderContextMenu, toggleFolder,
+  createFolder, createFolderFromModal, deleteFolder, renameFolder,
+  moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems,
   openCardDetail,
   calendarPrevMonth,
   calendarNextMonth,

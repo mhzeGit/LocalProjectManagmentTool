@@ -28,3 +28,21 @@
 .item-icon-board { color: #3b82f6; }
 .item-icon-document { color: #22c55e; }
 .item-icon-canvas { color: #a855f7; }
+.item-icon-folder { color: #f59e0b; }
+
+.sidebar-folder { margin: 2px 0; }
+.sidebar-folder-header { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; user-select: none; }
+.sidebar-folder-header:hover { background: var(--bg-surface-hover); color: var(--text-bright); }
+.sidebar-folder-header .arrow { font-size: 10px; color: var(--text-dim); transition: transform .15s; width: 10px; flex-shrink: 0; }
+.sidebar-folder-header .arrow.open { transform: rotate(90deg); }
+.sidebar-folder-header .name { flex: 1; }
+.sidebar-folder-header .btn-del { opacity: 0; }
+.sidebar-folder-header:hover .btn-del { opacity: 1; }
+.sidebar-folder-items { display: none; }
+.sidebar-folder-items.open { display: block; }
+.sidebar-folder-items .nav-child { margin-left: 20px; }
+
+.drag-indicator-top { border-top: 2px solid var(--accent) !important; }
+.drag-indicator-bottom { border-bottom: 2px solid var(--accent) !important; }
+.drag-over-folder { background: var(--accent); color: var(--text-white) !important; border-radius: 6px; }
+.sidebar-folder-header.drag-over-folder .arrow { color: var(--text-white); }
