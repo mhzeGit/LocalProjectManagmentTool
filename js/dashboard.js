@@ -63,7 +63,6 @@ export function renderDashboard(area) {
   const today = getTodayStr()
 
   let html = '<div class="page-view">'
-  html += '<div class="page-header"><h2>Dashboard</h2></div>'
 
   if (!self) {
     html += '<div class="dash-nodes"><div class="dash-node">'

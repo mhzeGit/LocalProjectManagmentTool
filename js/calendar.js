@@ -686,7 +686,7 @@ export function renderCalendar() {
   html += '<div class="cal-header">'
   html += '  <div class="cal-nav-group">'
   html += '    <button class="cal-nav-btn" onclick="calendarPrevMonth()">\u25C0</button>'
-  html += '    <h2 class="cal-title">' + MONTHS[month] + ' ' + year + '</h2>'
+  html += '    <span class="cal-title">' + MONTHS[month] + ' ' + year + '</span>'
   html += '    <button class="cal-nav-btn" onclick="calendarNextMonth()">\u25B6</button>'
   html += '  </div>'
   html += '  <button class="cal-today-btn" onclick="calendarToday()">Today</button>'

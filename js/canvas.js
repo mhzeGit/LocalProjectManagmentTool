@@ -703,7 +703,7 @@ export function renderCanvasView(canvasId) {
 
   const header=document.createElement('div')
   header.style.cssText='display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--bg-topbar);border-bottom:1px solid var(--border-light);flex-shrink:0;min-height:40px;'
-  header.innerHTML='<h2 class="document-title" id="canvasTitle-'+canvasId+'" ondblclick="startRenameCanvas(\''+canvasId+'\')" style="font-size:16px;font-weight:600;color:var(--text-primary);margin:0;cursor:pointer;">'+c.name+'</h2>'
+  header.innerHTML='<h2 class="document-title" id="canvasTitle-'+canvasId+'" style="display:none" ondblclick="startRenameCanvas(\''+canvasId+'\')">'+c.name+'</h2>'
   header.innerHTML+='<div style="flex:1;"></div>'
   header.innerHTML+='<div class="canvas-actions">'
   header.innerHTML+='<button id="canvasUndoBtn" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>'

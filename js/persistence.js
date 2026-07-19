@@ -133,10 +133,20 @@ function verifyHandlePermission(handle) {
 
 function getUserFileData() {
   return {
-    version: 1,
+    version: 2,
     selfMemberId: state.selfMemberId || null,
     workspaces: data.workspaces.map(function(w) {
-      return { id: w.id, name: w.name }
+      return {
+        id: w.id,
+        name: w.name,
+        tags: w.tags || [],
+        members: (w.members || []).map(function(m) {
+          return { id: m.id, name: m.name, avatar: m.avatar || '' }
+        }),
+        projects: (w.projects || []).map(function(p) {
+          return { id: p.id, name: p.name, color: p.color || null, path: p.path || '' }
+        })
+      }
     })
   }
 }
@@ -516,16 +526,39 @@ function loadAllFromUser() {
 
     var wsRefs = userData.workspaces || []
     var wsLoadPromises = []
+    var avatarPreloads = []
 
     for (var wi = 0; wi < wsRefs.length; wi++) {
       (function(wRef) {
-        var wsPlaceholder = {
+        var ws = {
           id: wRef.id,
-          name: wRef.name,
-          tags: [],
-          members: [],
+          name: wRef.name || 'Workspace',
+          tags: wRef.tags || [],
+          members: (wRef.members || []).map(function(m) {
+            return { id: m.id, name: m.name, avatar: m.avatar || '' }
+          }),
           projects: [],
           _loadError: false
+        }
+
+        var projectRefs = wRef.projects || []
+        for (var pi = 0; pi < projectRefs.length; pi++) {
+          var pRef = projectRefs[pi]
+          var pDirHandle = _projectDirHandles[pRef.id]
+          ws.projects.push({
+            id: pRef.id,
+            name: pRef.name,
+            color: pRef.color || null,
+            path: pRef.path || '',
+            boards: [],
+            documents: [],
+            canvasBoards: [],
+            _loadError: !pDirHandle
+          })
+        }
+
+        if (ws.members.length > 0) {
+          avatarPreloads.push(preloadMemberAvatars(ws.members))
         }
 
         var fileHandle = _workspaceFileHandles[wRef.id]
@@ -533,23 +566,55 @@ function loadAllFromUser() {
           wsLoadPromises.push(
             loadWorkspaceFromFile(fileHandle).then(function(loaded) {
               if (loaded) {
-                wsPlaceholder.tags = loaded.tags || []
-                wsPlaceholder.members = loaded.members || []
-                wsPlaceholder.projects = loaded.projects || []
+                ws.tags = loaded.tags || []
+                ws.members = loaded.members || []
+                for (var lpi = 0; lpi < (loaded.projects || []).length; lpi++) {
+                  var lp = loaded.projects[lpi]
+                  var existing = ws.projects.find(function(x) { return x.id === lp.id })
+                  if (existing) {
+                    existing.boards = lp.boards || []
+                    existing.documents = lp.documents || []
+                    existing.canvasBoards = lp.canvasBoards || []
+                    existing._loadError = lp._loadError || false
+                  } else {
+                    ws.projects.push(lp)
+                  }
+                }
               }
-            }).catch(function() {
-              wsPlaceholder._loadError = true
-            })
+            }).catch(function() {})
           )
-        } else {
-          wsPlaceholder._loadError = true
         }
 
-        data.workspaces.push(wsPlaceholder)
+        data.workspaces.push(ws)
       })(wsRefs[wi])
     }
 
     return Promise.all(wsLoadPromises).then(function() {
+      return Promise.all(avatarPreloads)
+    }).then(function() {
+      var projectLoadPromises = []
+      for (var wi3 = 0; wi3 < data.workspaces.length; wi3++) {
+        var ws3 = data.workspaces[wi3]
+        for (var pj = 0; pj < ws3.projects.length; pj++) {
+          (function(project) {
+            if (project.boards.length === 0 && !project._loadError && _projectDirHandles[project.id]) {
+              projectLoadPromises.push(
+                loadProjectFromDir(_projectDirHandles[project.id]).then(function(loaded) {
+                  if (loaded) {
+                    project.boards = loaded.boards || []
+                    project.documents = loaded.documents || []
+                    project.canvasBoards = loaded.canvasBoards || []
+                  }
+                }).catch(function() {
+                  project._loadError = true
+                })
+              )
+            }
+          })(ws3.projects[pj])
+        }
+      }
+      return Promise.all(projectLoadPromises)
+    }).then(function() {
       var allIds = []
       for (var wi2 = 0; wi2 < data.workspaces.length; wi2++) {
         var ws2 = data.workspaces[wi2]

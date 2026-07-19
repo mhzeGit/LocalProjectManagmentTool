@@ -1,20 +1,20 @@
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.topbar { padding: 8px 24px; background: var(--bg-topbar); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.topbar { padding: 8px 12px; background: var(--bg-topbar); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 .topbar-left { display: flex; align-items: center; gap: 12px; }
 .topbar-select { padding: 6px 10px; background: var(--bg-panel-alt); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; cursor: pointer; }
 .topbar-select:hover { border-color: var(--accent); }
 .topbar-select:focus { outline: none; border-color: var(--accent); }
 .topbar-select option { background: var(--bg-panel-alt); color: var(--text-secondary); }
-.breadcrumb { font-size: 13px; color: var(--text-secondary); }
+.breadcrumb { font-size: 14px; color: var(--text-secondary); }
 .breadcrumb span { margin: 0 4px; }
 .bc-link { cursor: pointer; color: var(--text-secondary); }
 .bc-link:hover { color: var(--text-primary); text-decoration: underline; }
 
 .view-switcher { display: flex; gap: 2px; background: var(--bg-strong); border-radius: 6px; padding: 2px; }
-.view-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; color: var(--text-dim); border-radius: 4px; transition: background .15s, color .15s; }
+.view-btn { padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--text-dim); border-radius: 4px; transition: background .15s, color .15s; }
 .view-btn:hover { color: var(--text-secondary); }
-.view-btn.active { background: var(--bg-surface-hover); color: var(--text-primary); }
+.view-btn.active { background: var(--bg-surface-hover); color: var(--text-primary); font-weight: 700; }
 
 .board-area { flex: 1; padding: 24px; overflow-x: auto; overflow-y: auto; cursor: default; user-select: none; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); scrollbar-width: thin; }
 
@@ -133,7 +133,7 @@
 .page-view { padding: 0; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .page-header h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-.page-header-actions { display: flex; align-items: center; gap: 8px; }
+.page-header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .page-card { background: var(--bg-panel-alt); border-radius: 8px; padding: 28px; border: 1px solid var(--border); cursor: pointer; transition: border-color .15s, background .15s; }
 .page-card:hover { border-color: var(--accent); background: var(--bg-surface-hover); }

@@ -49,7 +49,11 @@ export function renderBoard() {
   const d = state.selectedDocumentId ? findDocument(state.selectedDocumentId) : null
 
   let bc = ''
-  if (w) bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span> <span>›</span> <span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
+  if (!w) {
+    bc = '<span>Workspaces</span>'
+  } else {
+    bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span> <span>›</span> <span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
+  }
   if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
   if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
   if (d) bc += ` <span>›</span> <span class="bc-link" onclick="selectDocument('${d.id}')">${d.name}</span>`
@@ -100,12 +104,11 @@ export function renderBoard() {
   }
 
   if (!w && data.workspaces.length === 0 && saveMode === 'user') {
-    if (topbarEl) topbarEl.style.display = 'none'
+    if (topbarEl) topbarEl.style.display = ''
     destroyEditor()
     area.innerHTML =
       '<div class="page-view">' +
-      '<div class="page-header"><h2>Workspaces</h2>' +
-      '<div class="page-header-actions">' +
+      '<div class="page-header"><div class="page-header-actions">' +
       '<button class="btn-create" onclick="createWorkspaceInUser()">+ Create Workspace</button>' +
       '<button class="btn-secondary" onclick="addExistingWorkspace()">Add Workspace</button>' +
       '</div></div>' +
@@ -115,7 +118,7 @@ export function renderBoard() {
   }
 
   if (!w && data.workspaces.length > 0 && saveMode === 'user') {
-    if (topbarEl) topbarEl.style.display = 'none'
+    if (topbarEl) topbarEl.style.display = ''
     destroyEditor()
     renderWorkspacesPage(area)
     return
@@ -345,17 +348,11 @@ export function renderBoard() {
 }
 
 function renderWorkspacesPage(area) {
-  const topbarEl = document.querySelector('.topbar')
-  if (topbarEl) topbarEl.style.display = 'none'
-
   let html = '<div class="page-view">'
-  html += '<div class="page-header">'
-  html += '<h2>Workspaces</h2>'
-  html += '<div class="page-header-actions">'
+  html += '<div class="page-header"><div class="page-header-actions">'
   html += '<button class="btn-create" onclick="createWorkspaceInUser()">+ Create Workspace</button>'
   html += '<button class="btn-secondary" onclick="addExistingWorkspace()">Add Workspace</button>'
-  html += '</div>'
-  html += '</div>'
+  html += '</div></div>'
 
   if (data.workspaces.length === 0) {
     html += '<div class="empty-state"><p>No workspaces yet.</p></div>'
@@ -385,13 +382,10 @@ function renderWorkspacesPage(area) {
 
 function renderWorkspacePage(area, w) {
   let html = '<div class="page-view" oncontextmenu="showWsCtxMenu(event,\'' + w.id + '\')">'
-  html += '<div class="page-header">'
-  html += '<h2>Projects</h2>'
-  html += '<div class="page-header-actions">'
+  html += '<div class="page-header"><div class="page-header-actions">'
   html += '<button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button>'
   html += '<button class="btn-secondary" onclick="window.locateExistingProjectInWorkspace(\'' + w.id + '\')" title="Load an existing project from its folder">Locate Project</button>'
-  html += '</div>'
-  html += '</div>'
+  html += '</div></div>'
   if (w.projects.length === 0) {
     html += '<div class="empty-state"><p>No projects yet. Create a new project or locate an existing one.</p></div>'
   } else {

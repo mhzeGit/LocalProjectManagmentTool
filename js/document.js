@@ -79,7 +79,7 @@ export async function renderDocument(documentId) {
 
   let html = '<div class="document-editor">'
   html += '  <div class="document-header">'
-  html += '    <h2 class="document-title" id="docTitle-' + doc.id + '" ondblclick="startRenameDocument(\'' + doc.id + '\')">' + doc.name + '</h2>'
+  html += '    <h2 class="document-title" id="docTitle-' + doc.id + '" style="display:none" ondblclick="startRenameDocument(\'' + doc.id + '\')">' + doc.name + '</h2>'
   html += '  </div>'
   html += '  <div class="editor-toolbar" id="toolbar-' + doc.id + '">'
   html += '    <div class="editor-toolbar-group">'
