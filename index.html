@@ -23,36 +23,34 @@
 
 <div class="menubar" id="menubar"></div>
 
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="breadcrumb" id="breadcrumb"></span>
+  </div>
+  <div class="topbar-right">
+
+    <div class="board-io hidden" id="boardIO">
+      <button class="btn-board-io" onclick="exportBoardCSV()" title="Export all tasks on this board as CSV"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+      <button class="btn-board-io" onclick="importBoardCSV()" title="Import tasks from a CSV file into the first column"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+    </div>
+    <div class="view-switcher">
+      <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
+      <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
+      <button class="view-btn" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
+      <button class="view-btn" data-view="list" onclick="switchView('list')">List</button>
+    </div>
+    <div id="memberBar"></div>
+  </div>
+</div>
+
 <div class="app-body">
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <span class="sidebar-title" id="sidebarTitle">Task Board</span>
-  </div>
   <div class="sidebar-section" id="sidebarContent">
     <div class="sidebar-hint">Select a project to view boards</div>
   </div>
 </aside>
 
 <div class="main">
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="breadcrumb" id="breadcrumb"></span>
-    </div>
-    <div class="topbar-right">
-
-      <div class="board-io hidden" id="boardIO">
-        <button class="btn-board-io" onclick="exportBoardCSV()" title="Export all tasks on this board as CSV"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
-        <button class="btn-board-io" onclick="importBoardCSV()" title="Import tasks from a CSV file into the first column"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-      </div>
-      <div class="view-switcher">
-        <button class="view-btn active" data-view="kanban" onclick="switchView('kanban')">Kanban</button>
-        <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">Timeline</button>
-        <button class="view-btn" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
-        <button class="view-btn" data-view="list" onclick="switchView('list')">List</button>
-      </div>
-      <div id="memberBar"></div>
-    </div>
-  </div>
   <div id="filterBar" class="hidden"></div>
   <div class="board-area" id="boardArea">
     <div class="empty-state">

@@ -49,17 +49,17 @@ export function renderBoard() {
   const d = state.selectedDocumentId ? findDocument(state.selectedDocumentId) : null
 
   let bc = ''
-  if (!w) {
-    bc = '<span>Workspaces</span>'
-  } else {
-    bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span> <span>›</span> <span class="bc-link" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
-  }
-  if (p) bc += ` <span>›</span> <span class="bc-link" onclick="selectProject('${p.id}')">${p.name}</span>`
-  if (b) bc += ` <span>›</span> <span class="bc-link" onclick="selectBoard('${b.id}')">${b.name}</span>`
-  if (d) bc += ` <span>›</span> <span class="bc-link" onclick="selectDocument('${d.id}')">${d.name}</span>`
   const canvasBoard = state.selectedCanvasId ? findCanvas(state.selectedCanvasId) : null
-  if (canvasBoard) bc += ` <span>›</span> <span class="bc-link" onclick="selectCanvas('${canvasBoard.id}')">${canvasBoard.name}</span>`
-  if (state.selectedDashboard) bc += ` <span>›</span> <span>Dashboard</span>`
+  if (!w) {
+    bc = '<span class="bc-current">Workspaces</span>'
+  } else {
+    bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span> <span>›</span> <span class="bc-link${!p && !b && !d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
+  }
+  if (p) bc += ` <span>›</span> <span class="bc-link${!b && !d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectProject('${p.id}')">${p.name}</span>`
+  if (b) bc += ` <span>›</span> <span class="bc-link${!d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectBoard('${b.id}')">${b.name}</span>`
+  if (d) bc += ` <span>›</span> <span class="bc-link${!canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectDocument('${d.id}')">${d.name}</span>`
+  if (canvasBoard) bc += ` <span>›</span> <span class="bc-link${!state.selectedDashboard ? ' bc-current' : ''}" onclick="selectCanvas('${canvasBoard.id}')">${canvasBoard.name}</span>`
+  if (state.selectedDashboard) bc += ` <span>›</span> <span class="bc-current">Dashboard</span>`
   breadcrumb.innerHTML = bc
 
   const canvasActive = state.selectedCanvasId !== null

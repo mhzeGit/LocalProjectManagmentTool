@@ -13,18 +13,6 @@ export function render() {
     sidebarEl.classList.add('hidden')
   }
 
-  const title = document.getElementById('sidebarTitle')
-  if (state.selectedProjectId && state.selectedWorkspaceId) {
-    const p = findProject(state.selectedProjectId)
-    title.textContent = p ? p.name : 'Select a project'
-    title.onclick = function() { selectWorkspace(state.selectedWorkspaceId) }
-    title.classList.add('clickable')
-  } else {
-    title.textContent = 'Task Board'
-    title.onclick = null
-    title.classList.remove('clickable')
-  }
-
   const sidebar = document.getElementById('sidebarContent')
 
   if (!state.selectedProjectId) {
@@ -44,8 +32,9 @@ export function render() {
     return
   }
 
+  let html = '<div class="sidebar-project-name">' + p.name + '</div>'
   const dashActive = state.selectedDashboard ? ' active' : ''
-  let html = `<div class="nav-child${dashActive}" onclick="selectDashboard()">
+  html += `<div class="nav-child${dashActive}" onclick="selectDashboard()">
     <span class="name">Dashboard</span>
   </div>`
   html += '<div class="section-title" style="margin-top:12px"><span>Task Boards</span><span class="btn-add-board" onclick="toggleAddBoardMenu(event,\'' + p.id + '\')">+</span></div>'

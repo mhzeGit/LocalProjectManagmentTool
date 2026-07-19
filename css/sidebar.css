@@ -1,9 +1,6 @@
 .sidebar { width: 260px; min-width: 260px; background: var(--bg-sidebar); color: var(--text-secondary); display: flex; flex-direction: column; }
 .sidebar.hidden { display: none; }
-.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
-.sidebar-title { font-size: 16px; font-weight: 600; color: var(--text-bright); }
-.sidebar-title.clickable { cursor: pointer; }
-.sidebar-title.clickable:hover { color: var(--accent); }
+.sidebar-project-name { font-size: 15px; font-weight: 700; color: var(--text-bright); padding: 12px 16px; border-bottom: 1px solid var(--border); }
 .btn-add { background: var(--accent); color: var(--text-white); padding: 4px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; }
 .btn-add:hover { background: var(--accent-hover); }
 .btn-del { background: none; color: var(--danger); font-size: 12px; padding: 2px 6px; border-radius: 3px; margin-left: auto; opacity: 0; transition: opacity .15s; }
