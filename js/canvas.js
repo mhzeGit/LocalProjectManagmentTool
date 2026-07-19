@@ -708,7 +708,7 @@ export function renderCanvasView(canvasId) {
     isSelectingBox:false, boxStartX:0,boxStartY:0,boxEndX:0,boxEndY:0,
     lastWorldMouse:{x:0,y:0},
     nextTextBoxId:_canvasData.nextTextBoxId||1, nextShapeId:_canvasData.nextShapeId||1, nextArrowId:_canvasData.nextArrowId||1, nextConnectorId:_canvasData.nextConnectorId||1, nextConnectionId:_canvasData.nextConnectionId||1,
-    clipboard:[], inlineEditState:null, rmbDownTime:0, rmbMoved:false, rmbPending:false,
+    clipboard:[], _dragState:[], inlineEditState:null, rmbDownTime:0, rmbMoved:false, rmbPending:false,
   }
   _ctx=_ui.mainCanvas.getContext('2d'); _arrowCtx=_ui.arrowCanvas.getContext('2d')
 
@@ -751,7 +751,7 @@ function buildToolbar(canvasId) {
   return sideToolbar
 }
 
-function setActiveTool(tool) { _ui.activeTool=tool; _ui.canvasArea.style.cursor=tool===TOOLS.CURSOR?'default':'crosshair'; updateToolUI() }
+function setActiveTool(tool) { _ui.activeTool=tool; _ui.canvasArea.style.cursor=tool===TOOLS.CURSOR?'default':'crosshair'; _ui.isDrawing=false; _ui.drawingPreview=null; _ui._tbDragIdx=undefined; _ui._tbDragOrig=undefined; _ui._shapeDragIdx=undefined; _ui._shapeDragOrig=undefined; updateToolUI() }
 function setShapeSubType(type) { _ui.shapeSubType=type }
 function updateToolUI() {
   if (!_ui||!_ui.sideToolbar) return
@@ -780,7 +780,7 @@ function onPointerDown(e) {
 
   if (_ui.activeTool===TOOLS.SHAPES) {
     const defW=120, defH=80
-    const shape={id:_ui.nextShapeId++,shapeType:_ui.shapeSubType||'rectangle',x:wx-defW/2,y:wy-defH/2,w:defW,h:defH,color:'#2b2b2b',borderColor:getAccentColor(),borderWidth:2,cornerRadius:4,image:null,locked:false}
+    const shape={id:_ui.nextShapeId++,shapeType:_ui.shapeSubType||'rectangle',x:wx,y:wy,w:defW,h:defH,color:'#2b2b2b',borderColor:getAccentColor(),borderWidth:2,cornerRadius:4,image:null,locked:false}
     const idx=_canvasData.shapes.length
     _canvasData.shapes.push(shape)
     _parentTree.register('shape',shape.id,shape)
@@ -788,7 +788,7 @@ function onPointerDown(e) {
     _ui.selectedShapes.add(idx)
     _ui.drawingStartX=wx; _ui.drawingStartY=wy
     _ui._shapeDragIdx=idx
-    _ui._shapeDragOrig={x:shape.x,y:shape.y,w:defW,h:defH}
+    _ui._shapeDragOrig={x:wx,y:wy,w:defW,h:defH}
     _ui.isDrawing=true
     _ui.canvasArea.setPointerCapture(e.pointerId)
     return
@@ -796,7 +796,7 @@ function onPointerDown(e) {
 
   if (_ui.activeTool===TOOLS.IMAGE_CONTAINER) {
     const defW=280, defH=220
-    const shape={id:_ui.nextShapeId++,shapeType:'rectangle',x:wx-defW/2,y:wy-defH/2,w:defW,h:defH,color:'#1e1e1e',borderColor:'#3a3a3a',borderWidth:1,cornerRadius:8,image:null,locked:false}
+    const shape={id:_ui.nextShapeId++,shapeType:'rectangle',x:wx,y:wy,w:defW,h:defH,color:'#1e1e1e',borderColor:'#3a3a3a',borderWidth:1,cornerRadius:8,image:null,locked:false}
     const idx=_canvasData.shapes.length
     _canvasData.shapes.push(shape)
     _parentTree.register('shape',shape.id,shape)
@@ -804,7 +804,7 @@ function onPointerDown(e) {
     _ui.selectedShapes.add(idx)
     _ui.drawingStartX=wx; _ui.drawingStartY=wy
     _ui._shapeDragIdx=idx
-    _ui._shapeDragOrig={x:shape.x,y:shape.y,w:defW,h:defH}
+    _ui._shapeDragOrig={x:wx,y:wy,w:defW,h:defH}
     _ui.isDrawing=true
     _ui.canvasArea.setPointerCapture(e.pointerId)
     return
@@ -844,6 +844,11 @@ function onPointerDown(e) {
     else if (hit.type==='arrow') _ui.selectedArrows.add(hit.i)
     else if (hit.type==='connector') _ui.selectedConnectors.add(hit.i)
     else if (hit.type==='connection') _ui.selectedConnection=hit.i
+    if (_ui.isDragging) {
+      _ui._dragState=[]
+      for (const idx of _ui.selectedTextBoxes) _ui._dragState.push({t:'tb',i:idx,sx:_canvasData.textBoxes[idx].x,sy:_canvasData.textBoxes[idx].y})
+      for (const idx of _ui.selectedShapes) _ui._dragState.push({t:'sh',i:idx,sx:_canvasData.shapes[idx].x,sy:_canvasData.shapes[idx].y})
+    }
     updateSidePanel(); return
   }
 
@@ -855,7 +860,7 @@ function onPointerMove(e) {
   if (_ui.rmbPending&&(Math.abs(sx-_ui.dragStartX)>3||Math.abs(sy-_ui.dragStartY)>3)) _ui.rmbMoved=true
   if (_ui.isPanning) { const dx=sx-_ui.lastPanX, dy=sy-_ui.lastPanY; _ui.targetOffsetX+=dx; _ui.targetOffsetY+=dy; _ui.lastPanX=sx; _ui.lastPanY=sy; return }
   if (_ui.isResizing) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale, b=_ui.resizeStartBounds; if(!b)return; const h=_ui.resizeHandle; let nx=b.x,ny=b.y,nw=b.w,nh=b.h; if(h.includes('l')){nx=b.x+dx;nw=b.w-dx} if(h.includes('r'))nw=b.w+dx; if(h.includes('t')){ny=b.y+dy;nh=b.h-dy} if(h.includes('b'))nh=b.h+dy; if(nw<20){if(h.includes('l'))nx=b.x+b.w-20;nw=20} if(nh<20){if(h.includes('t'))ny=b.y+b.h-20;nh=20}; const entity=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx]; if(entity){entity.x=nx;entity.y=ny;entity.w=nw;entity.h=nh}; return }
-  if (_ui.isDragging) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale; for(const idx of _ui.selectedTextBoxes){ const tb=_canvasData.textBoxes[idx], s=getDragStart(idx,'textBox'); if(s){tb.x=s.x+dx;tb.y=s.y+dy} }; for(const idx of _ui.selectedShapes){ const sh=_canvasData.shapes[idx], s=getDragStart(idx,'shape'); if(s){sh.x=s.x+dx;sh.y=s.y+dy} }; return }
+  if (_ui.isDragging) { const dx=(sx-_ui.dragStartX)/_ui.scale, dy=(sy-_ui.dragStartY)/_ui.scale; for(const item of _ui._dragState){ const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i]; if(e){e.x=item.sx+dx;e.y=item.sy+dy} }; return }
   if (_ui.isDraggingArrowEnd&&_ui.arrowDragTarget!==null) { const a=_canvasData.arrows[_ui.arrowDragTarget]; if(a){ const snap=_ui.dragArrowEndSnapshot, fd=Math.hypot(wx-snap.x1,wy-snap.y1), td=Math.hypot(wx-snap.x2,wy-snap.y2); if(fd<td){a.x1=wx;a.y1=wy}else{a.x2=wx;a.y2=wy} }; return }
   if (_ui.connectingFrom!==null&&(_ui.activeTool===TOOLS.ARROW||_ui.activeTool===TOOLS.CONNECTION_LINE)) { _ui.connectingMouseWorld={x:wx,y:wy}; return }
   if (_ui.isDrawing) {
@@ -1000,13 +1005,13 @@ function onKeyDown(e) {
 }
 
 /* ─── Drag/Resize Helpers ─── */
-const _dragStarts={}
-function getDragStart(idx,type) { const key=type+'_'+idx; if(!_dragStarts[key]){const e=type==='textBox'?_canvasData.textBoxes[idx]:_canvasData.shapes[idx];if(e)_dragStarts[key]={x:e.x,y:e.y}}; return _dragStarts[key] }
 function finishDrag() {
   _ui.isDragging=false; const moves=[]
-  for (const idx of _ui.selectedTextBoxes) { const s=getDragStart(idx,'textBox'), tb=_canvasData.textBoxes[idx]; if(s&&(s.x!==tb.x||s.y!==tb.y)) moves.push({id:tb.id,fromX:s.x,fromY:s.y,toX:tb.x,toY:tb.y,type:'textBox'}) }
-  for (const idx of _ui.selectedShapes) { const s=getDragStart(idx,'shape'), sh=_canvasData.shapes[idx]; if(s&&(s.x!==sh.x||s.y!==sh.y)) moves.push({id:sh.id,fromX:s.x,fromY:s.y,toX:sh.x,toY:sh.y,type:'shape'}) }
-  if (moves.length>0) _history.push(createMoveCmd(moves)); _dragStarts={}; saveData()
+  for (const item of _ui._dragState) {
+    const e=item.t==='tb'?_canvasData.textBoxes[item.i]:_canvasData.shapes[item.i]
+    if (e&&(item.sx!==e.x||item.sy!==e.y)) moves.push({id:e.id,fromX:item.sx,fromY:item.sy,toX:e.x,toY:e.y,type:item.t==='tb'?'textBox':'shape'})
+  }
+  if (moves.length>0) _history.push(createMoveCmd(moves)); _ui._dragState=[]; saveData()
 }
 function finishResize() {
   _ui.isResizing=false; const entity=_ui.resizeEntityType==='textBox'?_canvasData.textBoxes[_ui.resizeEntityIdx]:_canvasData.shapes[_ui.resizeEntityIdx]
