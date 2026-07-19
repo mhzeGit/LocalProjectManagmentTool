@@ -268,14 +268,14 @@ function hitTestShape(shape, wx, wy) {
 }
 function hitTestTextBox(wx, wy) {
   for (let i=_canvasData.textBoxes.length-1; i>=0; i--) {
-    const tb=_canvasData.textBoxes[i]; if (tb.locked) continue
+    const tb=_canvasData.textBoxes[i]
     if (wx>=tb.x&&wx<=tb.x+tb.w&&wy>=tb.y&&wy<=tb.y+tb.h) return i
   }
   return -1
 }
 function hitTestShapeEntity(wx, wy) {
   for (let i=_canvasData.shapes.length-1; i>=0; i--) {
-    const s=_canvasData.shapes[i]; if (s.locked) continue
+    const s=_canvasData.shapes[i]
     if (hitTestShape(s, wx, wy)) return i
   }
   return -1
@@ -839,8 +839,8 @@ function onPointerDown(e) {
   if (hit&&hit.type==='arrow') { const a=_canvasData.arrows[hit.i]; const ed=Math.min(Math.hypot(wx-a.x1,wy-a.y1),Math.hypot(wx-a.x2,wy-a.y2)); if(ed<12){ _ui.arrowDragTarget=hit.i; _ui.isDraggingArrowEnd=true; _ui.dragArrowEndSnapshot={...a}; return } }
   if (hit) {
     if (!e.shiftKey&&!e.ctrlKey) clearSelection()
-    if (hit.type==='textBox') { if(e.ctrlKey){if(_ui.selectedTextBoxes.has(hit.i))_ui.selectedTextBoxes.delete(hit.i);else _ui.selectedTextBoxes.add(hit.i)}else{_ui.selectedTextBoxes.add(hit.i)}; _ui.isDragging=true }
-    else if (hit.type==='shape') { if(e.ctrlKey){if(_ui.selectedShapes.has(hit.i))_ui.selectedShapes.delete(hit.i);else _ui.selectedShapes.add(hit.i)}else{_ui.selectedShapes.add(hit.i)}; _ui.isDragging=true }
+    if (hit.type==='textBox') { if(e.ctrlKey){if(_ui.selectedTextBoxes.has(hit.i))_ui.selectedTextBoxes.delete(hit.i);else _ui.selectedTextBoxes.add(hit.i)}else{_ui.selectedTextBoxes.add(hit.i)}; _ui.isDragging=!_canvasData.textBoxes[hit.i].locked }
+    else if (hit.type==='shape') { if(e.ctrlKey){if(_ui.selectedShapes.has(hit.i))_ui.selectedShapes.delete(hit.i);else _ui.selectedShapes.add(hit.i)}else{_ui.selectedShapes.add(hit.i)}; _ui.isDragging=!_canvasData.shapes[hit.i].locked }
     else if (hit.type==='arrow') _ui.selectedArrows.add(hit.i)
     else if (hit.type==='connector') _ui.selectedConnectors.add(hit.i)
     else if (hit.type==='connection') _ui.selectedConnection=hit.i
@@ -1048,16 +1048,16 @@ function openContextMenu(e) {
     items.push(makeCtxItem('Copy',()=>copySelection(),'Ctrl+C'))
     if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
     items.push(makeCtxItem('Connect to...',()=>{_ui.connectingFrom=hit.i;_ui.activeTool=TOOLS.CONNECTION_LINE;updateToolUI()}))
-    items.push(makeCtxItem('Lock',()=>toggleLock('textBox',hit.i)))
-    items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
+    items.push(makeCtxItem(_canvasData.textBoxes[hit.i].locked?'Unlock':'Lock',()=>toggleLock('textBox',hit.i)))
     items.push(buildSortSubmenu())
+    items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
   } else if (hit&&hit.type==='shape') {
     items.push(makeCtxItem('Duplicate',()=>duplicateSelection(),'Ctrl+D'))
     items.push(makeCtxItem('Copy',()=>copySelection(),'Ctrl+C'))
     if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt(),'Ctrl+V'))
-    items.push(makeCtxItem('Lock',()=>toggleLock('shape',hit.i)))
-    items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
+    items.push(makeCtxItem(_canvasData.shapes[hit.i].locked?'Unlock':'Lock',()=>toggleLock('shape',hit.i)))
     items.push(buildSortSubmenu())
+    items.push(makeCtxItem('Delete',()=>deleteSelected(),null,true))
   } else if (hit&&hit.type==='arrow') {
     items.push(makeCtxItem('Lock',()=>toggleLock('arrow',hit.i)))
     items.push(makeCtxItem('Delete Arrow',()=>deleteSelected(),null,true))
