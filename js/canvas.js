@@ -332,7 +332,7 @@ function getTopHitAt(wx, wy) {
   return null
 }
 function getEdgeAt(wx, wy, entities, margin) {
-  margin=margin||8
+  margin=margin||(12/_ui.scale)
   for (let i=entities.length-1; i>=0; i--) {
     const e=entities[i]; if (e.locked) continue
     const ol=Math.abs(wx-e.x)<=margin, or2=Math.abs(wx-(e.x+e.w))<=margin
@@ -985,6 +985,10 @@ function onKeyDown(e) {
     if (e.key==='d') { e.preventDefault(); duplicateSelection(); return }
     if (e.key==='s'&&e.shiftKey) { e.preventDefault(); if(window.__saveAs)window.__saveAs(); return }
     if (e.key==='s') { e.preventDefault(); if(window.__save)window.__save(); return }
+    if (e.key===']'&&!e.shiftKey) { e.preventDefault(); bringForward(); return }
+    if (e.key==='['&&!e.shiftKey) { e.preventDefault(); sendBackward(); return }
+    if (e.key===']'&&e.shiftKey) { e.preventDefault(); bringToFront(); return }
+    if (e.key==='['&&e.shiftKey) { e.preventDefault(); sendToBack(); return }
     return
   }
   if (e.key==='Delete'||e.key==='Backspace') { e.preventDefault(); deleteSelected(); return }
@@ -1049,10 +1053,12 @@ function openContextMenu(e) {
     if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt()))
     items.push(makeCtxItem('Connect to...',()=>{_ui.connectingFrom=hit.i;_ui.activeTool=TOOLS.CONNECTION_LINE;updateToolUI()}))
     items.push(makeCtxItem('Lock',()=>toggleLock('textBox',hit.i))); items.push(makeCtxItem('Delete',()=>deleteSelected()))
+    items.push(buildSortSubmenu())
   } else if (hit&&hit.type==='shape') {
     items.push(makeCtxItem('Duplicate',()=>duplicateSelection())); items.push(makeCtxItem('Copy',()=>copySelection()))
     if (_ui.clipboard.length>0) items.push(makeCtxItem('Paste',()=>pasteAt()))
     items.push(makeCtxItem('Lock',()=>toggleLock('shape',hit.i))); items.push(makeCtxItem('Delete',()=>deleteSelected()))
+    items.push(buildSortSubmenu())
   } else if (hit&&hit.type==='arrow') {
     items.push(makeCtxItem('Lock',()=>toggleLock('arrow',hit.i))); items.push(makeCtxItem('Delete Arrow',()=>deleteSelected()))
   } else if (hit&&hit.type==='connector') {
@@ -1082,6 +1088,16 @@ function buildAddSubmenu(wx,wy,hit) {
   shapeItems.appendChild(makeCtxItem('Diamond',()=>addShapeAtCenter(wx,wy,'diamond')))
   shapeSub.appendChild(shapeItems); sub.appendChild(shapeSub)
   sub.appendChild(makeCtxItem('Image Container',()=>addImageContainer(wx,wy)))
+  wrap.appendChild(btn); wrap.appendChild(sub); return wrap
+}
+function buildSortSubmenu() {
+  const wrap=document.createElement('div'); wrap.className='context-submenu-trigger'
+  const btn=document.createElement('button'); btn.className='context-item has-submenu'; btn.innerHTML='<span>Sort</span><span class="submenu-arrow">\u25b8</span>'
+  const sub=document.createElement('div'); sub.className='context-submenu'
+  sub.appendChild(makeCtxItem('Bring to Front',()=>bringToFront()))
+  sub.appendChild(makeCtxItem('Send to Back',()=>sendToBack()))
+  sub.appendChild(makeCtxItem('Bring Forward',()=>bringForward()))
+  sub.appendChild(makeCtxItem('Send Backward',()=>sendBackward()))
   wrap.appendChild(btn); wrap.appendChild(sub); return wrap
 }
 function makeCtxItem(label, onClick) { const el=document.createElement('button'); el.className='context-item'; el.textContent=label; el.addEventListener('click',()=>{onClick();closeContextMenu()}); return el }
@@ -1134,6 +1150,142 @@ function startConnectionEdit(idx) {
   _ui.entityLayer.appendChild(el); el.focus(); el.select()
   el.addEventListener('blur',()=>{ if(el.value!==origText){ conn.text=el.value; _history.push({undo(){conn.text=origText},redo(){conn.text=el.value},description:'Edit Connection Text'}) }; el.remove(); updateSidePanel() })
   el.addEventListener('keydown',e=>{ if(e.key==='Enter')el.blur(); if(e.key==='Escape'){conn.text=origText;el.blur();el.remove();updateSidePanel()} })
+}
+
+/* ─── Sort / Reorder ─── */
+function bringToFront() {
+  if (_ui.selectedTextBoxes.size === 0 && _ui.selectedShapes.size === 0) return
+  const tbSnapshot = _canvasData.textBoxes.slice()
+  const shSnapshot = _canvasData.shapes.slice()
+  const tbSel = Array.from(_ui.selectedTextBoxes).sort((a, b) => a - b)
+  const shSel = Array.from(_ui.selectedShapes).sort((a, b) => a - b)
+  if (tbSel.length > 0) {
+    const items = tbSel.map(i => _canvasData.textBoxes[i])
+    for (let i = tbSel.length - 1; i >= 0; i--) _canvasData.textBoxes.splice(tbSel[i], 1)
+    _canvasData.textBoxes.push(...items)
+  }
+  if (shSel.length > 0) {
+    const items = shSel.map(i => _canvasData.shapes[i])
+    for (let i = shSel.length - 1; i >= 0; i--) _canvasData.shapes.splice(shSel[i], 1)
+    _canvasData.shapes.push(...items)
+  }
+  const selIds = new Set()
+  for (const idx of tbSel) selIds.add('tb:' + tbSnapshot[idx].id)
+  for (const idx of shSel) selIds.add('sh:' + shSnapshot[idx].id)
+  _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear()
+  for (let i = 0; i < _canvasData.textBoxes.length; i++) { if (selIds.has('tb:' + _canvasData.textBoxes[i].id)) _ui.selectedTextBoxes.add(i) }
+  for (let i = 0; i < _canvasData.shapes.length; i++) { if (selIds.has('sh:' + _canvasData.shapes[i].id)) _ui.selectedShapes.add(i) }
+  _history.push({
+    undo() { _canvasData.textBoxes = tbSnapshot; _canvasData.shapes = shSnapshot; _ui.selectedTextBoxes = new Set(tbSel); _ui.selectedShapes = new Set(shSel); saveData(); updateSidePanel() },
+    redo() {
+      if (tbSel.length > 0) { const its = tbSel.map(i => _canvasData.textBoxes[i]); for (let i = tbSel.length - 1; i >= 0; i--) _canvasData.textBoxes.splice(tbSel[i], 1); _canvasData.textBoxes.push(...its) }
+      if (shSel.length > 0) { const its = shSel.map(i => _canvasData.shapes[i]); for (let i = shSel.length - 1; i >= 0; i--) _canvasData.shapes.splice(shSel[i], 1); _canvasData.shapes.push(...its) }
+      _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear()
+      for (let i = 0; i < _canvasData.textBoxes.length; i++) { if (selIds.has('tb:' + _canvasData.textBoxes[i].id)) _ui.selectedTextBoxes.add(i) }
+      for (let i = 0; i < _canvasData.shapes.length; i++) { if (selIds.has('sh:' + _canvasData.shapes[i].id)) _ui.selectedShapes.add(i) }
+      saveData(); updateSidePanel()
+    },
+    description: 'Bring to Front'
+  })
+  saveData(); updateSidePanel()
+}
+function sendToBack() {
+  if (_ui.selectedTextBoxes.size === 0 && _ui.selectedShapes.size === 0) return
+  const tbSnapshot = _canvasData.textBoxes.slice()
+  const shSnapshot = _canvasData.shapes.slice()
+  const tbSel = Array.from(_ui.selectedTextBoxes).sort((a, b) => a - b)
+  const shSel = Array.from(_ui.selectedShapes).sort((a, b) => a - b)
+  if (tbSel.length > 0) {
+    const items = tbSel.map(i => _canvasData.textBoxes[i])
+    for (let i = tbSel.length - 1; i >= 0; i--) _canvasData.textBoxes.splice(tbSel[i], 1)
+    _canvasData.textBoxes.unshift(...items)
+  }
+  if (shSel.length > 0) {
+    const items = shSel.map(i => _canvasData.shapes[i])
+    for (let i = shSel.length - 1; i >= 0; i--) _canvasData.shapes.splice(shSel[i], 1)
+    _canvasData.shapes.unshift(...items)
+  }
+  const selIds = new Set()
+  for (const idx of tbSel) selIds.add('tb:' + tbSnapshot[idx].id)
+  for (const idx of shSel) selIds.add('sh:' + shSnapshot[idx].id)
+  _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear()
+  for (let i = 0; i < _canvasData.textBoxes.length; i++) { if (selIds.has('tb:' + _canvasData.textBoxes[i].id)) _ui.selectedTextBoxes.add(i) }
+  for (let i = 0; i < _canvasData.shapes.length; i++) { if (selIds.has('sh:' + _canvasData.shapes[i].id)) _ui.selectedShapes.add(i) }
+  _history.push({
+    undo() { _canvasData.textBoxes = tbSnapshot; _canvasData.shapes = shSnapshot; _ui.selectedTextBoxes = new Set(tbSel); _ui.selectedShapes = new Set(shSel); saveData(); updateSidePanel() },
+    redo() {
+      if (tbSel.length > 0) { const its = tbSel.map(i => _canvasData.textBoxes[i]); for (let i = tbSel.length - 1; i >= 0; i--) _canvasData.textBoxes.splice(tbSel[i], 1); _canvasData.textBoxes.unshift(...its) }
+      if (shSel.length > 0) { const its = shSel.map(i => _canvasData.shapes[i]); for (let i = shSel.length - 1; i >= 0; i--) _canvasData.shapes.splice(shSel[i], 1); _canvasData.shapes.unshift(...its) }
+      _ui.selectedTextBoxes.clear(); _ui.selectedShapes.clear()
+      for (let i = 0; i < _canvasData.textBoxes.length; i++) { if (selIds.has('tb:' + _canvasData.textBoxes[i].id)) _ui.selectedTextBoxes.add(i) }
+      for (let i = 0; i < _canvasData.shapes.length; i++) { if (selIds.has('sh:' + _canvasData.shapes[i].id)) _ui.selectedShapes.add(i) }
+      saveData(); updateSidePanel()
+    },
+    description: 'Send to Back'
+  })
+  saveData(); updateSidePanel()
+}
+function bringForward() {
+  if (_ui.selectedTextBoxes.size === 0 && _ui.selectedShapes.size === 0) return
+  const tbSnapshot = _canvasData.textBoxes.slice()
+  const shSnapshot = _canvasData.shapes.slice()
+  const tbSel = Array.from(_ui.selectedTextBoxes).sort((a, b) => b - a)
+  const shSel = Array.from(_ui.selectedShapes).sort((a, b) => b - a)
+  for (const idx of tbSel) {
+    if (idx < _canvasData.textBoxes.length - 1) {
+      [_canvasData.textBoxes[idx], _canvasData.textBoxes[idx + 1]] = [_canvasData.textBoxes[idx + 1], _canvasData.textBoxes[idx]]
+      _ui.selectedTextBoxes.delete(idx); _ui.selectedTextBoxes.add(idx + 1)
+    }
+  }
+  for (const idx of shSel) {
+    if (idx < _canvasData.shapes.length - 1) {
+      [_canvasData.shapes[idx], _canvasData.shapes[idx + 1]] = [_canvasData.shapes[idx + 1], _canvasData.shapes[idx]]
+      _ui.selectedShapes.delete(idx); _ui.selectedShapes.add(idx + 1)
+    }
+  }
+  _history.push({
+    undo() { _canvasData.textBoxes = tbSnapshot; _canvasData.shapes = shSnapshot; _ui.selectedTextBoxes = new Set(tbSel); _ui.selectedShapes = new Set(shSel); saveData(); updateSidePanel() },
+    redo() {
+      const rTbSel = Array.from(tbSel).sort((a, b) => b - a)
+      const rShSel = Array.from(shSel).sort((a, b) => b - a)
+      for (const idx of rTbSel) { if (idx < _canvasData.textBoxes.length - 1) { [_canvasData.textBoxes[idx], _canvasData.textBoxes[idx + 1]] = [_canvasData.textBoxes[idx + 1], _canvasData.textBoxes[idx]]; _ui.selectedTextBoxes.delete(idx); _ui.selectedTextBoxes.add(idx + 1) } }
+      for (const idx of rShSel) { if (idx < _canvasData.shapes.length - 1) { [_canvasData.shapes[idx], _canvasData.shapes[idx + 1]] = [_canvasData.shapes[idx + 1], _canvasData.shapes[idx]]; _ui.selectedShapes.delete(idx); _ui.selectedShapes.add(idx + 1) } }
+      saveData(); updateSidePanel()
+    },
+    description: 'Bring Forward'
+  })
+  saveData(); updateSidePanel()
+}
+function sendBackward() {
+  if (_ui.selectedTextBoxes.size === 0 && _ui.selectedShapes.size === 0) return
+  const tbSnapshot = _canvasData.textBoxes.slice()
+  const shSnapshot = _canvasData.shapes.slice()
+  const tbSel = Array.from(_ui.selectedTextBoxes).sort((a, b) => a - b)
+  const shSel = Array.from(_ui.selectedShapes).sort((a, b) => a - b)
+  for (const idx of tbSel) {
+    if (idx > 0) {
+      [_canvasData.textBoxes[idx], _canvasData.textBoxes[idx - 1]] = [_canvasData.textBoxes[idx - 1], _canvasData.textBoxes[idx]]
+      _ui.selectedTextBoxes.delete(idx); _ui.selectedTextBoxes.add(idx - 1)
+    }
+  }
+  for (const idx of shSel) {
+    if (idx > 0) {
+      [_canvasData.shapes[idx], _canvasData.shapes[idx - 1]] = [_canvasData.shapes[idx - 1], _canvasData.shapes[idx]]
+      _ui.selectedShapes.delete(idx); _ui.selectedShapes.add(idx - 1)
+    }
+  }
+  _history.push({
+    undo() { _canvasData.textBoxes = tbSnapshot; _canvasData.shapes = shSnapshot; _ui.selectedTextBoxes = new Set(tbSel); _ui.selectedShapes = new Set(shSel); saveData(); updateSidePanel() },
+    redo() {
+      const rTbSel = Array.from(_ui.selectedTextBoxes).sort((a, b) => a - b)
+      const rShSel = Array.from(_ui.selectedShapes).sort((a, b) => a - b)
+      for (const idx of rTbSel) { if (idx > 0) { [_canvasData.textBoxes[idx], _canvasData.textBoxes[idx - 1]] = [_canvasData.textBoxes[idx - 1], _canvasData.textBoxes[idx]]; _ui.selectedTextBoxes.delete(idx); _ui.selectedTextBoxes.add(idx - 1) } }
+      for (const idx of rShSel) { if (idx > 0) { [_canvasData.shapes[idx], _canvasData.shapes[idx - 1]] = [_canvasData.shapes[idx - 1], _canvasData.shapes[idx]]; _ui.selectedShapes.delete(idx); _ui.selectedShapes.add(idx - 1) } }
+      saveData(); updateSidePanel()
+    },
+    description: 'Send Backward'
+  })
+  saveData(); updateSidePanel()
 }
 
 /* ─── CRUD ─── */
