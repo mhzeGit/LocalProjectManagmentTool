@@ -1,5 +1,6 @@
 import { state, findBoard, findProject, findWorkspace, findDocument, findCanvas, getTagColor, PREDEFINED_COLORS } from './data.js'
-import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { getResolvedAvatar } from './persistence.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
 import { showColumnContextMenu } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
@@ -194,6 +195,21 @@ export function renderBoard() {
         const pct = total > 0 ? Math.round((done / total) * 100) : 0
         const allDone = total > 0 && done === total ? ' done' : ''
         html += '    <div class="card-cl-progress' + allDone + '"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
+      }
+      if (c.members && c.members.length > 0) {
+        let memberHtml = ''
+        for (const m of c.members) {
+          const mo = w && w.members ? w.members.find(wm => wm.name === m) : null
+          if (mo) {
+            const avatarUrl = getResolvedAvatar(mo)
+            if (avatarUrl) {
+              memberHtml += '<img class="card-member-avatar" src="' + avatarUrl + '">'
+            } else {
+              memberHtml += '<span class="card-member-avatar card-member-avatar-initials">' + getInitials(m) + '</span>'
+            }
+          }
+        }
+        if (memberHtml) html += '    <div class="card-members">' + memberHtml + '</div>'
       }
       html += '  </div>'
       html += '  <div class="card-priority">'

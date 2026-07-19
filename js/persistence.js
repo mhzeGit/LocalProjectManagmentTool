@@ -408,7 +408,9 @@ function reconstructProject(pMeta, allData) {
 /* ======== LOAD WORKSPACE FROM FILE ======== */
 
 function loadWorkspaceFromHandle(fileHandle) {
+  var _lastModified = Date.now()
   return fileHandle.getFile().then(function(file) {
+    _lastModified = file.lastModified || Date.now()
     return file.text()
   }).then(function(text) {
     var wsData = JSON.parse(text)
@@ -469,18 +471,19 @@ function loadWorkspaceFromHandle(fileHandle) {
       if (wsData.state) {
         var s = wsData.state
         if (s.selectedWorkspaceId !== undefined) state.selectedWorkspaceId = s.selectedWorkspaceId
-        if (s.selectedProjectId !== undefined) state.selectedProjectId = s.selectedProjectId
-        if (s.selectedBoardId !== undefined) state.selectedBoardId = s.selectedBoardId
-        if (s.selectedDocumentId !== undefined) state.selectedDocumentId = s.selectedDocumentId
-        if (s.selectedCanvasId !== undefined) state.selectedCanvasId = s.selectedCanvasId
-        if (s.selectedView !== undefined) state.selectedView = s.selectedView
         if (s.selfMemberId !== undefined) {
           state.selfMemberId = s.selfMemberId
           if (s.selfMemberId) {
             try { localStorage.setItem('kanboard_self_member', JSON.stringify(s.selfMemberId)) } catch {}
           }
         }
+        if (s.selectedView !== undefined) state.selectedView = s.selectedView
       }
+      state.selectedProjectId = null
+      state.selectedBoardId = null
+      state.selectedDocumentId = null
+      state.selectedCanvasId = null
+      state.selectedDashboard = false
 
       var allIds = []
       for (var pi2 = 0; pi2 < ws.projects.length; pi2++) {
@@ -506,7 +509,7 @@ function loadWorkspaceFromHandle(fileHandle) {
       setUid(maxNum)
 
       _workspaceHandle = fileHandle
-      _lastSavedTimestamp = file.lastModified || Date.now()
+      _lastSavedTimestamp = _lastModified
 
       return preloadMemberAvatars(ws.members).then(function() {
         return ws

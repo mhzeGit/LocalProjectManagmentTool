@@ -1,5 +1,6 @@
-import { state, findBoard } from './data.js'
-import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { state, findBoard, findWorkspace } from './data.js'
+import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCompletedChecklistItems } from './utils.js'
+import { getResolvedAvatar } from './persistence.js'
 import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 
@@ -117,8 +118,17 @@ export function renderListView() {
 
     let memberHtml = ''
     if (c.members && c.members.length > 0) {
+      const w = findWorkspace(state.selectedWorkspaceId)
       for (const m of c.members) {
-        memberHtml += '<span class="lv-member">' + escapeHtml(m) + '</span>'
+        const mo = w && w.members ? w.members.find(wm => wm.name === m) : null
+        if (mo) {
+          const avatarUrl = getResolvedAvatar(mo)
+          if (avatarUrl) {
+            memberHtml += '<img class="lv-member-avatar" src="' + avatarUrl + '">'
+          } else {
+            memberHtml += '<span class="lv-member-avatar lv-member-avatar-initials">' + getInitials(m) + '</span>'
+          }
+        }
       }
     }
 

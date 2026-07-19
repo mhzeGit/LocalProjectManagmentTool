@@ -21,6 +21,10 @@ export function countChecklistItems(items) {
   return count
 }
 
+export function getInitials(name) {
+  return name.split(/\s+/).map(s => s[0]).join('').toUpperCase().slice(0, 2) || '?'
+}
+
 export function countCompletedChecklistItems(items) {
   let count = 0
   for (const item of items) {
