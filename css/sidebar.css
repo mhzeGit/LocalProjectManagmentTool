@@ -20,6 +20,7 @@
 .nav-child { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; }
 .nav-child:hover { background: var(--bg-surface-hover); color: var(--text-bright); }
 .nav-child.active { background: var(--editor-btn-active-bg); color: var(--text-bright); }
+.nav-child.drag-hover { background: var(--accent); color: var(--text-white); }
 .sidebar-hint { padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
 
 .item-icon { flex-shrink: 0; color: var(--text-dim); }

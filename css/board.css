@@ -13,6 +13,13 @@
 .bc-link:hover { color: var(--text-primary); text-decoration: underline; }
 .bc-current { font-weight: 700; color: var(--text-primary); }
 
+.bc-dropdown-wrap { position: relative; }
+.bc-dropdown-wrap:hover .bc-dropdown { display: block; }
+.bc-dropdown { display: none; position: absolute; top: 100%; left: 0; min-width: 180px; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 6px; box-shadow: 0 6px 24px var(--shadow-lg); padding: 4px 0; z-index: 200; max-height: 300px; overflow-y: auto; }
+.bc-dropdown-item { padding: 6px 12px; font-size: 13px; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+.bc-dropdown-item:hover { background: var(--accent-subtle); color: var(--text-primary); }
+.bc-dropdown-item.bc-dropdown-item-current { color: var(--text-primary); font-weight: 600; }
+
 .view-switcher { display: flex; gap: 2px; background: var(--bg-strong); border-radius: 6px; padding: 2px; }
 .view-btn { padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--text-dim); border-radius: 4px; transition: background .15s, color .15s; }
 .view-btn:hover { color: var(--text-secondary); }

@@ -1,7 +1,7 @@
 import { state, findProject } from './data.js'
 import { openModal } from './modal.js'
 import { renderBoard, renderDocumentView } from './board.js'
-import { initDragDrop } from './dragdrop.js'
+import { initDragDrop, isCardDragActive } from './dragdrop.js'
 import { renderMemberBar } from './members.js'
 import { updateMenuBar } from './menubar.js'
 
@@ -61,7 +61,8 @@ export function render() {
     else if (item.type === 'document') { active = state.selectedDocumentId === item.id; selectFn = 'selectDocument' }
     else if (item.type === 'canvas') { active = state.selectedCanvasId === item.id; selectFn = 'selectCanvas' }
     const activeClass = active ? ' active' : ''
-    html += `<div class="nav-child${activeClass}" onclick="${selectFn}('${item.id}')">
+    const boardAttr = item.type === 'board' ? ` data-board-id="${item.id}"` : ''
+    html += `<div class="nav-child${activeClass}"${boardAttr} onclick="${selectFn}('${item.id}')">
       ${item.icon}
       <span class="name">${item.name}</span>
       <button class="btn-del" onclick="event.stopPropagation();${item.deleteFn}('${item.id}')">✕</button>
@@ -70,9 +71,75 @@ export function render() {
   sidebar.innerHTML = html
   renderBoard()
   initDragDrop(render)
+  initSidebarDrag()
   renderMemberBar()
   updateMenuBar()
   if (window.__autoSave) window.__autoSave()
+}
+
+function initSidebarDrag() {
+  const sidebar = document.getElementById('sidebarContent')
+  if (sidebar._sidebarDndInited) return
+  sidebar._sidebarDndInited = true
+
+  let hoverTimer = null
+  let hoveredBoardId = null
+
+  sidebar.addEventListener('dragenter', function(e) {
+    if (!isCardDragActive()) return
+    const item = e.target.closest('[data-board-id]')
+    if (!item) return
+    e.preventDefault()
+
+    const boardId = item.dataset.boardId
+    if (boardId === hoveredBoardId || boardId === state.selectedBoardId) return
+
+    clearTimeout(hoverTimer)
+    hoveredBoardId = boardId
+    item.classList.add('drag-hover')
+
+    hoverTimer = setTimeout(function() {
+      selectBoard(boardId)
+      hoveredBoardId = null
+    }, 500)
+  })
+
+  sidebar.addEventListener('dragleave', function(e) {
+    if (!isCardDragActive()) return
+    const item = e.target.closest('[data-board-id]')
+    if (!item) return
+    if (e.relatedTarget && item.contains(e.relatedTarget)) return
+
+    clearTimeout(hoverTimer)
+    if (item.dataset.boardId === hoveredBoardId) {
+      hoveredBoardId = null
+    }
+    item.classList.remove('drag-hover')
+  })
+
+  sidebar.addEventListener('dragover', function(e) {
+    if (!isCardDragActive()) return
+    if (e.target.closest('[data-board-id]')) {
+      e.preventDefault()
+    }
+  })
+
+  sidebar.addEventListener('drop', function(e) {
+    if (!isCardDragActive()) return
+    const item = e.target.closest('[data-board-id]')
+    if (!item) {
+      e.preventDefault()
+      return
+    }
+    e.preventDefault()
+    clearTimeout(hoverTimer)
+    hoveredBoardId = null
+    item.classList.remove('drag-hover')
+    const boardId = item.dataset.boardId
+    if (state.selectedBoardId !== boardId) {
+      selectBoard(boardId)
+    }
+  })
 }
 
 export function selectWorkspace(id) {

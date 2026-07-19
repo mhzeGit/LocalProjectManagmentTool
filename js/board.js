@@ -53,12 +53,46 @@ export function renderBoard() {
   if (!w) {
     bc = '<span class="bc-current">Workspaces</span>'
   } else {
-    bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span> <span>›</span> <span class="bc-link${!p && !b && !d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectWorkspace('${w.id}')">${w.name}</span>`
+    if (data.workspaces.length > 1) {
+      bc += `<span class="bc-dropdown-wrap"><span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span><div class="bc-dropdown">`
+      for (const ws of data.workspaces) {
+        const wsClass = state.selectedWorkspaceId === ws.id ? 'bc-dropdown-item bc-dropdown-item-current' : 'bc-dropdown-item'
+        bc += `<div class="${wsClass}" onclick="selectWorkspace('${ws.id}')">${escapeHtml(ws.name)}</div>`
+      }
+      bc += `</div></span>`
+    } else {
+      bc += `<span class="bc-link" onclick="selectWorkspaceHome()">Workspaces</span>`
+    }
+    bc += ` <span>›</span> `
+    const wsItemClass = `bc-link${!p && !b && !d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}`
+    if (w.projects.length > 1) {
+      bc += `<span class="bc-dropdown-wrap"><span class="${wsItemClass}" onclick="selectWorkspace('${w.id}')">${escapeHtml(w.name)}</span><div class="bc-dropdown">`
+      for (const proj of w.projects) {
+        const projClass = state.selectedProjectId === proj.id ? 'bc-dropdown-item bc-dropdown-item-current' : 'bc-dropdown-item'
+        bc += `<div class="${projClass}" onclick="selectProject('${proj.id}')">${escapeHtml(proj.name)}</div>`
+      }
+      bc += `</div></span>`
+    } else {
+      bc += `<span class="${wsItemClass}" onclick="selectWorkspace('${w.id}')">${escapeHtml(w.name)}</span>`
+    }
   }
-  if (p) bc += ` <span>›</span> <span class="bc-link${!b && !d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectProject('${p.id}')">${p.name}</span>`
-  if (b) bc += ` <span>›</span> <span class="bc-link${!d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectBoard('${b.id}')">${b.name}</span>`
-  if (d) bc += ` <span>›</span> <span class="bc-link${!canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectDocument('${d.id}')">${d.name}</span>`
-  if (canvasBoard) bc += ` <span>›</span> <span class="bc-link${!state.selectedDashboard ? ' bc-current' : ''}" onclick="selectCanvas('${canvasBoard.id}')">${canvasBoard.name}</span>`
+  if (p) bc += ` <span>›</span> `
+  if (p) {
+    const pjItemClass = `bc-link${!b && !d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}`
+    if (w && w.projects.length > 1) {
+      bc += `<span class="bc-dropdown-wrap"><span class="${pjItemClass}" onclick="selectProject('${p.id}')">${escapeHtml(p.name)}</span><div class="bc-dropdown">`
+      for (const proj of w.projects) {
+        const projClass = state.selectedProjectId === proj.id ? 'bc-dropdown-item bc-dropdown-item-current' : 'bc-dropdown-item'
+        bc += `<div class="${projClass}" onclick="selectProject('${proj.id}')">${escapeHtml(proj.name)}</div>`
+      }
+      bc += `</div></span>`
+    } else {
+      bc += `<span class="${pjItemClass}" onclick="selectProject('${p.id}')">${escapeHtml(p.name)}</span>`
+    }
+  }
+  if (b) bc += ` <span>›</span> <span class="bc-link${!d && !canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectBoard('${b.id}')">${escapeHtml(b.name)}</span>`
+  if (d) bc += ` <span>›</span> <span class="bc-link${!canvasBoard && !state.selectedDashboard ? ' bc-current' : ''}" onclick="selectDocument('${d.id}')">${escapeHtml(d.name)}</span>`
+  if (canvasBoard) bc += ` <span>›</span> <span class="bc-link${!state.selectedDashboard ? ' bc-current' : ''}" onclick="selectCanvas('${canvasBoard.id}')">${escapeHtml(canvasBoard.name)}</span>`
   if (state.selectedDashboard) bc += ` <span>›</span> <span class="bc-current">Dashboard</span>`
   breadcrumb.innerHTML = bc
 

@@ -507,3 +507,11 @@ export function initDragDrop(renderFn) {
     }
   })
 }
+
+export function isCardDragActive() {
+  return _dragActive && _cardDragData !== null
+}
+
+export function getCardDragData() {
+  return _cardDragData
+}
