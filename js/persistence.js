@@ -1029,7 +1029,7 @@ export function locateProjectFolder(projectId) {
         found._loadError = false
         found.name = loaded.name
         found.color = loaded.color || null
-        found.path = dirHandle.name || ''
+        if (!found.path) { found.path = dirHandle.name || '' }
       }
     }).then(function() {
       return saveHandleToDB('project_' + projectId, dirHandle)
