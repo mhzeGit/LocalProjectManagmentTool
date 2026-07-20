@@ -836,7 +836,7 @@ export function toggleAddBoardMenu(e, projectId) {
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + projectId + '\')">' + _canvasIcon + ' Canvas Board</button>' +
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + projectId + '\')">' + _folderIcon + ' Folder</button>'
-  menu.addEventListener('mouseleave', function() { menu.remove() })
+  
   document.body.appendChild(menu)
 }
 
@@ -851,12 +851,12 @@ export function showSidebarContextMenu(e) {
   menu.style.left = e.clientX + 'px'
   menu.style.top = e.clientY + 'px'
   menu.innerHTML =
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + p.id + '\')">' + _folderIcon + ' New Folder</button>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + p.id + '\')">' + _boardIcon + ' New Task Board</button>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + p.id + '\')">' + _docIcon + ' New Document</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + p.id + '\')">' + _canvasIcon + ' New Canvas Board</button>' +
     '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + p.id + '\')">' + _canvasIcon + ' New Canvas Board</button>'
-  menu.addEventListener('mouseleave', function() { menu.remove() })
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + p.id + '\')">' + _folderIcon + ' New Folder</button>'
+  
   document.body.appendChild(menu)
 }
 
@@ -883,6 +883,6 @@ export function showFolderContextMenu(e, folderId) {
   menu.innerHTML =
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();renameFolder(\'' + folderId + '\')">Rename Folder</button>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();deleteFolder(\'' + folderId + '\')">Delete Folder</button>'
-  menu.addEventListener('mouseleave', function() { menu.remove() })
+  
   document.body.appendChild(menu)
 }

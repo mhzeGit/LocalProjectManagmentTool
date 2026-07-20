@@ -355,7 +355,7 @@ export function renderBoard() {
         ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
         menu.innerHTML = ctxHtml
         if (colId) menu.dataset.colId = colId
-        menu.addEventListener('mouseleave', function() { menu.remove() })
+        
         document.body.appendChild(menu)
         return
       }
@@ -373,7 +373,7 @@ export function renderBoard() {
         menu.style.top = e.clientY + 'px'
         menu.dataset.colId = colEl.dataset.columnId
         menu.innerHTML = '<button class="tl-ctx-item" data-action="paste">Paste</button>'
-        menu.addEventListener('mouseleave', function() { menu.remove() })
+        
         document.body.appendChild(menu)
       }
     })
@@ -484,7 +484,7 @@ export function showWsCtxMenu(e, workspaceId) {
     '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>' +
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
-  menu.addEventListener('mouseleave', function() { menu.remove() })
+  
   document.body.appendChild(menu)
 }
 
@@ -511,7 +511,7 @@ export function showProjectCtxMenu(e, projectId) {
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();copyProject(\'' + projectId + '\')">Duplicate</button>' +
     '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();archiveProject(\'' + projectId + '\')">Archive</button>'
-  menu.addEventListener('mouseleave', function() { menu.remove() })
+  
   document.body.appendChild(menu)
 }
 

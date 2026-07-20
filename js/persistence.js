@@ -276,7 +276,9 @@ function saveProjectToDir(project, dirHandle) {
     color: project.color || null,
     boards: (project.boards || []).map(function(b) { return b.id }),
     documents: (project.documents || []).map(function(d) { return d.id }),
-    canvases: (project.canvasBoards || []).map(function(c) { return c.id })
+    canvases: (project.canvasBoards || []).map(function(c) { return c.id }),
+    folders: (project.folders || []).map(function(f) { return { id: f.id, name: f.name, itemOrder: f.itemOrder || [] } }),
+    sidebarOrder: project.sidebarOrder || []
   }))
 
   for (var bi = 0; bi < (project.boards || []).length; bi++) {
@@ -424,7 +426,9 @@ function loadProjectFromDir(dirHandle) {
 function reconstructProject(pMeta, allData) {
   var project = {
     id: pMeta.id, name: pMeta.name, color: pMeta.color || null,
-    boards: [], documents: [], canvasBoards: []
+    boards: [], documents: [], canvasBoards: [],
+    folders: (pMeta.folders || []).map(function(f) { return { id: f.id, name: f.name, itemOrder: (f.itemOrder || []).slice() } }),
+    sidebarOrder: (pMeta.sidebarOrder || []).slice()
   }
 
   for (var bi = 0; bi < (pMeta.boards || []).length; bi++) {

@@ -1138,6 +1138,13 @@ function openContextMenu(e) {
 
   for (const it of items) { if (it) menu.appendChild(it) }
   menu.style.left=e.clientX+'px'; menu.style.top=e.clientY+'px'; menu.style.display='block'
+  if (menu._closeTimer) { clearTimeout(menu._closeTimer); menu._closeTimer=null }
+  menu.addEventListener('mouseleave',menu._onLeave=function(){
+    menu._closeTimer=setTimeout(function(){ closeContextMenu(); menu._closeTimer=null },500)
+  })
+  menu.addEventListener('mouseenter',menu._onEnter=function(){
+    if (menu._closeTimer) { clearTimeout(menu._closeTimer); menu._closeTimer=null }
+  })
   setTimeout(()=>{ document.addEventListener('pointerdown',e=>{if(!menu.contains(e.target))closeContextMenu()},{once:true}) },0)
 }
 function buildAddSubmenu(wx,wy,hit) {
@@ -1172,7 +1179,15 @@ function makeCtxItem(label, onClick, shortcut, isDanger) {
   if (shortcut) { el.innerHTML='<span>'+label+'</span><span class="ctx-shortcut">'+shortcut+'</span>' } else el.textContent=label
   el.addEventListener('click',()=>{onClick();closeContextMenu()}); return el
 }
-function closeContextMenu() { if(_ui&&_ui.contextMenu) _ui.contextMenu.style.display='none' }
+function closeContextMenu() {
+  if (_ui&&_ui.contextMenu) {
+    var m=_ui.contextMenu
+    m.style.display='none'
+    if (m._closeTimer) { clearTimeout(m._closeTimer); m._closeTimer=null }
+    if (m._onLeave) { m.removeEventListener('mouseleave',m._onLeave); m._onLeave=null }
+    if (m._onEnter) { m.removeEventListener('mouseenter',m._onEnter); m._onEnter=null }
+  }
+}
 
 /* ─── Persistent Text Box Overlays (continue) ─── */
 function wireOverlayInput(tb, o) {

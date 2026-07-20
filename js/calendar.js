@@ -345,7 +345,7 @@ function initCalendarDrag() {
     }
 
     menu.innerHTML = html
-    menu.addEventListener('mouseleave', function() { menu.remove() })
+
     document.body.appendChild(menu)
   })
 }

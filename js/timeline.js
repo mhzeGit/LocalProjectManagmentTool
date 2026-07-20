@@ -578,7 +578,7 @@ function initTimelineDrag() {
       menu.dataset.colId = rowLabel.dataset.colId
       menu.dataset.source = 'rowLabel'
       menu.innerHTML = '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive Row</button>'
-      menu.addEventListener('mouseleave', function() { menu.remove() })
+      
       document.body.appendChild(menu)
       return
     }
@@ -611,7 +611,7 @@ function initTimelineDrag() {
       html += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
     }
     menu.innerHTML = html
-    menu.addEventListener('mouseleave', function() { menu.remove() })
+    
     document.body.appendChild(menu)
   })
 
