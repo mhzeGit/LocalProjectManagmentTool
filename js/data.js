@@ -27,6 +27,8 @@ export const state = {
   selectedCanvasId: null,
   selectedDashboard: false,
   renamingFolderId: null,
+  renamingSidebarItemId: null,
+  renamingSidebarItemType: null,
   selectedView: 'kanban',
   selfMemberId: null,
   filters: {

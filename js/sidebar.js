@@ -226,9 +226,13 @@ function renderNavChild(p, type, item, icons, folderId) {
   const activeClass = active ? ' active' : ''
   const boardAttr = type === 'board' ? ' data-board-id="' + item.id + '"' : ''
   const folderAttr = folderId ? ' data-folder-id="' + folderId + '"' : ''
+  const isRenaming = state.renamingSidebarItemId === item.id && state.renamingSidebarItemType === type
+  const nameHtml = isRenaming
+    ? '<input type="text" class="sidebar-item-rename-input" value="' + item.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-sidebar-item-id="' + item.id + '" data-sidebar-item-type="' + type + '" onclick="event.stopPropagation()" />'
+    : '<span class="name">' + item.name + '</span>'
   return '<div class="nav-child' + activeClass + '" draggable="true"' + boardAttr + folderAttr + ' data-sidebar-type="' + type + '" data-sidebar-id="' + item.id + '" onclick="' + selectFn + '(\'' + item.id + '\')" oncontextmenu="event.stopPropagation();showSidebarContextMenu(event)">' +
     icons[type] +
-    '<span class="name">' + item.name + '</span>' +
+    nameHtml +
     '<button class="btn-del" onclick="event.stopPropagation();window.' + (type === 'board' ? 'deleteBoard' : type === 'document' ? 'deleteDocument' : 'deleteCanvas') + '(\'' + item.id + '\')">' + String.fromCharCode(10005) + '</button>' +
     '</div>'
 }
@@ -373,7 +377,7 @@ function initSidebarReorder() {
       _ghostOffsetY = e.clientY - navChild.getBoundingClientRect().top
       _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
       document.body.appendChild(_dragGhost)
-      navChild.style.opacity = '0.35'
+      navChild.classList.add('sidebar-drag-preview')
       return
     }
 
@@ -397,7 +401,7 @@ function initSidebarReorder() {
       _ghostOffsetY = e.clientY - folderEl.getBoundingClientRect().top
       _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
       document.body.appendChild(_dragGhost)
-      folderEl.style.opacity = '0.35'
+      folderEl.classList.add('sidebar-drag-preview')
       return
     }
 
@@ -414,7 +418,7 @@ function initSidebarReorder() {
     if (_flipCleanupTimer) { clearTimeout(_flipCleanupTimer); _flipCleanupTimer = null }
     clearDragIndicators()
     if (_dragGhost) { _dragGhost.remove(); _dragGhost = null }
-    if (dragSource) { dragSource.style.opacity = '' }
+    if (dragSource) { dragSource.classList.remove('sidebar-drag-preview') }
     _sidebarDragData = null
     dragSource = null
     dragSourceType = null
@@ -583,7 +587,7 @@ function initSidebarReorder() {
     e.preventDefault()
 
     if (_dragGhost) { _dragGhost.remove(); _dragGhost = null }
-    if (dragSource) { dragSource.style.opacity = '' }
+    if (dragSource) { dragSource.classList.remove('sidebar-drag-preview') }
 
     const p = findProject(state.selectedProjectId)
     if (!p) { _sidebarDragData = null; return }
@@ -770,6 +774,34 @@ export function toggleFolder(id) {
   render()
 }
 
+function finishSidebarItemRename(input) {
+  const id = input.dataset.sidebarItemId
+  const type = input.dataset.sidebarItemType
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  let item = null
+  if (type === 'board') item = p.boards.find(b => b.id === id)
+  else if (type === 'document') item = (p.documents || []).find(d => d.id === id)
+  else if (type === 'canvas') item = (p.canvasBoards || []).find(c => c.id === id)
+  if (!item) return
+  const oldName = item.name
+  const fallback = type === 'board' ? 'New Board' : type === 'document' ? 'New Document' : 'New Canvas Board'
+  const newName = input.value.trim() || fallback
+  state.renamingSidebarItemId = null
+  state.renamingSidebarItemType = null
+  if (newName === oldName) {
+    render()
+    return
+  }
+  item.name = newName
+  render()
+  pushCommand({
+    undo() { item.name = oldName; render() },
+    redo() { item.name = newName; render() },
+    description: 'Rename ' + (type === 'board' ? 'Board' : type === 'document' ? 'Document' : 'Canvas')
+  })
+}
+
 export function toggleAddBoardMenu(e, projectId) {
   e.stopPropagation()
   const existing = document.querySelector('.add-board-menu')
@@ -782,9 +814,9 @@ export function toggleAddBoardMenu(e, projectId) {
   menu.className = 'tl-ctx-menu add-board-menu'
   menu.style.left = (rect.left - 80) + 'px'
   menu.style.top = (rect.bottom + 2) + 'px'
-  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'board\',\'' + projectId + '\')">Task Board</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'document\',\'' + projectId + '\')">Document</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'canvas\',\'' + projectId + '\')">Canvas Board</button>' +
+  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + projectId + '\')">Task Board</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + projectId + '\')">Document</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + projectId + '\')">Canvas Board</button>' +
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + projectId + '\')">Folder</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
@@ -803,10 +835,10 @@ export function showSidebarContextMenu(e) {
   menu.style.top = e.clientY + 'px'
   menu.innerHTML =
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + p.id + '\')">New Folder</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'board\',\'' + p.id + '\')">New Task Board</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'document\',\'' + p.id + '\')">New Document</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + p.id + '\')">New Task Board</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + p.id + '\')">New Document</button>' +
     '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();openModal(\'canvas\',\'' + p.id + '\')">New Canvas Board</button>'
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + p.id + '\')">New Canvas Board</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }

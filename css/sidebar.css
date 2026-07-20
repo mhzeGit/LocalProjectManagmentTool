@@ -47,4 +47,6 @@
 .drag-indicator-bottom { border-bottom: 2px solid var(--accent) !important; }
 .drag-over-folder { background: var(--accent); color: var(--text-white) !important; border-radius: 6px; }
 .sidebar-folder-header.drag-over-folder .arrow { color: var(--text-white); }
+.sidebar-drag-preview { background: var(--accent-subtle) !important; border: 2px dashed var(--accent) !important; border-radius: 6px !important; opacity: 0.9 !important; }
+.sidebar-drag-preview > * { visibility: hidden !important; }
 

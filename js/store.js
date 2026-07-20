@@ -112,6 +112,33 @@ export function createBoard(projectId) {
   })
 }
 
+export function quickCreateBoard(projectId) {
+  const p = findProject(projectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  let name = 'New Board'
+  let counter = 1
+  while (p.boards.some(b => b.name === name)) {
+    counter++
+    name = 'New Board (' + counter + ')'
+  }
+  const b = { id: genId(), name, columns: [] }
+  p.boards.push(b)
+  p.sidebarOrder.push('board:' + b.id)
+  state.selectedBoardId = b.id
+  state.renamingSidebarItemId = b.id
+  state.renamingSidebarItemType = 'board'
+  render()
+  pushCommand({
+    undo() {
+      const bi = p.boards.findIndex(x => x.id === b.id)
+      if (bi !== -1) { p.boards.splice(bi, 1); state.selectedBoardId = p.boards.length > 0 ? p.boards[0].id : null }
+    },
+    redo() { p.boards.push(b); state.selectedBoardId = b.id },
+    description: 'Create Board'
+  })
+}
+
 export function deleteBoard(id) {
   if (!confirm('Delete this board and all its columns and cards?')) return
   for (const w of data.workspaces) {
@@ -728,6 +755,36 @@ export function createDocument(projectId) {
   })
 }
 
+export function quickCreateDocument(projectId) {
+  const p = findProject(projectId)
+  if (!p) return
+  if (!p.documents) p.documents = []
+  ensureSidebarOrder(p)
+  let name = 'New Document'
+  let counter = 1
+  while (p.documents.some(d => d.name === name)) {
+    counter++
+    name = 'New Document (' + counter + ')'
+  }
+  const doc = { id: genId(), name, content: '<h1>' + name + '</h1><p></p>' }
+  p.documents.push(doc)
+  p.sidebarOrder.push('document:' + doc.id)
+  state.selectedDocumentId = doc.id
+  state.selectedBoardId = null
+  state.renamingSidebarItemId = doc.id
+  state.renamingSidebarItemType = 'document'
+  render()
+  pushCommand({
+    undo() {
+      const di = p.documents.findIndex(x => x.id === doc.id)
+      if (di !== -1) p.documents.splice(di, 1)
+      state.selectedDocumentId = p.documents.length > 0 ? p.documents[0].id : null
+    },
+    redo() { p.documents.push(doc); state.selectedDocumentId = doc.id; state.selectedBoardId = null },
+    description: 'Create Document'
+  })
+}
+
 export function deleteDocument(id) {
   if (!confirm('Delete this document?')) return
   for (const w of data.workspaces) {
@@ -800,6 +857,37 @@ export function createCanvas(projectId) {
   state.selectedCanvasId = canvas.id
   state.selectedBoardId = null
   state.selectedDocumentId = null
+  render()
+  pushCommand({
+    undo() {
+      const ci = p.canvasBoards.findIndex(x => x.id === canvas.id)
+      if (ci !== -1) p.canvasBoards.splice(ci, 1)
+      state.selectedCanvasId = p.canvasBoards.length > 0 ? p.canvasBoards[0].id : null
+    },
+    redo() { p.canvasBoards.push(canvas); state.selectedCanvasId = canvas.id; state.selectedBoardId = null; state.selectedDocumentId = null },
+    description: 'Create Canvas'
+  })
+}
+
+export function quickCreateCanvas(projectId) {
+  const p = findProject(projectId)
+  if (!p) return
+  if (!p.canvasBoards) p.canvasBoards = []
+  ensureSidebarOrder(p)
+  let name = 'New Canvas Board'
+  let counter = 1
+  while (p.canvasBoards.some(c => c.name === name)) {
+    counter++
+    name = 'New Canvas Board (' + counter + ')'
+  }
+  const canvas = { id: genId(), name, data: getEmptyCanvasState() }
+  p.canvasBoards.push(canvas)
+  p.sidebarOrder.push('canvas:' + canvas.id)
+  state.selectedCanvasId = canvas.id
+  state.selectedBoardId = null
+  state.selectedDocumentId = null
+  state.renamingSidebarItemId = canvas.id
+  state.renamingSidebarItemType = 'canvas'
   render()
   pushCommand({
     undo() {
