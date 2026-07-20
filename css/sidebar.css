@@ -37,7 +37,7 @@
 .sidebar-folder-header .arrow.open { transform: rotate(90deg); }
 .sidebar-folder-header .name { flex: 1; }
 .sidebar-folder-header .btn-del { opacity: 0; }
-.sidebar-folder-rename-input { flex: 1; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: 4px; color: var(--text-bright); font-size: 13px; padding: 1px 4px; outline: none; font-family: inherit; min-width: 0; }
+.sidebar-folder-rename-input, .sidebar-item-rename-input { flex: 1; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: 4px; color: var(--text-bright); font-size: 13px; padding: 1px 4px; outline: none; font-family: inherit; min-width: 0; }
 .sidebar-folder-header:hover .btn-del { opacity: 1; }
 .sidebar-folder-items { display: none; }
 .sidebar-folder-items.open { display: block; }

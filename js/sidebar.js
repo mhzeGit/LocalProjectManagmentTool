@@ -193,6 +193,24 @@ export function render() {
       })
     }
   }
+
+  if (state.renamingSidebarItemId && state.renamingSidebarItemType) {
+    const input = sidebar.querySelector('.sidebar-item-rename-input')
+    if (input) {
+      input.focus()
+      input.select()
+      input.addEventListener('blur', function() { finishSidebarItemRename(input) })
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          input.blur()
+        } else if (e.key === 'Escape') {
+          state.renamingSidebarItemId = null
+          state.renamingSidebarItemType = null
+          render()
+        }
+      })
+    }
+  }
 }
 
 function finishFolderRename(input) {
@@ -373,7 +391,7 @@ function initSidebarReorder() {
       e.dataTransfer.setDragImage(_transparentImg, 0, 0)
 
       _dragGhost = navChild.cloneNode(true)
-      _dragGhost.style.cssText = 'position:fixed;left:' + sidebar.getBoundingClientRect().left + 'px;width:' + sidebar.getBoundingClientRect().width + 'px;opacity:0.9;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:6px;pointer-events:none;z-index:99999;box-shadow:0 4px 16px var(--shadow-md);'
+      _dragGhost.style.cssText = 'position:fixed;left:' + sidebar.getBoundingClientRect().left + 'px;width:' + sidebar.getBoundingClientRect().width + 'px;opacity:0.65;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:6px;pointer-events:none;z-index:99999;box-shadow:0 4px 16px var(--shadow-md);'
       _ghostOffsetY = e.clientY - navChild.getBoundingClientRect().top
       _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
       document.body.appendChild(_dragGhost)
@@ -397,7 +415,7 @@ function initSidebarReorder() {
       e.dataTransfer.setDragImage(_transparentImg, 0, 0)
 
       _dragGhost = folderEl.cloneNode(true)
-      _dragGhost.style.cssText = 'position:fixed;left:' + sidebar.getBoundingClientRect().left + 'px;width:' + sidebar.getBoundingClientRect().width + 'px;opacity:0.9;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:6px;pointer-events:none;z-index:99999;box-shadow:0 4px 16px var(--shadow-md);'
+      _dragGhost.style.cssText = 'position:fixed;left:' + sidebar.getBoundingClientRect().left + 'px;width:' + sidebar.getBoundingClientRect().width + 'px;opacity:0.65;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:6px;pointer-events:none;z-index:99999;box-shadow:0 4px 16px var(--shadow-md);'
       _ghostOffsetY = e.clientY - folderEl.getBoundingClientRect().top
       _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
       document.body.appendChild(_dragGhost)
