@@ -8,11 +8,48 @@ export async function initCardEditor(content) {
   const containerEl = document.getElementById('cd-desc-editor')
   if (!containerEl) return
 
-  const { Editor } = await import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION)
+  const { Editor, Extension } = await import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION)
+  const { TextSelection } = await import('https://esm.sh/prosemirror-state@1.4.3')
   const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@' + TIPTAP_VERSION)).default
   const Underline = (await import('https://esm.sh/@tiptap/extension-underline@' + TIPTAP_VERSION)).default
   const Link = (await import('https://esm.sh/@tiptap/extension-link@' + TIPTAP_VERSION)).default
   const Placeholder = (await import('https://esm.sh/@tiptap/extension-placeholder@' + TIPTAP_VERSION)).default
+
+  const ListBehavior = Extension.create({
+    name: 'listBehavior',
+    addKeyboardShortcuts() {
+      return {
+        Tab: () => this.editor.chain().focus().sinkListItem('listItem').run(),
+        'Shift-Tab': () => this.editor.chain().focus().liftListItem('listItem').run(),
+        Enter: () => {
+          const { editor } = this
+          const { $from } = editor.state.selection
+          const listItem = $from.node($from.depth - 1)
+          if (!listItem || listItem.type.name !== 'listItem') return false
+
+          const para = listItem.firstChild
+          const isEmpty = !para || para.textContent === ''
+
+          if (!isEmpty) {
+            return editor.chain().focus().splitListItem('listItem').run()
+          }
+
+          if (editor.chain().focus().liftListItem('listItem').run()) {
+            return true
+          }
+
+          const from = $from.before($from.depth - 1)
+          const to = $from.after($from.depth - 1)
+          const tr = editor.state.tr
+          const emptyPara = editor.schema.nodes.paragraph.create()
+          tr.replaceWith(from, to, emptyPara)
+          tr.setSelection(TextSelection.create(tr.doc, from + 1))
+          editor.view.dispatch(tr)
+          return true
+        },
+      }
+    },
+  })
 
   _editor = new Editor({
     element: containerEl,
@@ -28,6 +65,7 @@ export async function initCardEditor(content) {
       Placeholder.configure({
         placeholder: 'Add a more detailed description…',
       }),
+      ListBehavior,
     ],
     content: content || '',
   })
