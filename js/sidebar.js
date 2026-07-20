@@ -145,7 +145,7 @@ export function render() {
       if (state.renamingFolderId === folder.id) {
         html += '<input type="text" class="sidebar-folder-rename-input" value="' + folder.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-folder-id="' + folder.id + '" />'
       } else {
-        html += '<span class="name" onclick="event.stopPropagation()" ondblclick="event.stopPropagation();renameFolder(\'' + folder.id + '\')">' + folder.name + '</span>'
+        html += '<span class="name" ondblclick="event.stopPropagation();renameFolder(\'' + folder.id + '\')">' + folder.name + '</span>'
       }
       html += '<button class="btn-del" onclick="event.stopPropagation();deleteFolder(\'' + folder.id + '\')">' + String.fromCharCode(10005) + '</button>'
       html += '</div>'
@@ -246,7 +246,7 @@ function renderNavChild(p, type, item, icons, folderId) {
   const isRenaming = state.renamingSidebarItemId === item.id && state.renamingSidebarItemType === type
   const nameHtml = isRenaming
     ? '<input type="text" class="sidebar-item-rename-input" value="' + item.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-sidebar-item-id="' + item.id + '" data-sidebar-item-type="' + type + '" onclick="event.stopPropagation()" />'
-    : '<span class="name">' + item.name + '</span>'
+    : '<span class="name" ondblclick="event.stopPropagation();startRenameSidebarItem(\'' + item.id + '\',\'' + type + '\')">' + item.name + '</span>'
   return '<div class="nav-child' + activeClass + '" draggable="true"' + boardAttr + folderAttr + ' data-sidebar-type="' + type + '" data-sidebar-id="' + item.id + '" onclick="' + selectFn + '(\'' + item.id + '\')" oncontextmenu="event.stopPropagation();showSidebarContextMenu(event)">' +
     icons[type] +
     nameHtml +

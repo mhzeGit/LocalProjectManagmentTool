@@ -14,7 +14,7 @@ import {
   createDocument, quickCreateDocument, deleteDocument, setDocumentPaperSize,
   createCanvas, quickCreateCanvas, deleteCanvas, renameCanvas,
   createFolder, createFolderFromModal, deleteFolder, renameFolder,
-  moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems
+  startRenameSidebarItem, moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems
 } from './store.js'
 import { startRenameColumn, startRenameCard, startRenameProject, startRenameWorkspace, startRenameDocument, startRenameCanvas } from './inlineEdit.js'
 import { showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus } from './columnMenu.js'
@@ -115,7 +115,7 @@ Object.assign(window, {
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
   showSidebarContextMenu, showFolderContextMenu, toggleFolder,
   createFolder, createFolderFromModal, deleteFolder, renameFolder,
-  moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems,
+  startRenameSidebarItem, moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems,
   openCardDetail,
   calendarPrevMonth,
   calendarNextMonth,

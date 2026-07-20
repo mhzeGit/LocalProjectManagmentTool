@@ -1108,6 +1108,12 @@ export function renameFolder(id) {
   render()
 }
 
+export function startRenameSidebarItem(id, type) {
+  state.renamingSidebarItemId = id
+  state.renamingSidebarItemType = type
+  render()
+}
+
 export function moveItemToFolder(itemKey, folderId) {
   const p = findProject(state.selectedProjectId)
   if (!p) return
