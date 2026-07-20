@@ -37,10 +37,24 @@
 /* Left column — content */
 .cd-left { display: flex; flex-direction: column; gap: 16px; }
 .cd-left-section { margin-bottom: 0; }
-.cd-left-section-desc { flex: 1; display: flex; flex-direction: column; }
-.cd-left-section-desc textarea { flex: 1; margin-bottom: 0 !important; min-height: 180px; }
+.cd-left-section-desc { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.cd-editor-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 8px; background: var(--bg-panel); border: 1px solid var(--border); border-bottom: none; border-radius: 8px 8px 0 0; user-select: none; flex-shrink: 0; flex-wrap: wrap; }
+.cd-editor-content { flex: 1; min-height: 200px; border: 1px solid var(--border); border-radius: 0 0 8px 8px; padding: 12px; overflow-y: auto; background: var(--bg-input); color: var(--text-primary); cursor: text; }
+.cd-editor-content .tiptap { outline: none; min-height: 180px; }
+.cd-editor-content .tiptap p { margin: 0 0 0.5em; }
+.cd-editor-content .tiptap h1, .cd-editor-content .tiptap h2, .cd-editor-content .tiptap h3 { margin: 0.5em 0 0.25em; line-height: 1.3; }
+.cd-editor-content .tiptap h1 { font-size: 1.4em; }
+.cd-editor-content .tiptap h2 { font-size: 1.2em; }
+.cd-editor-content .tiptap h3 { font-size: 1.1em; }
+.cd-editor-content .tiptap ul, .cd-editor-content .tiptap ol { padding-left: 1.5em; margin: 0 0 0.5em; }
+.cd-editor-content .tiptap li { margin-bottom: 0.2em; }
+.cd-editor-content .tiptap blockquote { border-left: 3px solid var(--accent); padding-left: 0.8em; margin: 0 0 0.5em; color: var(--text-secondary); }
+.cd-editor-content .tiptap code { background: var(--bg-surface-hover); border-radius: 3px; padding: 0.15em 0.3em; font-size: 0.9em; }
+.cd-editor-content .tiptap pre { background: var(--bg-surface-hover); border-radius: 6px; padding: 0.8em; margin: 0 0 0.5em; overflow-x: auto; }
+.cd-editor-content .tiptap pre code { background: none; padding: 0; }
+.cd-editor-content .tiptap a { color: var(--accent); text-decoration: underline; cursor: pointer; }
+.cd-editor-content .tiptap p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; color: var(--text-placeholder); pointer-events: none; height: 0; }
 .cd-title-input { font-size: 20px !important; font-weight: 600 !important; padding: 10px 12px !important; margin-bottom: 0 !important; border-width: 1px !important; }
-.cd-desc-textarea { min-height: 260px !important; margin-bottom: 0 !important; }
 
 /* Right column — metadata */
 .cd-right { display: flex; flex-direction: column; gap: 14px; }

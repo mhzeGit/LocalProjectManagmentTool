@@ -1,4 +1,5 @@
 import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor, PREDEFINED_COLORS } from './data.js'
+import { initCardEditor, destroyCardEditor, getCardEditorHTML } from './cardEditor.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { getResolvedAvatar } from './persistence.js'
 
@@ -107,6 +108,7 @@ export function openModal(type, parentId) {
     title.textContent = 'Create Card'
     body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
     renderPriorityPicker()
+    initCardEditor('')
   } else if (type === 'document') {
     title.textContent = 'Create Document'
     body.innerHTML = '<label>Document Name</label><input id="modalInput" placeholder="e.g. Meeting Notes" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createDocument(\'' + parentId + '\')">Create</button></div>'
@@ -116,7 +118,7 @@ export function openModal(type, parentId) {
   }
 }
 
-export function openCardDetail(cardId) {
+export async function openCardDetail(cardId) {
   const c = findCard(cardId)
   if (!c) return
   _editingCardId = cardId
@@ -128,6 +130,7 @@ export function openCardDetail(cardId) {
   overlay.classList.add('open')
   renderPriorityPicker()
   body.querySelector('.cd-title-input')?.focus()
+  await initCardEditor(c.description || '')
 }
 
 function buildCardForm(c, saveAction) {
@@ -147,8 +150,26 @@ function buildCardForm(c, saveAction) {
   html += '      <div class="cd-left-section">'
   html += '        <input id="cd-title" class="cd-title-input" value="' + escapeHtml(c.title) + '" placeholder="Card title">'
   html += '      </div>'
-  html += '      <div class="cd-left-section cd-left-section-desc">'
-  html += '        <textarea id="cd-desc" class="cd-desc-textarea" placeholder="Add a more detailed description…">' + escapeHtml(c.description || '') + '</textarea>'
+      html += '      <div class="cd-left-section cd-left-section-desc">'
+  html += '        <div class="cd-editor-toolbar" id="cd-editor-toolbar">'
+  html += '          <button class="editor-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>'
+  html += '          <button class="editor-btn" data-cmd="italic" title="Italic"><em>I</em></button>'
+  html += '          <button class="editor-btn" data-cmd="underline" title="Underline"><span style="text-decoration:underline">U</span></button>'
+  html += '          <button class="editor-btn" data-cmd="strike" title="Strikethrough"><span style="text-decoration:line-through">S</span></button>'
+  html += '          <span class="editor-toolbar-sep"></span>'
+  html += '          <button class="editor-btn" data-cmd="h1" title="Heading 1">H1</button>'
+  html += '          <button class="editor-btn" data-cmd="h2" title="Heading 2">H2</button>'
+  html += '          <button class="editor-btn" data-cmd="h3" title="Heading 3">H3</button>'
+  html += '          <span class="editor-toolbar-sep"></span>'
+  html += '          <button class="editor-btn" data-cmd="bulletList" title="Bullet List">•</button>'
+  html += '          <button class="editor-btn" data-cmd="orderedList" title="Ordered List">1.</button>'
+  html += '          <span class="editor-toolbar-sep"></span>'
+  html += '          <button class="editor-btn" data-cmd="blockquote" title="Blockquote">"</button>'
+  html += '          <button class="editor-btn" data-cmd="codeBlock" title="Code Block">&lt;/&gt;</button>'
+  html += '          <span class="editor-toolbar-sep"></span>'
+  html += '          <button class="editor-btn" data-cmd="link" title="Link">🔗</button>'
+  html += '        </div>'
+  html += '        <div class="cd-editor-content" id="cd-desc-editor"></div>'
   html += '      </div>'
   html += '      <div class="cd-left-section">'
   html += '        <label>Checklist</label>'
@@ -317,6 +338,7 @@ function renderChecklistItem(item, depth, isFirst) {
 
 export function closeModal() {
   document.getElementById('modal').classList.remove('open')
+  destroyCardEditor()
 }
 
 export function setupModalKeyboard() {
@@ -460,6 +482,7 @@ export function setupModalKeyboard() {
     if (e.key === 'Enter') {
       const target = e.target
       if (target.tagName === 'TEXTAREA') return
+      if (target.closest('.tiptap')) return
       if (target.dataset.addChip) {
         e.preventDefault()
         addChip(target, target.dataset.addChip)

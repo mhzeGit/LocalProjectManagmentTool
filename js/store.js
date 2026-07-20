@@ -2,6 +2,7 @@ import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, 
 import { render } from './sidebar.js'
 import { closeModal, openModal } from './modal.js'
 import { pushCommand } from './history.js'
+import { getCardEditorHTML } from './cardEditor.js'
 
 function ensureSidebarOrder(p) {
   if (!p.sidebarOrder) {
@@ -401,7 +402,7 @@ export function saveCard(cardId) {
 
 function collectCardForm() {
   const title = (document.getElementById('cd-title')?.value || '').trim()
-  const description = document.getElementById('cd-desc')?.value?.trim() || ''
+  const description = getCardEditorHTML()
   const startDate = document.getElementById('cd-start')?.value || null
   const endDate = document.getElementById('cd-end')?.value || null
   const priority = document.getElementById('cd-priority')?.value || '3'

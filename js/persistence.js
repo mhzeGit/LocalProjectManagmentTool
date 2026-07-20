@@ -235,6 +235,8 @@ function buildWorkspaceFromData(wsData) {
               p.boards = loaded.boards || []
               p.documents = loaded.documents || []
               p.canvasBoards = loaded.canvasBoards || []
+              p.folders = loaded.folders || []
+              p.sidebarOrder = loaded.sidebarOrder || []
             }
           }).catch(function() {
             p._loadError = true
@@ -583,6 +585,8 @@ function loadAllFromUser() {
                     existing.boards = lp.boards || []
                     existing.documents = lp.documents || []
                     existing.canvasBoards = lp.canvasBoards || []
+                    existing.folders = lp.folders || []
+                    existing.sidebarOrder = lp.sidebarOrder || []
                     existing._loadError = lp._loadError || false
                   } else {
                     ws.projects.push(lp)
@@ -612,6 +616,8 @@ function loadAllFromUser() {
                     project.boards = loaded.boards || []
                     project.documents = loaded.documents || []
                     project.canvasBoards = loaded.canvasBoards || []
+                    project.folders = loaded.folders || []
+                    project.sidebarOrder = loaded.sidebarOrder || []
                   }
                 }).catch(function() {
                   project._loadError = true
@@ -1025,17 +1031,19 @@ export function locateProjectFolder(projectId) {
 
   return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
     _projectDirHandles[projectId] = dirHandle
-    return loadProjectFromDir(dirHandle).then(function(loaded) {
-      if (loaded) {
-        found.boards = loaded.boards || []
-        found.documents = loaded.documents || []
-        found.canvasBoards = loaded.canvasBoards || []
-        found._loadError = false
-        found.name = loaded.name
-        found.color = loaded.color || null
-        if (!found.path) { found.path = dirHandle.name || '' }
-      }
-    }).then(function() {
+      return loadProjectFromDir(dirHandle).then(function(loaded) {
+        if (loaded) {
+          found.boards = loaded.boards || []
+          found.documents = loaded.documents || []
+          found.canvasBoards = loaded.canvasBoards || []
+          found.folders = loaded.folders || []
+          found.sidebarOrder = loaded.sidebarOrder || []
+          found._loadError = false
+          found.name = loaded.name
+          found.color = loaded.color || null
+          if (!found.path) { found.path = dirHandle.name || '' }
+        }
+      }).then(function() {
       return saveHandleToDB('project_' + projectId, dirHandle)
     }).then(function() {
       return saveAll()

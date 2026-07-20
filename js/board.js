@@ -249,7 +249,7 @@ export function renderBoard() {
       html += '  <div class="card-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="card-check-circle"><svg class="card-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>'
       html += '  <div class="card-body">'
       html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
-      if (c.description) html += '    <div class="card-desc">' + escapeHtml(c.description) + '</div>'
+      if (c.description) html += '    <div class="card-desc">' + c.description + '</div>'
       if (c.tags && c.tags.length > 0) {
         html += '    <div class="card-tags">'
         for (const t of c.tags) {
