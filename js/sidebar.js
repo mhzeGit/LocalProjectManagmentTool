@@ -598,8 +598,6 @@ function initSidebarReorder() {
       if (folderEl) {
         const folderId = folderEl.dataset.folderId
         if (folderId !== dragSourceFolder) {
-          if (_linePh) _linePh.remove()
-          _linePh = null
           doDrop(p, function() {
             if (dragSourceFolder) {
               const srcFolder = getFolderById(p, dragSourceFolder)
@@ -627,10 +625,17 @@ function initSidebarReorder() {
         const folderId = parentFolderEl.dataset.folderId
         const folder = getFolderById(p, folderId)
         if (folder) {
-          if (_linePh && _linePh.parentNode === folderItemsEl && dragSource) {
-            placeElementAtLine(folderItemsEl, dragSource)
-          }
           doDrop(p, function() {
+            if (!dragSourceFolder) {
+              const oi = p.sidebarOrder.indexOf(dragSourceKey)
+              if (oi !== -1) p.sidebarOrder.splice(oi, 1)
+            } else if (dragSourceFolder !== folderId) {
+              const srcFolder = getFolderById(p, dragSourceFolder)
+              if (srcFolder) {
+                const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
+                if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
+              }
+            }
             folder.itemOrder = readOrder(folderItemsEl, false)
           })
         }
@@ -642,9 +647,6 @@ function initSidebarReorder() {
     if (e.target.closest('.sidebar-folder-items')) { _sidebarDragData = null; return }
 
     if (dragSourceType === 'folder' && dragSourceKey && dragSource) {
-      if (_linePh && _linePh.parentNode === sidebar) {
-        placeElementAtLine(sidebar, dragSource)
-      }
       doDrop(p, function() {
         p.sidebarOrder = readOrder(sidebar, true)
       })
@@ -657,8 +659,6 @@ function initSidebarReorder() {
       if (targetFolderEl && !e.target.closest('.sidebar-folder-header')) {
         const folderId = targetFolderEl.dataset.folderId
         if (folderId !== dragSourceFolder) {
-          if (_linePh) _linePh.remove()
-          _linePh = null
           doDrop(p, function() {
             if (dragSourceFolder) {
               const srcFolder = getFolderById(p, dragSourceFolder)
@@ -679,10 +679,14 @@ function initSidebarReorder() {
       }
 
       if (dragSource) {
-        if (_linePh && _linePh.parentNode === sidebar) {
-          placeElementAtLine(sidebar, dragSource)
-        }
         doDrop(p, function() {
+          if (dragSourceFolder) {
+            const srcFolder = getFolderById(p, dragSourceFolder)
+            if (srcFolder) {
+              const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
+              if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
+            }
+          }
           p.sidebarOrder = readOrder(sidebar, true)
         })
       }
