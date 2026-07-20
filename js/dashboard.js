@@ -4,6 +4,11 @@ import { escapeHtml, getInitials, getProgressColor, countChecklistItems, countCo
 import { getResolvedAvatar } from './persistence.js'
 import { openCardDetail } from './modal.js'
 
+let _sortKey = 'endDate'
+let _sortAsc = true
+
+const PRIORITY_ORDER = { none: 0, low: 1, '1': 1, '2': 2, medium: 3, '3': 3, high: 4, '4': 4, urgent: 5, '5': 5 }
+
 function getTodayStr() {
   const d = new Date()
   const y = d.getFullYear()
@@ -43,16 +48,42 @@ function collectTodaysTasks() {
     }
   }
 
-  tasks.sort((a, b) => {
-    if (a.card.completed !== b.card.completed) {
-      return a.card.completed ? 1 : -1
-    }
-    const aDate = a.card.endDate || a.card.startDate || ''
-    const bDate = b.card.endDate || b.card.startDate || ''
-    return aDate.localeCompare(bDate)
-  })
-
   return tasks
+}
+
+function sortTasks(tasks) {
+  const sorted = [...tasks]
+  sorted.sort((a, b) => {
+    const ca = a.card, cb = b.card
+    let cmp = 0
+    if (_sortKey === 'title') {
+      cmp = (ca.title || '').localeCompare(cb.title || '')
+    } else if (_sortKey === 'board') {
+      cmp = (a.boardName + a.columnName).localeCompare(b.boardName + b.columnName)
+    } else if (_sortKey === 'priority') {
+      cmp = (PRIORITY_ORDER[ca.priority] || 0) - (PRIORITY_ORDER[cb.priority] || 0)
+    } else if (_sortKey === 'tags') {
+      const ta = ca.tags && ca.tags.length > 0 ? ca.tags[0] : ''
+      const tb = cb.tags && cb.tags.length > 0 ? cb.tags[0] : ''
+      cmp = ta.localeCompare(tb)
+    } else if (_sortKey === 'startDate') {
+      cmp = (ca.startDate || '').localeCompare(cb.startDate || '')
+    } else if (_sortKey === 'endDate') {
+      cmp = (ca.endDate || '').localeCompare(cb.endDate || '')
+    } else if (_sortKey === 'progress') {
+      const pctA = ca.checklists && ca.checklists.length > 0
+        ? Math.round((countCompletedChecklistItems(ca.checklists) / countChecklistItems(ca.checklists)) * 100) : 0
+      const pctB = cb.checklists && cb.checklists.length > 0
+        ? Math.round((countCompletedChecklistItems(cb.checklists) / countChecklistItems(cb.checklists)) * 100) : 0
+      cmp = pctA - pctB
+    } else if (_sortKey === 'members') {
+      const ma = ca.members && ca.members.length > 0 ? ca.members[0] : ''
+      const mb = cb.members && cb.members.length > 0 ? cb.members[0] : ''
+      cmp = ma.localeCompare(mb)
+    }
+    return _sortAsc ? cmp : -cmp
+  })
+  return sorted
 }
 
 const PRIORITY_BAR_CONFIG = {
@@ -70,8 +101,16 @@ const PRIORITY_BAR_CONFIG = {
 
 export function renderDashboard(area) {
   const self = getSelfMember()
-  const tasks = collectTodaysTasks()
+  const rawTasks = collectTodaysTasks()
+  const tasks = sortTasks(rawTasks)
   const today = getTodayStr()
+
+  function sortIcon(key) {
+    if (_sortKey !== key) return ''
+    return _sortAsc
+      ? ' <svg class="lv-sort-icon" viewBox="0 0 24 24" width="12" height="12" style="display:inline-block;vertical-align:middle"><path d="M12 5l-7 7h14l-7-7z" fill="currentColor"/></svg>'
+      : ' <svg class="lv-sort-icon" viewBox="0 0 24 24" width="12" height="12" style="display:inline-block;vertical-align:middle"><path d="M12 19l7-7H5l7 7z" fill="currentColor"/></svg>'
+  }
 
   let html = '<div class="page-view">'
 
@@ -96,14 +135,14 @@ export function renderDashboard(area) {
       html += '<div class="lv-header" style="border-radius:0;border-left:none;border-right:none">'
       html += '  <div class="lv-cell lv-cell-check"></div>'
       html += '  <div class="lv-cell lv-cell-color"></div>'
-      html += '  <div class="lv-cell lv-cell-title">Title</div>'
-      html += '  <div class="lv-cell lv-cell-column">Board</div>'
-      html += '  <div class="lv-cell lv-cell-priority">Priority</div>'
-      html += '  <div class="lv-cell lv-cell-tags">Tags</div>'
-      html += '  <div class="lv-cell lv-cell-dates">Start</div>'
-      html += '  <div class="lv-cell lv-cell-dates">Due</div>'
-      html += '  <div class="lv-cell lv-cell-progress">Progress</div>'
-      html += '  <div class="lv-cell lv-cell-members">Members</div>'
+      html += '  <div class="lv-cell lv-cell-title" data-sort="title" style="cursor:pointer">Title' + sortIcon('title') + '</div>'
+      html += '  <div class="lv-cell lv-cell-column" data-sort="board" style="cursor:pointer">Board' + sortIcon('board') + '</div>'
+      html += '  <div class="lv-cell lv-cell-priority" data-sort="priority" style="cursor:pointer">Priority' + sortIcon('priority') + '</div>'
+      html += '  <div class="lv-cell lv-cell-tags" data-sort="tags" style="cursor:pointer">Tags' + sortIcon('tags') + '</div>'
+      html += '  <div class="lv-cell lv-cell-dates" data-sort="startDate" style="cursor:pointer">Start' + sortIcon('startDate') + '</div>'
+      html += '  <div class="lv-cell lv-cell-dates" data-sort="endDate" style="cursor:pointer">Due' + sortIcon('endDate') + '</div>'
+      html += '  <div class="lv-cell lv-cell-progress" data-sort="progress" style="cursor:pointer">Progress' + sortIcon('progress') + '</div>'
+      html += '  <div class="lv-cell lv-cell-members" data-sort="members" style="cursor:pointer">Members' + sortIcon('members') + '</div>'
       html += '</div>'
       html += '<div class="lv-body" style="border:none;background:transparent">'
 
@@ -180,6 +219,19 @@ export function renderDashboard(area) {
   if (!area._dashEventsDone) {
     area._dashEventsDone = true
     area.addEventListener('click', function(e) {
+      const header = e.target.closest('.lv-header .lv-cell[data-sort]')
+      if (header) {
+        const key = header.dataset.sort
+        if (_sortKey === key) {
+          _sortAsc = !_sortAsc
+        } else {
+          _sortKey = key
+          _sortAsc = true
+        }
+        renderDashboard(area)
+        return
+      }
+
       const row = e.target.closest('.lv-row')
       if (row && row.dataset.cardId) {
         const check = e.target.closest('.lv-check')
