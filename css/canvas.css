@@ -440,8 +440,8 @@
   flex-shrink: 0;
 }
 
-.context-item.danger { color: #e74c3c }
-.context-item.danger:hover { background: rgba(231,76,60,0.12) }
+.context-item.danger { color: var(--danger) }
+.context-item.danger:hover { background: var(--danger-bg) }
 
 .context-item.has-submenu {
   display: flex;

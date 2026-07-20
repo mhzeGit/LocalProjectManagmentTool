@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu, showSidebarContextMenu, showFolderContextMenu, toggleFolder } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu, showSidebarContextMenu, showNavChildContextMenu, showFolderContextMenu, toggleFolder } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -113,7 +113,7 @@ Object.assign(window, {
   startRenameDocument,
   startRenameCanvas,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
-  showSidebarContextMenu, showFolderContextMenu, toggleFolder,
+  showSidebarContextMenu, showNavChildContextMenu, showFolderContextMenu, toggleFolder,
   createFolder, createFolderFromModal, deleteFolder, renameFolder,
   startRenameSidebarItem, moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems,
   openCardDetail,

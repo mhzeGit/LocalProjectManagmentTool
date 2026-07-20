@@ -247,7 +247,7 @@ function renderNavChild(p, type, item, icons, folderId) {
   const nameHtml = isRenaming
     ? '<input type="text" class="sidebar-item-rename-input" value="' + item.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-sidebar-item-id="' + item.id + '" data-sidebar-item-type="' + type + '" onclick="event.stopPropagation()" />'
     : '<span class="name" ondblclick="event.stopPropagation();startRenameSidebarItem(\'' + item.id + '\',\'' + type + '\')">' + item.name + '</span>'
-  return '<div class="nav-child' + activeClass + '" draggable="true"' + boardAttr + folderAttr + ' data-sidebar-type="' + type + '" data-sidebar-id="' + item.id + '" onclick="' + selectFn + '(\'' + item.id + '\')" oncontextmenu="event.stopPropagation();showSidebarContextMenu(event)">' +
+  return '<div class="nav-child' + activeClass + '" draggable="true"' + boardAttr + folderAttr + ' data-sidebar-type="' + type + '" data-sidebar-id="' + item.id + '" onclick="' + selectFn + '(\'' + item.id + '\')" oncontextmenu="event.stopPropagation();showNavChildContextMenu(event,\'' + type + '\',\'' + item.id + '\')">' +
     icons[type] +
     nameHtml +
     '<button class="btn-del" onclick="event.stopPropagation();window.' + (type === 'board' ? 'deleteBoard' : type === 'document' ? 'deleteDocument' : 'deleteCanvas') + '(\'' + item.id + '\')">' + String.fromCharCode(10005) + '</button>' +
@@ -860,6 +860,24 @@ export function showSidebarContextMenu(e) {
   document.body.appendChild(menu)
 }
 
+export function showNavChildContextMenu(e, type, id) {
+  e.preventDefault()
+  e.stopPropagation()
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+  const menu = document.createElement('div')
+  menu.className = 'tl-ctx-menu'
+  menu.style.left = e.clientX + 'px'
+  menu.style.top = e.clientY + 'px'
+  const label = type === 'board' ? 'Board' : type === 'document' ? 'Document' : 'Canvas'
+  const deleteFn = type === 'board' ? 'deleteBoard' : type === 'document' ? 'deleteDocument' : 'deleteCanvas'
+  menu.innerHTML =
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();startRenameSidebarItem(\'' + id + '\',\'' + type + '\')">Rename ' + label + '</button>' +
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();' + deleteFn + '(\'' + id + '\')">Delete</button>'
+  document.body.appendChild(menu)
+}
+
 export function initSidebarContextMenu() {
   const sidebar = document.getElementById('sidebarContent')
   if (sidebar._sidebarCtxMenuInited) return
@@ -882,7 +900,7 @@ export function showFolderContextMenu(e, folderId) {
   menu.style.top = e.clientY + 'px'
   menu.innerHTML =
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();renameFolder(\'' + folderId + '\')">Rename Folder</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();deleteFolder(\'' + folderId + '\')">Delete Folder</button>'
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteFolder(\'' + folderId + '\')">Delete Folder</button>'
   
   document.body.appendChild(menu)
 }
