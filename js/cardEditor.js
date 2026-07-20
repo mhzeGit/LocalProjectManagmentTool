@@ -3,8 +3,6 @@ let _editor = null
 const TIPTAP_VERSION = '2.6.6'
 
 export async function initCardEditor(content) {
-  destroyCardEditor()
-
   const containerEl = document.getElementById('cd-desc-editor')
   if (!containerEl) return
 
@@ -50,6 +48,8 @@ export async function initCardEditor(content) {
       }
     },
   })
+
+  destroyCardEditor()
 
   _editor = new Editor({
     element: containerEl,
@@ -148,7 +148,7 @@ export function destroyCardEditor() {
 }
 
 export function getCardEditorHTML() {
-  if (!_editor) return ''
+  if (!_editor) return null
   const text = _editor.getText().trim()
   if (!text) return ''
   return _editor.getHTML()

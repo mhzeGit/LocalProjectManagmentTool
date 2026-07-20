@@ -350,6 +350,7 @@ export function createCard(columnId) {
   const cardData = collectCardForm()
   if (!cardData.title) return
   cardData.id = genId()
+  cardData.description = cardData.description ?? ''
   cardData.completed = false
   col.cards.push(cardData)
   closeModal()
@@ -371,7 +372,7 @@ export function saveCard(cardId) {
   const newData = collectCardForm()
   if (!newData.title) return
   c.title = newData.title
-  c.description = newData.description
+  if (newData.description !== null) c.description = newData.description
   c.startDate = newData.startDate
   c.endDate = newData.endDate
   c.priority = newData.priority
@@ -389,7 +390,8 @@ export function saveCard(cardId) {
     redo() {
       const card = findCard(cardId)
       if (card) {
-        card.title = newData.title; card.description = newData.description
+        card.title = newData.title
+        if (newData.description !== null) card.description = newData.description
         card.startDate = newData.startDate; card.endDate = newData.endDate
         card.priority = newData.priority; card.tags = newData.tags
         card.members = newData.members; card.checklists = newData.checklists
