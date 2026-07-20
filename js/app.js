@@ -153,27 +153,26 @@ Object.assign(window, {
 
 ;(function() {
   var _timers = {}
-  document.addEventListener('mouseout', function(e) {
-    var menu = e.target.closest('.tl-ctx-menu, .col-menu.open')
-    if (!menu) return
-    if (e.relatedTarget && menu.contains(e.relatedTarget)) return
-    var key = menu.id || menu._uid || (menu._uid = 'm' + Date.now() + Math.random())
-    _timers[key] = setTimeout(function() {
-      if (menu.classList.contains('tl-ctx-menu')) {
-        if (menu.parentNode) menu.remove()
-      } else {
-        menu.classList.remove('open')
-        menu.style.left = ''
-        menu.style.top = ''
-      }
-      delete _timers[key]
-    }, 500)
-  })
   document.addEventListener('mouseover', function(e) {
-    var menu = e.target.closest('.tl-ctx-menu, .col-menu')
-    if (!menu) return
-    var key = menu.id || menu._uid || (menu._uid = 'm' + Date.now() + Math.random())
-    if (_timers[key]) { clearTimeout(_timers[key]); delete _timers[key] }
+    document.querySelectorAll('.tl-ctx-menu, .col-menu.open').forEach(function(menu) {
+      var el = document.elementFromPoint(e.clientX, e.clientY)
+      var inside = el && menu.contains(el)
+      var key = menu.id || menu._uid || (menu._uid = 'm' + Date.now() + Math.random())
+      if (inside) {
+        if (_timers[key]) { clearTimeout(_timers[key]); delete _timers[key] }
+      } else if (!_timers[key]) {
+        _timers[key] = setTimeout(function() {
+          if (menu.classList.contains('tl-ctx-menu')) {
+            if (menu.parentNode) menu.remove()
+          } else {
+            menu.classList.remove('open')
+            menu.style.left = ''
+            menu.style.top = ''
+          }
+          delete _timers[key]
+        }, 500)
+      }
+    })
   })
 })()
 

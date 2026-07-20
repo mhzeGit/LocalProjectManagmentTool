@@ -1139,12 +1139,15 @@ function openContextMenu(e) {
   for (const it of items) { if (it) menu.appendChild(it) }
   menu.style.left=e.clientX+'px'; menu.style.top=e.clientY+'px'; menu.style.display='block'
   if (menu._closeTimer) { clearTimeout(menu._closeTimer); menu._closeTimer=null }
-  menu.addEventListener('mouseleave',menu._onLeave=function(){
-    menu._closeTimer=setTimeout(function(){ closeContextMenu(); menu._closeTimer=null },500)
-  })
-  menu.addEventListener('mouseenter',menu._onEnter=function(){
-    if (menu._closeTimer) { clearTimeout(menu._closeTimer); menu._closeTimer=null }
-  })
+  if (menu._onDocHover) { document.removeEventListener('mouseover',menu._onDocHover) }
+  menu._onDocHover=function(e){
+    if(!menu.parentNode){document.removeEventListener('mouseover',menu._onDocHover);return}
+    var el=document.elementFromPoint(e.clientX,e.clientY)
+    var inside=el&&menu.contains(el)
+    if(inside){if(menu._closeTimer){clearTimeout(menu._closeTimer);menu._closeTimer=null}}
+    else if(!menu._closeTimer){menu._closeTimer=setTimeout(function(){closeContextMenu();menu._closeTimer=null},500)}
+  }
+  document.addEventListener('mouseover',menu._onDocHover)
   setTimeout(()=>{ document.addEventListener('pointerdown',e=>{if(!menu.contains(e.target))closeContextMenu()},{once:true}) },0)
 }
 function buildAddSubmenu(wx,wy,hit) {
@@ -1184,8 +1187,7 @@ function closeContextMenu() {
     var m=_ui.contextMenu
     m.style.display='none'
     if (m._closeTimer) { clearTimeout(m._closeTimer); m._closeTimer=null }
-    if (m._onLeave) { m.removeEventListener('mouseleave',m._onLeave); m._onLeave=null }
-    if (m._onEnter) { m.removeEventListener('mouseenter',m._onEnter); m._onEnter=null }
+    if (m._onDocHover) { document.removeEventListener('mouseover',m._onDocHover); m._onDocHover=null }
   }
 }
 

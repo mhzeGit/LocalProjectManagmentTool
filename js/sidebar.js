@@ -734,7 +734,7 @@ export function selectProject(id) {
   state.selectedBoardId = null
   state.selectedDocumentId = null
   state.selectedCanvasId = null
-  state.selectedDashboard = false
+  state.selectedDashboard = true
   render()
 }
 
