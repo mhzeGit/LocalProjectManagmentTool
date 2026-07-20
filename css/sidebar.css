@@ -23,12 +23,9 @@
 .nav-child.drag-hover { background: var(--accent); color: var(--text-white); }
 .sidebar-hint { padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
 
-.item-icon { flex-shrink: 0; color: var(--text-dim); }
-.nav-child.active .item-icon { color: var(--text-bright); }
-.item-icon-board { color: #3b82f6; }
-.item-icon-document { color: #22c55e; }
-.item-icon-canvas { color: #a855f7; }
-.item-icon-folder { color: #f59e0b; }
+.item-icon { flex-shrink: 0; color: var(--text-dim); opacity: 0.6; }
+.nav-child:hover .item-icon { opacity: 0.85; }
+.nav-child.active .item-icon { color: var(--text-bright); opacity: 0.85; }
 
 .sidebar-folder { margin: 2px 0; }
 .sidebar-folder-header { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; user-select: none; }

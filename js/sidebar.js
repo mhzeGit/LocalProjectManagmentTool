@@ -126,7 +126,7 @@ export function render() {
   const boardIcon = '<svg class="item-icon item-icon-board" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M3.2 4l.8.8L6 3.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 4h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><rect x="2.5" y="6.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M7 8h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><rect x="2.5" y="10.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M7 12h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>'
   const docIcon = '<svg class="item-icon item-icon-document" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.5V4.5H13" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><line x1="5" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="9.5" x2="11" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
   const canvasIcon = '<svg class="item-icon item-icon-canvas" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="0.5" y="0.5" width="15" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="5.5" y1="0.5" x2="5.5" y2="15.5" stroke="currentColor" stroke-width="1"/><line x1="10.5" y1="0.5" x2="10.5" y2="15.5" stroke="currentColor" stroke-width="1"/><line x1="0.5" y1="5.5" x2="15.5" y2="5.5" stroke="currentColor" stroke-width="1"/><line x1="0.5" y1="10.5" x2="15.5" y2="10.5" stroke="currentColor" stroke-width="1"/></svg>'
-  const folderIcon = '<svg class="item-icon item-icon-folder" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1.5 4.5V13C1.5 13.5523 1.94772 14 2.5 14H13.5C14.0523 14 14.5 13.5523 14.5 13V5.5C14.5 4.94772 14.0523 4.5 13.5 4.5H8L6.5 3H2.5C1.94772 3 1.5 3.44772 1.5 4V4.5Z" stroke="currentColor" stroke-width="1.3"/></svg>'
+  const folderIcon = '<svg class="item-icon item-icon-folder" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1.5 4.5V13C1.5 13.5523 1.94772 14 2.5 14H13.5C14.0523 14 14.5 13.5523 14.5 13V5.5C14.5 4.94772 14.0523 4.5 13.5 4.5H8L6.5 3H2.5C1.94772 3 1.5 3.44772 1.5 4V4.5Z" fill="currentColor"/></svg>'
 
   const icons = { board: boardIcon, document: docIcon, canvas: canvasIcon }
 
@@ -146,7 +146,7 @@ export function render() {
       if (state.renamingFolderId === folder.id) {
         html += '<input type="text" class="sidebar-folder-rename-input" value="' + folder.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-folder-id="' + folder.id + '" />'
       } else {
-        html += '<span class="name">' + folder.name + '</span>'
+        html += '<span class="name" onclick="event.stopPropagation()" ondblclick="event.stopPropagation();renameFolder(\'' + folder.id + '\')">' + folder.name + '</span>'
       }
       html += '<button class="btn-del" onclick="event.stopPropagation();deleteFolder(\'' + folder.id + '\')">' + String.fromCharCode(10005) + '</button>'
       html += '</div>'
