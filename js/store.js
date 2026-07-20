@@ -919,11 +919,19 @@ export function createFolder(projectId) {
   const p = findProject(projectId)
   if (!p) return
   ensureSidebarOrder(p)
-  const name = prompt('Folder name:')
-  if (!name || !name.trim()) return
-  const folder = { id: genId(), name: name.trim(), itemOrder: [] }
+
+  let baseName = 'New Folder'
+  let name = baseName
+  let counter = 1
+  while ((p.folders || []).some(f => f.name === name)) {
+    counter++
+    name = baseName + ' (' + counter + ')'
+  }
+
+  const folder = { id: genId(), name, itemOrder: [] }
   p.folders.push(folder)
   p.sidebarOrder.push('folder:' + folder.id)
+  state.renamingFolderId = folder.id
   render()
   pushCommand({
     undo() {
@@ -1008,20 +1016,8 @@ export function deleteFolder(id) {
 }
 
 export function renameFolder(id) {
-  const p = findProject(state.selectedProjectId)
-  if (!p) return
-  const folder = (p.folders || []).find(f => f.id === id)
-  if (!folder) return
-  const oldName = folder.name
-  const newName = prompt('Rename folder:', folder.name)
-  if (!newName || !newName.trim() || newName.trim() === oldName) return
-  folder.name = newName.trim()
+  state.renamingFolderId = id
   render()
-  pushCommand({
-    undo() { folder.name = oldName; render() },
-    redo() { folder.name = newName.trim(); render() },
-    description: 'Rename Folder'
-  })
 }
 
 export function moveItemToFolder(itemKey, folderId) {

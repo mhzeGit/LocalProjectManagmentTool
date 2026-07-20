@@ -3,6 +3,7 @@ import { renderBoard } from './board.js'
 import { initDragDrop, isCardDragActive } from './dragdrop.js'
 import { renderMemberBar } from './members.js'
 import { updateMenuBar } from './menubar.js'
+import { pushCommand } from './history.js'
 
 let _sidebarDragData = null
 
@@ -142,7 +143,11 @@ export function render() {
       html += '<div class="sidebar-folder-header" onclick="toggleFolder(\'' + folder.id + '\')" oncontextmenu="event.stopPropagation();showFolderContextMenu(event,\'' + folder.id + '\')">'
       html += '<span class="arrow' + (isOpen ? ' open' : '') + '">' + String.fromCharCode(9654) + '</span>'
       html += folderIcon
-      html += '<span class="name">' + folder.name + '</span>'
+      if (state.renamingFolderId === folder.id) {
+        html += '<input type="text" class="sidebar-folder-rename-input" value="' + folder.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-folder-id="' + folder.id + '" />'
+      } else {
+        html += '<span class="name">' + folder.name + '</span>'
+      }
       html += '<button class="btn-del" onclick="event.stopPropagation();deleteFolder(\'' + folder.id + '\')">' + String.fromCharCode(10005) + '</button>'
       html += '</div>'
       html += '<div class="sidebar-folder-items' + (isOpen ? ' open' : '') + '">'
@@ -171,6 +176,45 @@ export function render() {
   renderMemberBar()
   updateMenuBar()
   if (window.__autoSave) window.__autoSave()
+
+  if (state.renamingFolderId) {
+    const input = sidebar.querySelector('.sidebar-folder-rename-input')
+    if (input) {
+      input.focus()
+      input.select()
+      input.addEventListener('blur', function() { finishFolderRename(input) })
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          input.blur()
+        } else if (e.key === 'Escape') {
+          state.renamingFolderId = null
+          render()
+        }
+      })
+    }
+  }
+}
+
+function finishFolderRename(input) {
+  const id = input.dataset.folderId
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  const folder = (p.folders || []).find(f => f.id === id)
+  if (!folder) return
+  const oldName = folder.name
+  const newName = input.value.trim() || 'New Folder'
+  state.renamingFolderId = null
+  if (newName === oldName) {
+    render()
+    return
+  }
+  folder.name = newName
+  render()
+  pushCommand({
+    undo() { folder.name = oldName; render() },
+    redo() { folder.name = newName; render() },
+    description: 'Rename Folder'
+  })
 }
 
 function renderNavChild(p, type, item, icons, folderId) {
@@ -269,6 +313,8 @@ function initSidebarReorder() {
   let dragSourceFolder = null
   let _lastPosKey = null
   let _flipCleanupTimer = null
+  let _dragGhost = null
+  let _ghostOffsetY = 0
 
   function flipSiblings(container, movedEl, oldRects) {
     if (_flipCleanupTimer) { clearTimeout(_flipCleanupTimer); _flipCleanupTimer = null }
@@ -318,7 +364,16 @@ function initSidebarReorder() {
 
       e.dataTransfer.effectAllowed = 'move'
       e.dataTransfer.setData('text/x-sidebar-item', dragSourceKey)
-      e.dataTransfer.setDragImage(new Image(), 0, 0)
+      var _transparentImg = new Image()
+      _transparentImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      e.dataTransfer.setDragImage(_transparentImg, 0, 0)
+
+      _dragGhost = navChild.cloneNode(true)
+      _dragGhost.style.cssText = 'position:fixed;left:' + sidebar.getBoundingClientRect().left + 'px;width:' + sidebar.getBoundingClientRect().width + 'px;opacity:0.9;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:6px;pointer-events:none;z-index:99999;box-shadow:0 4px 16px var(--shadow-md);'
+      _ghostOffsetY = e.clientY - navChild.getBoundingClientRect().top
+      _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
+      document.body.appendChild(_dragGhost)
+      navChild.style.opacity = '0.35'
       return
     }
 
@@ -333,16 +388,33 @@ function initSidebarReorder() {
 
       e.dataTransfer.effectAllowed = 'move'
       e.dataTransfer.setData('text/x-sidebar-folder', folderId)
-      e.dataTransfer.setDragImage(new Image(), 0, 0)
+      var _transparentImg = new Image()
+      _transparentImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      e.dataTransfer.setDragImage(_transparentImg, 0, 0)
+
+      _dragGhost = folderEl.cloneNode(true)
+      _dragGhost.style.cssText = 'position:fixed;left:' + sidebar.getBoundingClientRect().left + 'px;width:' + sidebar.getBoundingClientRect().width + 'px;opacity:0.9;background:var(--bg-elevated);border:1px solid var(--accent);border-radius:6px;pointer-events:none;z-index:99999;box-shadow:0 4px 16px var(--shadow-md);'
+      _ghostOffsetY = e.clientY - folderEl.getBoundingClientRect().top
+      _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
+      document.body.appendChild(_dragGhost)
+      folderEl.style.opacity = '0.35'
       return
     }
 
     e.preventDefault()
   })
 
+  document.addEventListener('dragover', function(e) {
+    if (_dragGhost) {
+      _dragGhost.style.top = (e.clientY - _ghostOffsetY) + 'px'
+    }
+  })
+
   document.addEventListener('dragend', function() {
     if (_flipCleanupTimer) { clearTimeout(_flipCleanupTimer); _flipCleanupTimer = null }
     clearDragIndicators()
+    if (_dragGhost) { _dragGhost.remove(); _dragGhost = null }
+    if (dragSource) { dragSource.style.opacity = '' }
     _sidebarDragData = null
     dragSource = null
     dragSourceType = null
@@ -355,7 +427,7 @@ function initSidebarReorder() {
     const items = []
     for (let i = 0; i < containerEl.children.length; i++) {
       const child = containerEl.children[i]
-      if (child.matches('.nav-child[draggable], .sidebar-folder[draggable]')) {
+      if (child !== dragSource && child.matches('.nav-child[draggable], .sidebar-folder[draggable]')) {
         items.push(child)
       }
     }
@@ -375,7 +447,10 @@ function initSidebarReorder() {
   }
 
   function getDropPositionInFolder(folderEl, clientY) {
-    const items = folderEl.querySelectorAll('.nav-child[draggable]')
+    const items = []
+    for (const item of folderEl.querySelectorAll('.nav-child[draggable]')) {
+      if (item !== dragSource) items.push(item)
+    }
     let before = null
     let after = null
     for (const item of items) {
@@ -397,6 +472,48 @@ function initSidebarReorder() {
     })
   }
 
+  function moveDragSource(container, beforeEl) {
+    if (!dragSource) return false
+    if (dragSource.parentNode === container && dragSource.nextElementSibling === beforeEl) return false
+    if (_flipCleanupTimer) { clearTimeout(_flipCleanupTimer); _flipCleanupTimer = null }
+    const siblings = []
+    for (let i = 0; i < container.children.length; i++) {
+      const c = container.children[i]
+      if (c !== dragSource && c.matches('.nav-child[draggable], .sidebar-folder[draggable]')) {
+        siblings.push({ el: c, rect: c.getBoundingClientRect() })
+      }
+    }
+    container.insertBefore(dragSource, beforeEl)
+    const moved = []
+    for (let i = 0; i < siblings.length; i++) {
+      const el = siblings[i].el
+      const oldRect = siblings[i].rect
+      const newRect = el.getBoundingClientRect()
+      const dx = oldRect.left - newRect.left
+      const dy = oldRect.top - newRect.top
+      if (dx > 0.5 || dx < -0.5 || dy > 0.5 || dy < -0.5) {
+        el.style.transition = 'none'
+        el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)'
+        moved.push(el)
+      }
+    }
+    if (moved.length) {
+      void container.offsetHeight
+      for (let i = 0; i < moved.length; i++) {
+        moved[i].style.transition = 'transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1)'
+        moved[i].style.transform = 'translate(0, 0)'
+      }
+      _flipCleanupTimer = setTimeout(function() {
+        for (let i = 0; i < moved.length; i++) {
+          moved[i].style.transition = ''
+          moved[i].style.transform = ''
+        }
+        _flipCleanupTimer = null
+      }, 250)
+    }
+    return true
+  }
+
   sidebar.addEventListener('dragover', function(e) {
     if (!_sidebarDragData) return
     e.preventDefault()
@@ -412,7 +529,6 @@ function initSidebarReorder() {
         const folderId = folderEl.dataset.folderId
         if (folderId !== dragSourceFolder) {
           folderHeader.classList.add('drag-over-folder')
-          _lastPosKey = null
         }
       }
       return
@@ -421,106 +537,87 @@ function initSidebarReorder() {
     const folderItemsEl = e.target.closest('.sidebar-folder-items')
     if (folderItemsEl && dragSourceType === 'item') {
       const parentFolderEl = folderItemsEl.closest('.sidebar-folder')
-      if (!parentFolderEl || !dragSource) { _lastPosKey = null; return }
-      const folderId = parentFolderEl.dataset.folderId
+      if (!parentFolderEl) return
       const pos = getDropPositionInFolder(folderItemsEl, e.clientY)
       const insertBeforeEl = pos.beforeEl || null
-
-      if (dragSource.parentNode !== folderItemsEl) {
-        if (pos.beforeEl) { pos.beforeEl.classList.add('drag-indicator-top') }
-        else if (pos.afterEl) { pos.afterEl.classList.add('drag-indicator-bottom') }
-        _lastPosKey = null
-        return
-      }
-
-      const posKey = folderId + ':' + (insertBeforeEl ? insertBeforeEl.dataset.sidebarId : '__end')
+      const posKey = (parentFolderEl.dataset.folderId || '') + ':' + (insertBeforeEl ? insertBeforeEl.dataset.sidebarId : '__end')
       if (posKey === _lastPosKey) return
       _lastPosKey = posKey
-
-      const oldRects = []
-      const siblings = folderItemsEl.querySelectorAll('.nav-child[draggable]')
-      for (let i = 0; i < siblings.length; i++) {
-        if (siblings[i] !== dragSource) {
-          oldRects.push({ el: siblings[i], rect: siblings[i].getBoundingClientRect() })
-        }
-      }
-
-      folderItemsEl.insertBefore(dragSource, insertBeforeEl)
-      flipSiblings(folderItemsEl, dragSource, oldRects)
+      moveDragSource(folderItemsEl, insertBeforeEl)
       return
     }
 
-    if (e.target.closest('.sidebar-folder-items')) { _lastPosKey = null; return }
+    if (e.target.closest('.sidebar-folder-items')) { return }
 
-    if (!dragSource) { _lastPosKey = null; return }
-
-    const currentContainer = dragSource.parentNode
-    const sameContainer = currentContainer === sidebar
-
-    if (!sameContainer) {
-      const pos = getDropPosition(sidebar, e.clientY)
-      if (pos.beforeEl) { pos.beforeEl.classList.add('drag-indicator-top') }
-      else if (pos.afterEl) { pos.afterEl.classList.add('drag-indicator-bottom') }
-      _lastPosKey = null
-      return
-    }
+    if (!dragSource) return
 
     const pos = getDropPosition(sidebar, e.clientY)
     const insertBeforeEl = pos.beforeEl || null
     const posKey = '__root:' + (insertBeforeEl ? getItemKeyFromEl(insertBeforeEl) : '__end')
     if (posKey === _lastPosKey) return
     _lastPosKey = posKey
+    moveDragSource(sidebar, insertBeforeEl)
+  })
 
-    const oldRects = []
-    const siblings = []
-    for (let i = 0; i < sidebar.children.length; i++) {
-      const child = sidebar.children[i]
-      if (child.matches('.nav-child[draggable], .sidebar-folder[draggable]') && child !== dragSource) {
-        siblings.push(child)
-        oldRects.push({ el: child, rect: child.getBoundingClientRect() })
+  function doDrop(p, fn) {
+    fn()
+    flipRender(function() { render(); if (window.__autoSave) window.__autoSave() })
+  }
+
+  function readOrder(container, isRoot) {
+    const order = []
+    for (let i = 0; i < container.children.length; i++) {
+      const c = container.children[i]
+      if (isRoot && c.matches('.nav-child[draggable], .sidebar-folder[draggable]')) {
+        const key = getItemKeyFromEl(c)
+        if (key) order.push(key)
+      } else if (!isRoot && c.matches('.nav-child[draggable]')) {
+        order.push(c.dataset.sidebarType + ':' + c.dataset.sidebarId)
       }
     }
-
-    sidebar.insertBefore(dragSource, insertBeforeEl)
-    flipSiblings(sidebar, dragSource, oldRects)
-  })
+    return order
+  }
 
   sidebar.addEventListener('drop', function(e) {
     if (!_sidebarDragData) return
     e.preventDefault()
 
+    if (_dragGhost) { _dragGhost.remove(); _dragGhost = null }
+    if (dragSource) { dragSource.style.opacity = '' }
+
     const p = findProject(state.selectedProjectId)
-    if (!p) return
+    if (!p) { _sidebarDragData = null; return }
     ensureSidebarOrder(p)
 
     if (_flipCleanupTimer) { clearTimeout(_flipCleanupTimer); _flipCleanupTimer = null }
     clearDragIndicators()
 
     const folderHeader = e.target.closest('.sidebar-folder-header')
-    if (folderHeader && dragSourceType === 'item') {
+    if (folderHeader && dragSourceType === 'item' && dragSourceKey) {
       const folderEl = folderHeader.closest('.sidebar-folder')
       if (folderEl) {
         const folderId = folderEl.dataset.folderId
-        if (folderId !== dragSourceFolder && dragSourceKey) {
-          if (dragSourceFolder) {
-            const srcFolder = getFolderById(p, dragSourceFolder)
-            if (srcFolder) {
-              const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
-              if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
+        if (folderId !== dragSourceFolder) {
+          if (_linePh) _linePh.remove()
+          _linePh = null
+          doDrop(p, function() {
+            if (dragSourceFolder) {
+              const srcFolder = getFolderById(p, dragSourceFolder)
+              if (srcFolder) {
+                const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
+                if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
+              }
+            } else {
+              const oi = p.sidebarOrder.indexOf(dragSourceKey)
+              if (oi !== -1) p.sidebarOrder.splice(oi, 1)
             }
-          } else {
-            const oi = p.sidebarOrder.indexOf(dragSourceKey)
-            if (oi !== -1) p.sidebarOrder.splice(oi, 1)
-          }
-          const dstFolder = getFolderById(p, folderId)
-          if (dstFolder) {
-            dstFolder.itemOrder.push(dragSourceKey)
-          }
-          flipRender(function() { render(); if (window.__autoSave) window.__autoSave() })
-          _sidebarDragData = null
-          return
+            const dstFolder = getFolderById(p, folderId)
+            if (dstFolder) { dstFolder.itemOrder.push(dragSourceKey) }
+          })
         }
       }
+      _sidebarDragData = null
+      return
     }
 
     const folderItemsEl = e.target.closest('.sidebar-folder-items')
@@ -529,63 +626,28 @@ function initSidebarReorder() {
       if (parentFolderEl && dragSourceKey) {
         const folderId = parentFolderEl.dataset.folderId
         const folder = getFolderById(p, folderId)
-        if (!folder) { _sidebarDragData = null; return }
-
-        if (dragSourceFolder === folderId && dragSource && dragSource.parentNode === folderItemsEl) {
-          folder.itemOrder = []
-          const children = folderItemsEl.querySelectorAll('.nav-child[draggable]')
-          for (let i = 0; i < children.length; i++) {
-            const key = children[i].dataset.sidebarType + ':' + children[i].dataset.sidebarId
-            folder.itemOrder.push(key)
+        if (folder) {
+          if (_linePh && _linePh.parentNode === folderItemsEl && dragSource) {
+            placeElementAtLine(folderItemsEl, dragSource)
           }
-        } else {
-          const pos = getDropPositionInFolder(folderItemsEl, e.clientY)
-          let newOrder = folder.itemOrder.slice()
-          if (dragSourceFolder === folderId) {
-            const fromIdx = newOrder.indexOf(dragSourceKey)
-            if (fromIdx !== -1) newOrder.splice(fromIdx, 1)
-          } else {
-            if (dragSourceFolder) {
-              const srcFolder = getFolderById(p, dragSourceFolder)
-              if (srcFolder) {
-                const sfi = srcFolder.itemOrder.indexOf(dragSourceKey)
-                if (sfi !== -1) srcFolder.itemOrder.splice(sfi, 1)
-              }
-            } else {
-              const oi = p.sidebarOrder.indexOf(dragSourceKey)
-              if (oi !== -1) p.sidebarOrder.splice(oi, 1)
-            }
-          }
-          let insertIdx = newOrder.length
-          if (pos.beforeEl) {
-            const bk = pos.beforeEl.dataset.sidebarType + ':' + pos.beforeEl.dataset.sidebarId
-            const bi = newOrder.indexOf(bk)
-            if (bi !== -1) insertIdx = bi
-          } else if (pos.afterEl) {
-            const ak = pos.afterEl.dataset.sidebarType + ':' + pos.afterEl.dataset.sidebarId
-            const ai = newOrder.indexOf(ak)
-            if (ai !== -1) insertIdx = ai + 1
-          }
-          newOrder.splice(insertIdx, 0, dragSourceKey)
-          folder.itemOrder = newOrder
+          doDrop(p, function() {
+            folder.itemOrder = readOrder(folderItemsEl, false)
+          })
         }
-        if (window.__autoSave) window.__autoSave()
-        _sidebarDragData = null
-        return
       }
+      _sidebarDragData = null
+      return
     }
 
     if (e.target.closest('.sidebar-folder-items')) { _sidebarDragData = null; return }
 
-    if (dragSourceType === 'folder' && dragSourceKey && dragSource && dragSource.parentNode === sidebar) {
-      p.sidebarOrder = []
-      const children = sidebar.querySelectorAll(':scope > .nav-child[draggable], :scope > .sidebar-folder[draggable]')
-      for (let i = 0; i < children.length; i++) {
-        const key = getItemKeyFromEl(children[i])
-        if (key) p.sidebarOrder.push(key)
+    if (dragSourceType === 'folder' && dragSourceKey && dragSource) {
+      if (_linePh && _linePh.parentNode === sidebar) {
+        placeElementAtLine(sidebar, dragSource)
       }
-      p.sidebarOrder = p.sidebarOrder.filter(function(k, idx, self) { return self.indexOf(k) === idx })
-      if (window.__autoSave) window.__autoSave()
+      doDrop(p, function() {
+        p.sidebarOrder = readOrder(sidebar, true)
+      })
       _sidebarDragData = null
       return
     }
@@ -595,69 +657,35 @@ function initSidebarReorder() {
       if (targetFolderEl && !e.target.closest('.sidebar-folder-header')) {
         const folderId = targetFolderEl.dataset.folderId
         if (folderId !== dragSourceFolder) {
-          if (dragSourceFolder) {
-            const srcFolder = getFolderById(p, dragSourceFolder)
-            if (srcFolder) {
-              const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
-              if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
+          if (_linePh) _linePh.remove()
+          _linePh = null
+          doDrop(p, function() {
+            if (dragSourceFolder) {
+              const srcFolder = getFolderById(p, dragSourceFolder)
+              if (srcFolder) {
+                const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
+                if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
+              }
+            } else {
+              const oi = p.sidebarOrder.indexOf(dragSourceKey)
+              if (oi !== -1) p.sidebarOrder.splice(oi, 1)
             }
-          } else {
-            const oi = p.sidebarOrder.indexOf(dragSourceKey)
-            if (oi !== -1) p.sidebarOrder.splice(oi, 1)
-          }
-          const dstFolder = getFolderById(p, folderId)
-          if (dstFolder) {
-            dstFolder.itemOrder.push(dragSourceKey)
-          }
-          flipRender(function() { render(); if (window.__autoSave) window.__autoSave() })
+            const dstFolder = getFolderById(p, folderId)
+            if (dstFolder) { dstFolder.itemOrder.push(dragSourceKey) }
+          })
           _sidebarDragData = null
           return
         }
       }
 
-      if (dragSource && dragSource.parentNode === sidebar) {
-        p.sidebarOrder = []
-        const children = sidebar.querySelectorAll(':scope > .nav-child[draggable], :scope > .sidebar-folder[draggable]')
-        for (let i = 0; i < children.length; i++) {
-          const key = getItemKeyFromEl(children[i])
-          if (key) p.sidebarOrder.push(key)
+      if (dragSource) {
+        if (_linePh && _linePh.parentNode === sidebar) {
+          placeElementAtLine(sidebar, dragSource)
         }
-      } else {
-        const pos = getDropPosition(sidebar, e.clientY)
-        if (dragSourceFolder) {
-          const srcFolder = getFolderById(p, dragSourceFolder)
-          if (srcFolder) {
-            const fi = srcFolder.itemOrder.indexOf(dragSourceKey)
-            if (fi !== -1) srcFolder.itemOrder.splice(fi, 1)
-          }
-          let newRootOrder = p.sidebarOrder.slice()
-          let insertIdx = newRootOrder.length
-          if (pos.beforeEl) {
-            const bk = getItemKeyFromEl(pos.beforeEl)
-            if (bk) { const bi = newRootOrder.indexOf(bk); if (bi !== -1) insertIdx = bi }
-          } else if (pos.afterEl) {
-            const ak = getItemKeyFromEl(pos.afterEl)
-            if (ak) { const ai = newRootOrder.indexOf(ak); if (ai !== -1) insertIdx = ai + 1 }
-          }
-          newRootOrder.splice(insertIdx, 0, dragSourceKey)
-          p.sidebarOrder = newRootOrder
-        } else {
-          let newOrder = p.sidebarOrder.slice()
-          const fromIdx = newOrder.indexOf(dragSourceKey)
-          if (fromIdx !== -1) newOrder.splice(fromIdx, 1)
-          let insertIdx = newOrder.length
-          if (pos.beforeEl) {
-            const bk = getItemKeyFromEl(pos.beforeEl)
-            if (bk) { const bi = newOrder.indexOf(bk); if (bi !== -1) insertIdx = bi }
-          } else if (pos.afterEl) {
-            const ak = getItemKeyFromEl(pos.afterEl)
-            if (ak) { const ai = newOrder.indexOf(ak); if (ai !== -1) insertIdx = ai + 1 }
-          }
-          newOrder.splice(insertIdx, 0, dragSourceKey)
-          p.sidebarOrder = newOrder
-        }
+        doDrop(p, function() {
+          p.sidebarOrder = readOrder(sidebar, true)
+        })
       }
-      if (window.__autoSave) window.__autoSave()
       _sidebarDragData = null
       return
     }

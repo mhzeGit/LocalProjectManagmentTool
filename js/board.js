@@ -144,7 +144,7 @@ export function renderBoard() {
       '<div class="page-view">' +
       '<div class="page-header"><div class="page-header-actions">' +
       '<button class="btn-create" onclick="createWorkspaceInUser()">+ Create Workspace</button>' +
-      '<button class="btn-secondary" onclick="addExistingWorkspace()">Add Workspace</button>' +
+      '<button class="btn-secondary" onclick="addExistingWorkspace()">Locate Workspace</button>' +
       '</div></div>' +
       '<div class="empty-state"><p>No workspaces yet. Create a new workspace or locate an existing one.</p></div>' +
       '</div>'
@@ -385,7 +385,7 @@ function renderWorkspacesPage(area) {
   let html = '<div class="page-view">'
   html += '<div class="page-header"><div class="page-header-actions">'
   html += '<button class="btn-create" onclick="createWorkspaceInUser()">+ Create Workspace</button>'
-  html += '<button class="btn-secondary" onclick="addExistingWorkspace()">Add Workspace</button>'
+  html += '<button class="btn-secondary" onclick="addExistingWorkspace()">Locate Workspace</button>'
   html += '</div></div>'
 
   if (data.workspaces.length === 0) {

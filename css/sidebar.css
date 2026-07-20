@@ -37,6 +37,7 @@
 .sidebar-folder-header .arrow.open { transform: rotate(90deg); }
 .sidebar-folder-header .name { flex: 1; }
 .sidebar-folder-header .btn-del { opacity: 0; }
+.sidebar-folder-rename-input { flex: 1; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: 4px; color: var(--text-bright); font-size: 13px; padding: 1px 4px; outline: none; font-family: inherit; min-width: 0; }
 .sidebar-folder-header:hover .btn-del { opacity: 1; }
 .sidebar-folder-items { display: none; }
 .sidebar-folder-items.open { display: block; }
@@ -46,3 +47,5 @@
 .drag-indicator-bottom { border-bottom: 2px solid var(--accent) !important; }
 .drag-over-folder { background: var(--accent); color: var(--text-white) !important; border-radius: 6px; }
 .sidebar-folder-header.drag-over-folder .arrow { color: var(--text-white); }
+.sidebar-placeholder { margin: 2px 8px; border-radius: 6px; border: 2px dashed var(--accent); background: var(--accent-subtle); pointer-events: none; flex-shrink: 0; animation: ph-appear 0.15s ease-out; }
+@keyframes ph-appear { from { opacity: 0; transform: scaleY(0.6); } to { opacity: 1; transform: scaleY(1); } }
