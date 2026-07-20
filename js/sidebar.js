@@ -87,6 +87,12 @@ function flipRender(fn) {
   })
 }
 
+const _boardIcon = '<svg class="item-icon item-icon-board" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M3.2 4l.8.8L6 3.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 4h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><rect x="2.5" y="6.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M7 8h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><rect x="2.5" y="10.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M7 12h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>'
+const _docIcon = '<svg class="item-icon item-icon-document" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.5V4.5H13" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><line x1="5" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="9.5" x2="11" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
+const _canvasIcon = '<svg class="item-icon item-icon-canvas" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="0.5" y="0.5" width="15" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="5.5" y1="0.5" x2="5.5" y2="15.5" stroke="currentColor" stroke-width="1"/><line x1="10.5" y1="0.5" x2="10.5" y2="15.5" stroke="currentColor" stroke-width="1"/><line x1="0.5" y1="5.5" x2="15.5" y2="5.5" stroke="currentColor" stroke-width="1"/><line x1="0.5" y1="10.5" x2="15.5" y2="10.5" stroke="currentColor" stroke-width="1"/></svg>'
+const _folderIcon = '<svg class="item-icon item-icon-folder" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1.5 4.5V13C1.5 13.5523 1.94772 14 2.5 14H13.5C14.0523 14 14.5 13.5523 14.5 13V5.5C14.5 4.94772 14.0523 4.5 13.5 4.5H8L6.5 3H2.5C1.94772 3 1.5 3.44772 1.5 4V4.5Z" fill="currentColor"/></svg>'
+const _icons = { board: _boardIcon, document: _docIcon, canvas: _canvasIcon }
+
 export function render() {
   const sidebarEl = document.getElementById('sidebar')
   if (state.selectedProjectId && state.selectedWorkspaceId) {
@@ -123,13 +129,6 @@ export function render() {
   </div>`
   html += '<div class="section-title" style="margin-top:12px"><span>Items</span><span class="btn-add-board" onclick="toggleAddBoardMenu(event,\'' + p.id + '\')">+</span></div>'
 
-  const boardIcon = '<svg class="item-icon item-icon-board" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M3.2 4l.8.8L6 3.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 4h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><rect x="2.5" y="6.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M7 8h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><rect x="2.5" y="10.5" width="3" height="3" rx="0.5" stroke="currentColor" stroke-width="1"/><path d="M7 12h5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>'
-  const docIcon = '<svg class="item-icon item-icon-document" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.5V4.5H13" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><line x1="5" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="9.5" x2="11" y2="9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="5" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
-  const canvasIcon = '<svg class="item-icon item-icon-canvas" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="0.5" y="0.5" width="15" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="5.5" y1="0.5" x2="5.5" y2="15.5" stroke="currentColor" stroke-width="1"/><line x1="10.5" y1="0.5" x2="10.5" y2="15.5" stroke="currentColor" stroke-width="1"/><line x1="0.5" y1="5.5" x2="15.5" y2="5.5" stroke="currentColor" stroke-width="1"/><line x1="0.5" y1="10.5" x2="15.5" y2="10.5" stroke="currentColor" stroke-width="1"/></svg>'
-  const folderIcon = '<svg class="item-icon item-icon-folder" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1.5 4.5V13C1.5 13.5523 1.94772 14 2.5 14H13.5C14.0523 14 14.5 13.5523 14.5 13V5.5C14.5 4.94772 14.0523 4.5 13.5 4.5H8L6.5 3H2.5C1.94772 3 1.5 3.44772 1.5 4V4.5Z" fill="currentColor"/></svg>'
-
-  const icons = { board: boardIcon, document: docIcon, canvas: canvasIcon }
-
   for (const entry of p.sidebarOrder) {
     const colonIdx = entry.indexOf(':')
     const entryType = entry.substring(0, colonIdx)
@@ -142,7 +141,7 @@ export function render() {
       html += '<div class="sidebar-folder" data-folder-id="' + folder.id + '" draggable="true">'
       html += '<div class="sidebar-folder-header" onclick="toggleFolder(\'' + folder.id + '\')" oncontextmenu="event.stopPropagation();showFolderContextMenu(event,\'' + folder.id + '\')">'
       html += '<span class="arrow' + (isOpen ? ' open' : '') + '">' + String.fromCharCode(9654) + '</span>'
-      html += folderIcon
+      html += _folderIcon
       if (state.renamingFolderId === folder.id) {
         html += '<input type="text" class="sidebar-folder-rename-input" value="' + folder.name.replace(/"/g, '&quot;').replace(/&/g, '&amp;') + '" data-folder-id="' + folder.id + '" />'
       } else {
@@ -157,13 +156,13 @@ export function render() {
         const fiId = fi.substring(fcolonIdx + 1)
         const item = getItemByType(p, fiType, fiId)
         if (!item) continue
-        html += renderNavChild(p, fiType, item, icons, folder.id)
+        html += renderNavChild(p, fiType, item, _icons, folder.id)
       }
       html += '</div></div>'
     } else {
       const item = getItemByType(p, entryType, entryId)
       if (!item) continue
-      html += renderNavChild(p, entryType, item, icons, null)
+      html += renderNavChild(p, entryType, item, _icons, null)
     }
   }
 
@@ -832,11 +831,11 @@ export function toggleAddBoardMenu(e, projectId) {
   menu.className = 'tl-ctx-menu add-board-menu'
   menu.style.left = (rect.left - 80) + 'px'
   menu.style.top = (rect.bottom + 2) + 'px'
-  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + projectId + '\')">Task Board</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + projectId + '\')">Document</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + projectId + '\')">Canvas Board</button>' +
+  menu.innerHTML = '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + projectId + '\')">' + _boardIcon + ' Task Board</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + projectId + '\')">' + _docIcon + ' Document</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + projectId + '\')">' + _canvasIcon + ' Canvas Board</button>' +
     '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + projectId + '\')">Folder</button>'
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + projectId + '\')">' + _folderIcon + ' Folder</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }
@@ -852,11 +851,11 @@ export function showSidebarContextMenu(e) {
   menu.style.left = e.clientX + 'px'
   menu.style.top = e.clientY + 'px'
   menu.innerHTML =
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + p.id + '\')">New Folder</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + p.id + '\')">New Task Board</button>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + p.id + '\')">New Document</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();createFolder(\'' + p.id + '\')">' + _folderIcon + ' New Folder</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateBoard(\'' + p.id + '\')">' + _boardIcon + ' New Task Board</button>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateDocument(\'' + p.id + '\')">' + _docIcon + ' New Document</button>' +
     '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + p.id + '\')">New Canvas Board</button>'
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();quickCreateCanvas(\'' + p.id + '\')">' + _canvasIcon + ' New Canvas Board</button>'
   menu.addEventListener('mouseleave', function() { menu.remove() })
   document.body.appendChild(menu)
 }
