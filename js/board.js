@@ -435,7 +435,7 @@ function renderWorkspacePage(area, w) {
         html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
         html += '</div>'
       } else {
-        html += '<div class="page-card page-card-unloaded" style="border-top:5px solid #555;opacity:0.7">'
+        html += '<div class="page-card page-card-unloaded" style="border-top:5px solid #555;opacity:0.7" oncontextmenu="event.preventDefault();event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')">'
         html += '<h3>' + p.name + '</h3>'
         html += '<p class="count" style="color:var(--text-dim)">Project folder not located</p>'
         html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();window.locateProjectFolder(\'' + p.id + '\')">Locate Folder</button>'
@@ -482,8 +482,8 @@ export function showWsCtxMenu(e, workspaceId) {
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>' +
     '<div class="tl-ctx-divider"></div>' +
     '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>' +
-    '<div class="tl-ctx-divider"></div>' +
-    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>'
+    (state.selectedWorkspaceId !== workspaceId ? '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>' : '')
   
   document.body.appendChild(menu)
 }
@@ -510,7 +510,9 @@ export function showProjectCtxMenu(e, projectId) {
     '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>' +
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();copyProject(\'' + projectId + '\')">Duplicate</button>' +
-    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();archiveProject(\'' + projectId + '\')">Archive</button>'
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();archiveProject(\'' + projectId + '\')">Archive</button>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteProject(\'' + projectId + '\')">Delete Project</button>'
   
   document.body.appendChild(menu)
 }
