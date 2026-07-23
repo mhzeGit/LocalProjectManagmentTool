@@ -980,8 +980,10 @@ export function addProjectToWorkspace(workspaceId) {
     }).then(function() {
       return saveUserFile()
     }).then(function() {
-      state.selectedProjectId = project.id
       render()
+      setTimeout(function() {
+        if (window.startRenameProject) window.startRenameProject(project.id)
+      }, 50)
       showNotification('Project added')
     })
   }).catch(function(e) {
@@ -993,7 +995,7 @@ export function addProjectToWorkspace(workspaceId) {
 }
 
 export function locateExistingProjectInWorkspace(workspaceId) {
-  if (!window.showDirectoryPicker) {
+  if (!window.showOpenFilePicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
   }
@@ -1001,27 +1003,39 @@ export function locateExistingProjectInWorkspace(workspaceId) {
   var w = data.workspaces.find(function(ws) { return ws.id === workspaceId })
   if (!w) return Promise.resolve()
 
-  return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
-    return readJSON(dirHandle, 'project.json').then(function(pMeta) {
+  return window.showOpenFilePicker({
+    types: [{ description: 'Project File', accept: { 'application/json': ['.json'] } }],
+    multiple: false
+  }).then(function(fileHandles) {
+    var fileHandle = fileHandles[0]
+    return fileHandle.getFile().then(function(file) {
+      return file.text()
+    }).then(function(text) {
+      var pMeta
+      try { pMeta = JSON.parse(text) } catch(e) { pMeta = null }
       if (!pMeta || pMeta.type !== 'project') {
-        showNotification('No project data found in this folder', 3000)
+        showNotification('Invalid project file selected', 3000)
         return null
       }
-      return loadProjectFromDir(dirHandle).then(function(loaded) {
-        if (!loaded) { showNotification('Failed to load project', 3000); return null }
-        loaded.path = dirHandle.name || ''
-        loaded._loadError = false
-        w.projects.push(loaded)
-        _projectDirHandles[loaded.id] = dirHandle
-        _saveMode = 'user'
-        return saveHandleToDB('project_' + loaded.id, dirHandle).then(function() {
-          return saveWorkspaceFile(w)
-        }).then(function() {
-          return saveUserFile()
-        }).then(function() {
-          state.selectedProjectId = loaded.id
-          render()
-          showNotification('Project loaded: ' + loaded.name)
+      return (typeof fileHandle.parent === 'function' ? fileHandle.parent() : fileHandle.parent).then(function(parentHandle) {
+        if (parentHandle) return parentHandle
+        return window.showDirectoryPicker({ mode: 'readwrite' })
+      }).then(function(dirHandle) {
+        return loadProjectFromDir(dirHandle).then(function(loaded) {
+          if (!loaded) { showNotification('Failed to load project', 3000); return null }
+          loaded.path = dirHandle.name || ''
+          loaded._loadError = false
+          w.projects.push(loaded)
+          _projectDirHandles[loaded.id] = dirHandle
+          _saveMode = 'user'
+          return saveHandleToDB('project_' + loaded.id, dirHandle).then(function() {
+            return saveWorkspaceFile(w)
+          }).then(function() {
+            return saveUserFile()
+          }).then(function() {
+            render()
+            showNotification('Project loaded: ' + loaded.name)
+          })
         })
       })
     })
@@ -1041,8 +1055,21 @@ export function locateProjectFolder(projectId) {
   }
   if (!found) return Promise.resolve()
 
-  return window.showDirectoryPicker({ mode: 'readwrite' }).then(function(dirHandle) {
-    _projectDirHandles[projectId] = dirHandle
+  if (!window.showOpenFilePicker) {
+    showNotification('Your browser does not support the File System Access API.', 4000)
+    return Promise.resolve()
+  }
+
+  return window.showOpenFilePicker({
+    types: [{ description: 'Project File', accept: { 'application/json': ['.json'] } }],
+    multiple: false
+  }).then(function(fileHandles) {
+    var fileHandle = fileHandles[0]
+    return (typeof fileHandle.parent === 'function' ? fileHandle.parent() : fileHandle.parent).then(function(parentHandle) {
+      if (!parentHandle) return window.showDirectoryPicker({ mode: 'readwrite' })
+      return parentHandle
+    }).then(function(dirHandle) {
+      _projectDirHandles[projectId] = dirHandle
       return loadProjectFromDir(dirHandle).then(function(loaded) {
         if (loaded) {
           found.boards = loaded.boards || []
@@ -1056,13 +1083,14 @@ export function locateProjectFolder(projectId) {
           if (!found.path) { found.path = dirHandle.name || '' }
         }
       }).then(function() {
-      _saveMode = 'user'
-      return saveHandleToDB('project_' + projectId, dirHandle)
-    }).then(function() {
-      return saveAll()
-    }).then(function() {
-      render()
-      showNotification('Project located and loaded')
+        _saveMode = 'user'
+        return saveHandleToDB('project_' + projectId, dirHandle)
+      }).then(function() {
+        return saveAll()
+      }).then(function() {
+        render()
+        showNotification('Project located and loaded')
+      })
     })
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {

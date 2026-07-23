@@ -51,15 +51,16 @@ export function createProject(workspaceId) {
   const p = { id: genId(), name, boards: [] }
   w.projects.push(p)
   closeModal()
-  state.selectedProjectId = p.id
-  state.selectedBoardId = null
   render()
+  setTimeout(function() {
+    if (window.startRenameProject) window.startRenameProject(p.id)
+  }, 50)
   pushCommand({
     undo() {
       const pi = w.projects.findIndex(x => x.id === p.id)
       if (pi !== -1) { w.projects.splice(pi, 1); state.selectedProjectId = w.projects.length > 0 ? w.projects[0].id : null; state.selectedBoardId = null }
     },
-    redo() { w.projects.push(p); state.selectedProjectId = p.id; state.selectedBoardId = null },
+    redo() { w.projects.push(p); render() },
     description: 'Create Project'
   })
 }
