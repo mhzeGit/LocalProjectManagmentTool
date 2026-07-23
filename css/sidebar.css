@@ -17,7 +17,7 @@
 .nav-item .arrow.open { transform: rotate(90deg); }
 .nav-children { display: none; }
 .nav-children.open { display: block; }
-.nav-child { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; }
+.nav-child { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; outline: none; }
 .nav-child:hover { background: var(--bg-surface-hover); color: var(--text-bright); }
 .nav-child.active { background: var(--editor-btn-active-bg); color: var(--text-bright); }
 .nav-child.drag-hover { background: var(--accent); color: var(--text-white); }
@@ -46,4 +46,15 @@
 .sidebar-folder-header.drag-over-folder .arrow { color: var(--text-white); }
 .sidebar-drag-preview { background: var(--accent-subtle) !important; box-shadow: inset 0 0 0 2px var(--accent) !important; border-radius: 6px !important; opacity: 0.9 !important; }
 .sidebar-drag-preview > * { visibility: hidden !important; }
+
+.nav-child.multi-selected { background: var(--accent-subtle); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.nav-child.multi-selected:hover { background: var(--accent-subtle); }
+.nav-child.active.multi-selected { background: var(--accent-subtle); box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+.sidebar-multi-toolbar { display: flex; align-items: center; gap: 4px; padding: 8px 12px; margin: 4px 8px; border-top: 1px solid var(--border); background: var(--bg-surface); border-radius: 6px; }
+.multi-count { font-size: 11px; color: var(--text-dim); margin-right: auto; white-space: nowrap; }
+.multi-btn { background: var(--bg-surface-hover); border: none; color: var(--text-secondary); font-size: 13px; padding: 4px 8px; border-radius: 4px; cursor: pointer; line-height: 1; transition: background .12s; }
+.multi-btn:hover { background: var(--accent); color: var(--text-white); }
+.multi-btn-clear { color: var(--danger); }
+.multi-btn-clear:hover { background: var(--danger-bg); color: var(--danger); }
 

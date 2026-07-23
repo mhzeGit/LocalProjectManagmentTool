@@ -1,4 +1,4 @@
-import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu, showSidebarContextMenu, showNavChildContextMenu, showFolderContextMenu, toggleFolder } from './sidebar.js'
+import { render, selectWorkspace, selectProject, selectBoard, selectDocument, selectCanvas, selectDashboard, toggleAddBoardMenu, showSidebarContextMenu, showNavChildContextMenu, showFolderContextMenu, toggleFolder, clearMultiSelection, moveSelectedUp, moveSelectedDown, moveSelectedToFolder } from './sidebar.js'
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
@@ -118,6 +118,7 @@ Object.assign(window, {
   showSidebarContextMenu, showNavChildContextMenu, showFolderContextMenu, toggleFolder,
   createFolder, createFolderFromModal, deleteFolder, renameFolder,
   startRenameSidebarItem, moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems,
+  clearMultiSelection, moveSelectedUp, moveSelectedDown, moveSelectedToFolder,
   openCardDetail,
   calendarPrevMonth,
   calendarNextMonth,

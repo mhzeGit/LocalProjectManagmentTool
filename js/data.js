@@ -31,6 +31,7 @@ export const state = {
   renamingSidebarItemType: null,
   selectedView: 'kanban',
   selfMemberId: null,
+  selectedSidebarItems: [],
   filters: {
     search: '',
     members: [],
