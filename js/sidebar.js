@@ -196,7 +196,7 @@ export function render() {
   resetSidebarNavFocus()
   if (state.selectedSidebarItems.length > 0) {
     var lastKey = state.selectedSidebarItems[state.selectedSidebarItems.length - 1]
-    var focusEl = sidebar.querySelector('[data-sidebar-key="' + lastKey + '"]')
+    var focusEl = sidebar.querySelector('.sidebar-folder-header[data-sidebar-key="' + lastKey + '"]') || sidebar.querySelector('[data-sidebar-key="' + lastKey + '"]')
     if (focusEl) focusEl.focus({ preventScroll: true })
   }
   renderMemberBar()
@@ -1146,6 +1146,7 @@ function getSidebarItemKeys(p) {
   const keys = []
   for (const entry of p.sidebarOrder) {
     if (entry.startsWith('folder:')) {
+      keys.push(entry)
       const folderId = entry.split(':')[1]
       const folder = getFolderById(p, folderId)
       if (folder && folder._open !== false) {
@@ -1207,6 +1208,23 @@ window.handleSidebarItemClick = function(e, type, id) {
   }
 }
 
+window.handleFolderClick = function(e, folderId) {
+  const key = 'folder:' + folderId
+  if (e.shiftKey) {
+    e.preventDefault()
+    handleShiftClick(key)
+  } else if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()
+    handleCtrlClick(key)
+  } else {
+    if (state.selectedSidebarItems.length > 0) {
+      state.selectedSidebarItems = []
+      _lastClickedKey = null
+    }
+    toggleFolder(folderId)
+  }
+}
+
 export function clearMultiSelection() {
   state.selectedSidebarItems = []
   _lastClickedKey = null
@@ -1218,15 +1236,39 @@ function initSidebarKeyboardNav() {
   if (sidebar._sidebarKeyboardNavInited) return
   sidebar._sidebarKeyboardNavInited = true
 
+  function getItemKey(el) {
+    if (el.classList.contains('nav-child')) return el.dataset.sidebarType + ':' + el.dataset.sidebarId
+    if (el.classList.contains('sidebar-folder-header')) return el.dataset.sidebarKey
+    return null
+  }
+
   function getItems() {
-    return sidebar.querySelectorAll('.nav-child[draggable]')
+    const list = []
+    for (let i = 0; i < sidebar.children.length; i++) {
+      const child = sidebar.children[i]
+      if (child.matches('.nav-child[draggable]')) {
+        list.push(child)
+      } else if (child.matches('.sidebar-folder[draggable]')) {
+        const header = child.querySelector('.sidebar-folder-header')
+        if (header) list.push(header)
+        const itemsContainer = child.querySelector('.sidebar-folder-items')
+        if (itemsContainer && itemsContainer.classList.contains('open')) {
+          for (let j = 0; j < itemsContainer.children.length; j++) {
+            if (itemsContainer.children[j].matches('.nav-child[draggable]')) {
+              list.push(itemsContainer.children[j])
+            }
+          }
+        }
+      }
+    }
+    return list
   }
 
   function syncNavIndexFromSelection(items) {
     if (state.selectedSidebarItems.length > 0) {
       var lastKey = state.selectedSidebarItems[state.selectedSidebarItems.length - 1]
       for (var i = 0; i < items.length; i++) {
-        if (items[i].dataset.sidebarType + ':' + items[i].dataset.sidebarId === lastKey) {
+        if (getItemKey(items[i]) === lastKey) {
           _sidebarNavIndex = i
           return
         }
@@ -1237,13 +1279,32 @@ function initSidebarKeyboardNav() {
     }
   }
 
+  function isFolderHeader(el) {
+    return el && el.classList.contains('sidebar-folder-header')
+  }
+
+  function getFolderIdFromHeader(el) {
+    if (!el) return null
+    var key = el.dataset.sidebarKey
+    if (key && key.indexOf('folder:') === 0) return key.substring(7)
+    return null
+  }
+
+  function toggleFolderByKey(key) {
+    if (key && key.indexOf('folder:') === 0) {
+      var fid = key.substring(7)
+      if (window.toggleFolder) window.toggleFolder(fid)
+    }
+  }
+
   function handleKey(e, items) {
     if (e.ctrlKey && e.key === 'a') {
       e.preventDefault()
       e.stopPropagation()
       state.selectedSidebarItems = []
       for (let i = 0; i < items.length; i++) {
-        state.selectedSidebarItems.push(items[i].dataset.sidebarType + ':' + items[i].dataset.sidebarId)
+        var k = getItemKey(items[i])
+        if (k) state.selectedSidebarItems.push(k)
       }
       _lastClickedKey = null
       render()
@@ -1270,7 +1331,8 @@ function initSidebarKeyboardNav() {
       e.stopPropagation()
       _sidebarNavIndex = Math.min(_sidebarNavIndex + 1, items.length - 1)
       items[_sidebarNavIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      const key = items[_sidebarNavIndex].dataset.sidebarType + ':' + items[_sidebarNavIndex].dataset.sidebarId
+      var key = getItemKey(items[_sidebarNavIndex])
+      if (!key) { render(); return }
       if (e.shiftKey) {
         if (state.selectedSidebarItems.indexOf(key) === -1) {
           state.selectedSidebarItems.push(key)
@@ -1288,7 +1350,8 @@ function initSidebarKeyboardNav() {
       e.stopPropagation()
       _sidebarNavIndex = Math.max(_sidebarNavIndex - 1, 0)
       items[_sidebarNavIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      const key = items[_sidebarNavIndex].dataset.sidebarType + ':' + items[_sidebarNavIndex].dataset.sidebarId
+      var key = getItemKey(items[_sidebarNavIndex])
+      if (!key) { render(); return }
       if (e.shiftKey) {
         if (state.selectedSidebarItems.indexOf(key) === -1) {
           state.selectedSidebarItems.push(key)
@@ -1301,11 +1364,57 @@ function initSidebarKeyboardNav() {
       render()
       return
     }
+    if (e.key === 'ArrowRight' && !e.ctrlKey && !e.shiftKey) {
+      if (_sidebarNavIndex >= 0 && _sidebarNavIndex < items.length) {
+        var cur = items[_sidebarNavIndex]
+        if (isFolderHeader(cur)) {
+          e.preventDefault()
+          e.stopPropagation()
+          var fid = getFolderIdFromHeader(cur)
+          if (fid) {
+            var p = findProject(state.selectedProjectId)
+            if (p) {
+              var folder = getFolderById(p, fid)
+              if (folder && folder._open === false) {
+                toggleFolder(fid)
+              }
+            }
+          }
+          return
+        }
+      }
+    }
+    if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.shiftKey) {
+      if (_sidebarNavIndex >= 0 && _sidebarNavIndex < items.length) {
+        var cur = items[_sidebarNavIndex]
+        if (isFolderHeader(cur)) {
+          e.preventDefault()
+          e.stopPropagation()
+          var fid = getFolderIdFromHeader(cur)
+          if (fid) {
+            var p = findProject(state.selectedProjectId)
+            if (p) {
+              var folder = getFolderById(p, fid)
+              if (folder && folder._open !== false) {
+                toggleFolder(fid)
+              }
+            }
+          }
+          return
+        }
+      }
+    }
     if (e.key === 'Enter') {
       if (_sidebarNavIndex >= 0 && _sidebarNavIndex < items.length) {
         e.preventDefault()
         e.stopPropagation()
-        items[_sidebarNavIndex].click()
+        var el = items[_sidebarNavIndex]
+        if (isFolderHeader(el)) {
+          var fkey = el.dataset.sidebarKey
+          if (fkey) toggleFolderByKey(fkey)
+        } else {
+          el.click()
+        }
       }
       return
     }
@@ -1313,8 +1422,8 @@ function initSidebarKeyboardNav() {
       e.preventDefault()
       e.stopPropagation()
       if (_sidebarNavIndex >= 0 && _sidebarNavIndex < items.length) {
-        const key = items[_sidebarNavIndex].dataset.sidebarType + ':' + items[_sidebarNavIndex].dataset.sidebarId
-        handleCtrlClick(key)
+        var k = getItemKey(items[_sidebarNavIndex])
+        if (k) handleCtrlClick(k)
       }
       return
     }
@@ -1349,7 +1458,7 @@ function moveSelectedIntoNearestFolder() {
       targetFolderIdx = ei
     }
     if (selected.indexOf(entry) !== -1) {
-      if (targetFolderId) {
+      if (!entry.startsWith('folder:') && targetFolderId) {
         var alreadyInFolder = false
         for (var fi = 0; fi < (p.folders || []).length; fi++) {
           if ((p.folders)[fi].id === targetFolderId &&
@@ -1376,7 +1485,9 @@ function moveSelectedOutOfFolder() {
   if (selected.length === 0) return
 
   var commonFolder = null
+  var firstNonFolder = true
   for (var si = 0; si < selected.length; si++) {
+    if (selected[si].startsWith('folder:')) continue
     var foundFolder = null
     for (var fi = 0; fi < (p.folders || []).length; fi++) {
       if ((p.folders)[fi].itemOrder.indexOf(selected[si]) !== -1) {
@@ -1384,13 +1495,15 @@ function moveSelectedOutOfFolder() {
         break
       }
     }
-    if (si === 0) {
+    if (firstNonFolder) {
       commonFolder = foundFolder
+      firstNonFolder = false
     } else if (commonFolder !== foundFolder) {
       commonFolder = null
       break
     }
   }
+  if (firstNonFolder) return
 
   if (!commonFolder) return
 
@@ -1404,6 +1517,7 @@ function moveSelectedOutOfFolder() {
     var fIdx = p.sidebarOrder.indexOf('folder:' + commonFolder.id)
     var iIdx = fIdx >= 0 ? fIdx : p.sidebarOrder.length
     for (var ri = 0; ri < selected.length; ri++) {
+      if (selected[ri].startsWith('folder:')) continue
       var itemIdx = commonFolder.itemOrder.indexOf(selected[ri])
       if (itemIdx !== -1) commonFolder.itemOrder.splice(itemIdx, 1)
       if (p.sidebarOrder.indexOf(selected[ri]) === -1) {
@@ -1461,7 +1575,7 @@ function doMoveSelected(direction) {
   }
 
   function applyMove() {
-    const rootSelected = selected.filter(function(k) { return !k.startsWith('folder:') && p.sidebarOrder.indexOf(k) !== -1 })
+    const rootSelected = selected.filter(function(k) { return p.sidebarOrder.indexOf(k) !== -1 })
     moveInArray(p.sidebarOrder, rootSelected, direction)
     for (const f of (p.folders || [])) {
       const folderSelected = selected.filter(function(k) { return f.itemOrder.indexOf(k) !== -1 })
