@@ -429,8 +429,8 @@ function renderWorkspacesPage(area) {
       var wsName = ws.name || 'Workspace'
       if (isLoaded) {
         const colorStyle = ws.color ? 'border-top:5px solid ' + ws.color + ';background:linear-gradient(180deg,' + ws.color + '25, #1e1e2e 100%);' : ''
-        html += '<div class="page-card" onclick="selectWorkspace(\'' + ws.id + '\')" data-id="' + ws.id + '" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')" style="' + colorStyle + '">'
-        html += '<h3 id="workspaceTitle-' + ws.id + '" ondblclick="startRenameWorkspace(\'' + ws.id + '\')">' + wsName + '</h3>'
+        html += '<div class="page-card" ondblclick="selectWorkspace(\'' + ws.id + '\')" data-id="' + ws.id + '" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')" style="' + colorStyle + '">'
+        html += '<h3 id="workspaceTitle-' + ws.id + '" ondblclick="event.stopPropagation();startRenameWorkspace(\'' + ws.id + '\')">' + wsName + '</h3>'
         html += '<p class="count">' + (ws.projects ? ws.projects.length : 0) + ' project' + ((ws.projects ? ws.projects.length : 0) !== 1 ? 's' : '') + '</p>'
         html += '</div>'
       } else {
@@ -464,8 +464,8 @@ function renderWorkspacePage(area, w) {
       const isLoaded = !p._loadError
       const colorStyle = p.color ? 'border-top:5px solid ' + p.color + ';background:linear-gradient(180deg,' + p.color + '25, #1e1e2e 100%);' : ''
       if (isLoaded) {
-        html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" data-id="' + p.id + '" oncontextmenu="event.preventDefault();event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
-        html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
+        html += '<div class="page-card" ondblclick="selectProject(\'' + p.id + '\')" data-id="' + p.id + '" oncontextmenu="event.preventDefault();event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
+        html += '<h3 id="projectTitle-' + p.id + '" ondblclick="event.stopPropagation();startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
         html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
         html += '</div>'
       } else {

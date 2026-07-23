@@ -103,7 +103,14 @@ function onGlobalKeyDown(e) {
     if (e.key === 'Enter') {
       if (!fromInput && _items[_index]) {
         e.preventDefault()
-        _items[_index].click()
+        const id = _items[_index].dataset.id
+        if (id) {
+          if (!state.selectedWorkspaceId) {
+            window.selectWorkspace(id)
+          } else if (!state.selectedProjectId) {
+            window.selectProject(id)
+          }
+        }
       }
       return
     }
