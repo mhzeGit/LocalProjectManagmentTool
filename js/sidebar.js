@@ -1297,6 +1297,23 @@ function initSidebarKeyboardNav() {
     }
   }
 
+  function selectItemByKey(key) {
+    if (!key) return
+    var colonIdx = key.indexOf(':')
+    if (colonIdx === -1) return
+    var type = key.substring(0, colonIdx)
+    var id = key.substring(colonIdx + 1)
+    state.selectedBoardId = null
+    state.selectedDocumentId = null
+    state.selectedCanvasId = null
+    state.selectedDashboard = false
+    if (type === 'board') state.selectedBoardId = id
+    else if (type === 'document') state.selectedDocumentId = id
+    else if (type === 'canvas') state.selectedCanvasId = id
+    else return
+    if (window.__saveSelectedState) window.__saveSelectedState()
+  }
+
   function handleKey(e, items) {
     if (e.ctrlKey && e.key === 'a') {
       e.preventDefault()
@@ -1341,6 +1358,7 @@ function initSidebarKeyboardNav() {
       } else {
         state.selectedSidebarItems = [key]
         _lastClickedKey = key
+        selectItemByKey(key)
       }
       render()
       return
@@ -1360,6 +1378,7 @@ function initSidebarKeyboardNav() {
       } else {
         state.selectedSidebarItems = [key]
         _lastClickedKey = key
+        selectItemByKey(key)
       }
       render()
       return
