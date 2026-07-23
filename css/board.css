@@ -146,6 +146,10 @@
 .btn-open { background: var(--bg-surface-hover); color: var(--text-primary); border: 1px solid var(--border-strong); }
 .btn-open:hover { background: var(--border-strong); border-color: var(--accent); }
 
+.onboarding-reconnect { margin: 8px 0 4px; }
+.btn-reconnect { background: var(--accent); color: #fff; border: none; padding: 10px 24px; font-size: 14px; font-weight: 500; border-radius: 8px; cursor: pointer; transition: background .15s, transform .1s; }
+.btn-reconnect:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
 .page-view { padding: 0; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .page-header h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); }

@@ -24,7 +24,7 @@ import { calendarPrevMonth, calendarNextMonth, calendarToday, calendarAddCard, c
 import { initSelfMember, renderMemberBar, setSelfMember, getSelfMember, addMember, editMember, removeMember } from './members.js'
 import { initFilterEvents, resetFilters, filterCards, getActiveFilterCount } from './filters.js'
 import { openPreferences, closePreferences, initTheme, initGlowMultiplier } from './preferences.js'
-import { initPersistence, handleKeyDown, setupUserDirectory, openUserFile, createWorkspaceInUser, addExistingWorkspace, locateWorkspaceFile, addProjectToWorkspace, locateExistingProjectInWorkspace, locateProjectFolder, closeUserDirectory, getSaveMode, hasProjectHandle } from './persistence.js'
+import { initPersistence, handleKeyDown, setupUserDirectory, openUserFile, createWorkspaceInUser, addExistingWorkspace, locateWorkspaceFile, addProjectToWorkspace, locateExistingProjectInWorkspace, locateProjectFolder, closeUserDirectory, getSaveMode, hasProjectHandle, reconnectUserFile } from './persistence.js'
 import { getCurrentWorkspace, state } from './data.js'
 import { initMenuBar } from './menubar.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
@@ -149,6 +149,7 @@ Object.assign(window, {
   locateExistingProjectInWorkspace,
   locateProjectFolder,
   hasProjectHandle,
+  reconnectUserFile,
 })
 
 ;(function() {

@@ -13,6 +13,7 @@ let _saveMode = 'memory'
 let _dirty = false
 let _saveTimer = null
 let _initialized = false
+let _storedUserFileHandle = null
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -664,25 +665,27 @@ function loadAllFromUser() {
 /* ======== SAVE ALL ======== */
 
 function saveAll() {
-  if (_saveMode !== 'user' || !_userFileHandle) return Promise.resolve()
-
   var promises = []
 
   for (var wi = 0; wi < data.workspaces.length; wi++) {
     var w = data.workspaces[wi]
     if (_workspaceFileHandles[w.id]) {
       promises.push(saveWorkspaceFile(w))
-      for (var pi = 0; pi < (w.projects || []).length; pi++) {
-        var p = w.projects[pi]
-        var pDir = _projectDirHandles[p.id]
-        if (pDir) {
-          promises.push(saveProjectToDir(p, pDir))
-        }
+    }
+    for (var pi = 0; pi < (w.projects || []).length; pi++) {
+      var p = w.projects[pi]
+      var pDir = _projectDirHandles[p.id]
+      if (pDir) {
+        promises.push(saveProjectToDir(p, pDir))
       }
     }
   }
 
-  promises.push(saveUserFile())
+  if (_userFileHandle) {
+    promises.push(saveUserFile())
+  }
+
+  if (promises.length === 0) return Promise.resolve()
 
   return Promise.all(promises).then(function() {
     showNotification('Auto-saved')
@@ -965,6 +968,7 @@ export function addProjectToWorkspace(workspaceId) {
     return saveProjectToDir(project, dirHandle).then(function() {
       return saveHandleToDB('project_' + project.id, dirHandle)
     }).then(function() {
+      _saveMode = 'user'
       return saveWorkspaceFile(w)
     }).then(function() {
       return saveUserFile()
@@ -1002,6 +1006,7 @@ export function locateExistingProjectInWorkspace(workspaceId) {
         loaded._loadError = false
         w.projects.push(loaded)
         _projectDirHandles[loaded.id] = dirHandle
+        _saveMode = 'user'
         return saveHandleToDB('project_' + loaded.id, dirHandle).then(function() {
           return saveWorkspaceFile(w)
         }).then(function() {
@@ -1044,6 +1049,7 @@ export function locateProjectFolder(projectId) {
           if (!found.path) { found.path = dirHandle.name || '' }
         }
       }).then(function() {
+      _saveMode = 'user'
       return saveHandleToDB('project_' + projectId, dirHandle)
     }).then(function() {
       return saveAll()
@@ -1060,7 +1066,6 @@ export function locateProjectFolder(projectId) {
 }
 
 export function markDirty() {
-  if (_saveMode !== 'user' || !_userFileHandle) return
   _dirty = true
   if (_saveTimer) return
   _saveTimer = setTimeout(function() {
@@ -1075,7 +1080,6 @@ export function markDirty() {
 }
 
 export function saveNow() {
-  if (_saveMode !== 'user' || !_userFileHandle) return Promise.resolve()
   if (_saveTimer) {
     clearTimeout(_saveTimer)
     _saveTimer = null
@@ -1128,11 +1132,11 @@ export function initPersistence() {
 
   return getHandleFromDB('user_file').then(function(handle) {
     if (!handle) return
+    _storedUserFileHandle = handle
     return verifyHandlePermission(handle).then(function(valid) {
-      if (!valid) {
-        return removeHandleFromDB('user_file')
-      }
+      if (!valid) return
       _userFileHandle = handle
+      _storedUserFileHandle = null
       _workspaceFileHandles = {}
       _projectDirHandles = {}
       data.workspaces.splice(0, data.workspaces.length)
@@ -1162,9 +1166,7 @@ export function initPersistence() {
       }).then(function(result) {
         if (result) {
           _saveMode = 'user'
-          state.selectedWorkspaceId = null
-          state.selectedProjectId = null
-          state.selectedBoardId = null
+          restoreSelectedState()
           render()
         }
         return null
@@ -1186,6 +1188,57 @@ export function getSaveMode() {
   return _saveMode
 }
 
+export function hasStoredUserFile() {
+  return _storedUserFileHandle !== null
+}
+
+export function reconnectUserFile() {
+  if (!_storedUserFileHandle) {
+    return openUserFile()
+  }
+
+  return verifyHandlePermission(_storedUserFileHandle).then(function(valid) {
+    if (!valid) return false
+    _userFileHandle = _storedUserFileHandle
+    _storedUserFileHandle = null
+    _workspaceFileHandles = {}
+    _projectDirHandles = {}
+    data.workspaces.splice(0, data.workspaces.length)
+    return getAllKeys().then(function(keys) {
+      var handlePromises = []
+      for (var i = 0; i < (keys || []).length; i++) {
+        (function(k) {
+          if (k === 'user_file') return
+          handlePromises.push(
+            getHandleFromDB(k).then(function(h) {
+              if (!h) return
+              return verifyHandlePermission(h).then(function(ok) {
+                if (!ok) { removeHandleFromDB(k).catch(function() {}); return }
+                if (typeof k === 'string' && k.startsWith('workspace_')) {
+                  _workspaceFileHandles[k.replace('workspace_', '')] = h
+                } else if (typeof k === 'string' && k.startsWith('project_')) {
+                  _projectDirHandles[k.replace('project_', '')] = h
+                }
+              })
+            })
+          )
+        })(keys[i])
+      }
+      return Promise.all(handlePromises)
+    }).then(function() {
+      return loadAllFromUser()
+    }).then(function(result) {
+      if (result) {
+        _saveMode = 'user'
+        restoreSelectedState()
+        render()
+        showNotification('User file reconnected')
+      }
+      return true
+    })
+  })
+}
+
 export function hasProjectHandle(projectId) {
   return !!_projectDirHandles[projectId]
 }
@@ -1194,8 +1247,110 @@ export function hasWorkspaceFileHandle(workspaceId) {
   return !!_workspaceFileHandles[workspaceId]
 }
 
+export function showProjectInPicker(projectId) {
+  var dirHandle = _projectDirHandles[projectId]
+  if (!dirHandle) {
+    showNotification('Project folder not located. Right-click and use "Locate Folder" first.', 3000)
+    return Promise.resolve()
+  }
+  return window.showDirectoryPicker({ startIn: dirHandle, mode: 'readwrite' }).then(function() {
+  }).catch(function(e) {
+    if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+      console.error('Error opening picker:', e)
+    }
+  })
+}
+
+export function showWorkspaceInPicker(workspaceId) {
+  var fileHandle = _workspaceFileHandles[workspaceId]
+  if (!fileHandle) {
+    showNotification('Workspace file not located. Right-click and use "Locate File" first.', 3000)
+    return Promise.resolve()
+  }
+  return window.showOpenFilePicker({ startIn: fileHandle, multiple: false }).then(function() {
+  }).catch(function(e) {
+    if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+      console.error('Error opening picker:', e)
+    }
+  })
+}
+
+function saveSelectedState() {
+  try {
+    localStorage.setItem('kanboard_sel_ws', JSON.stringify(state.selectedWorkspaceId))
+    localStorage.setItem('kanboard_sel_pj', JSON.stringify(state.selectedProjectId))
+    localStorage.setItem('kanboard_sel_bd', JSON.stringify(state.selectedBoardId))
+    localStorage.setItem('kanboard_sel_doc', JSON.stringify(state.selectedDocumentId))
+    localStorage.setItem('kanboard_sel_cv', JSON.stringify(state.selectedCanvasId))
+    localStorage.setItem('kanboard_sel_db', JSON.stringify(state.selectedDashboard))
+    localStorage.setItem('kanboard_sel_vw', JSON.stringify(state.selectedView))
+  } catch {}
+}
+
+function restoreSelectedState() {
+  try {
+    var ws = JSON.parse(localStorage.getItem('kanboard_sel_ws'))
+    if (ws && data.workspaces.find(function(w) { return w.id === ws })) {
+      state.selectedWorkspaceId = ws
+    }
+    var pj = JSON.parse(localStorage.getItem('kanboard_sel_pj'))
+    if (pj) {
+      var w = state.selectedWorkspaceId ? data.workspaces.find(function(w) { return w.id === state.selectedWorkspaceId }) : null
+      if (w && w.projects.find(function(p) { return p.id === pj })) {
+        state.selectedProjectId = pj
+      }
+    }
+    var bd = JSON.parse(localStorage.getItem('kanboard_sel_bd'))
+    if (bd && state.selectedProjectId) {
+      var p = null
+      for (var wi = 0; wi < data.workspaces.length; wi++) {
+        var found = data.workspaces[wi].projects.find(function(pj) { return pj.id === state.selectedProjectId })
+        if (found) { p = found; break }
+      }
+      if (p && p.boards.find(function(b) { return b.id === bd })) {
+        state.selectedBoardId = bd
+      }
+    }
+    var doc = JSON.parse(localStorage.getItem('kanboard_sel_doc'))
+    if (doc && state.selectedProjectId) {
+      var p2 = null
+      for (var wi2 = 0; wi2 < data.workspaces.length; wi2++) {
+        var found2 = data.workspaces[wi2].projects.find(function(pj) { return pj.id === state.selectedProjectId })
+        if (found2) { p2 = found2; break }
+      }
+      if (p2 && p2.documents && p2.documents.find(function(d) { return d.id === doc })) {
+        state.selectedDocumentId = doc
+      }
+    }
+    var cv = JSON.parse(localStorage.getItem('kanboard_sel_cv'))
+    if (cv && state.selectedProjectId) {
+      var p3 = null
+      for (var wi3 = 0; wi3 < data.workspaces.length; wi3++) {
+        var found3 = data.workspaces[wi3].projects.find(function(pj) { return pj.id === state.selectedProjectId })
+        if (found3) { p3 = found3; break }
+      }
+      if (p3 && p3.canvasBoards && p3.canvasBoards.find(function(c) { return c.id === cv })) {
+        state.selectedCanvasId = cv
+      }
+    }
+    var db = JSON.parse(localStorage.getItem('kanboard_sel_db'))
+    if (db === true) {
+      state.selectedDashboard = true
+    }
+    var vw = JSON.parse(localStorage.getItem('kanboard_sel_vw'))
+    if (vw) {
+      state.selectedView = vw
+    }
+  } catch {}
+}
+
 window.__autoSave = markDirty
 window.__getSaveMode = function() { return _saveMode }
+window.__hasStoredUserFile = hasStoredUserFile
+window.__reconnectUserFile = reconnectUserFile
+window.__saveSelectedState = saveSelectedState
+window.__showProjectInPicker = showProjectInPicker
+window.__showWorkspaceInPicker = showWorkspaceInPicker
 
 /* ======== AVATAR SUPPORT ======== */
 

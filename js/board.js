@@ -31,6 +31,7 @@ const PRIORITY_BAR_CONFIG = {
 export function switchView(view) {
   state.selectedView = view
   state.selectedDocumentId = null
+  if (window.__saveSelectedState) window.__saveSelectedState()
   renderBoard()
   document.querySelectorAll('.view-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === view)
@@ -144,13 +145,20 @@ export function renderBoard() {
   if (!w && saveMode !== 'user') {
     if (topbarEl) topbarEl.style.display = 'none'
     destroyEditor()
+    var hasStored = window.__hasStoredUserFile ? window.__hasStoredUserFile() : false
+    var reconnectHtml = ''
+    if (hasStored) {
+      reconnectHtml = '<div class="onboarding-reconnect"><p class="onboarding-desc">Previously saved user file found. Reconnect to restore your data.</p><button class="btn-reconnect onboarding-btn" onclick="window.__reconnectUserFile()">Reconnect to User File</button></div>'
+    } else {
+      reconnectHtml = '<p class="onboarding-desc">Set up a user directory to store workspaces and projects across your device.</p>'
+    }
     area.innerHTML =
       '<div class="onboarding">' +
       '<div class="onboarding-icon">' +
       '  <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 9h18"/></svg>' +
       '</div>' +
       '<h1 class="onboarding-title">Welcome to Task Board</h1>' +
-      '<p class="onboarding-desc">Set up a user directory to store workspaces and projects across your device.</p>' +
+      reconnectHtml +
       '<div class="onboarding-actions">' +
       '  <button class="btn-create onboarding-btn" onclick="setupUserDirectory()">+ Set Up User File</button>' +
       '  <button class="btn-open onboarding-btn" onclick="openUserFile()">Open Existing User File</button>' +
@@ -503,7 +511,11 @@ export function showWsCtxMenu(e, workspaceId) {
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();selectWorkspace(\'' + workspaceId + '\')">Open</button>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();addProjectDirect(\'' + workspaceId + '\')">+ Add Project</button>' +
     '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();startRenameWorkspace(\'' + workspaceId + '\')">Rename</button>' +
+    '<div class="tl-ctx-divider"></div>' +
     '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();window.__showWorkspaceInPicker(\'' + workspaceId + '\')">Show in file picker</button>' +
     (state.selectedWorkspaceId !== workspaceId ? '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteWorkspace(\'' + workspaceId + '\')">Delete Workspace</button>' : '')
   
@@ -533,6 +545,8 @@ export function showProjectCtxMenu(e, projectId) {
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item" onclick="closeAllColumnMenus();copyProject(\'' + projectId + '\')">Duplicate</button>' +
     '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();archiveProject(\'' + projectId + '\')">Archive</button>' +
+    '<div class="tl-ctx-divider"></div>' +
+    '<button class="tl-ctx-item" onclick="closeAllColumnMenus();window.__showProjectInPicker(\'' + projectId + '\')">Show in file picker</button>' +
     '<div class="tl-ctx-divider"></div>' +
     '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();deleteProject(\'' + projectId + '\')">Delete Project</button>'
   

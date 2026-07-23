@@ -726,6 +726,7 @@ export function selectWorkspace(id) {
   state.selectedDocumentId = null
   state.selectedCanvasId = null
   state.selectedDashboard = false
+  if (window.__saveSelectedState) window.__saveSelectedState()
   render()
 }
 
@@ -735,6 +736,7 @@ export function selectProject(id) {
   state.selectedDocumentId = null
   state.selectedCanvasId = null
   state.selectedDashboard = true
+  if (window.__saveSelectedState) window.__saveSelectedState()
   render()
 }
 
@@ -755,6 +757,7 @@ export function selectBoard(id) {
   state.selectedDocumentId = null
   state.selectedCanvasId = null
   state.selectedDashboard = false
+  if (window.__saveSelectedState) window.__saveSelectedState()
   render()
 }
 
@@ -763,6 +766,7 @@ export function selectDocument(id) {
   state.selectedBoardId = null
   state.selectedCanvasId = null
   state.selectedDashboard = false
+  if (window.__saveSelectedState) window.__saveSelectedState()
   render()
 }
 
@@ -771,6 +775,7 @@ export function selectCanvas(id) {
   state.selectedBoardId = null
   state.selectedDocumentId = null
   state.selectedDashboard = false
+  if (window.__saveSelectedState) window.__saveSelectedState()
   render()
 }
 
@@ -779,6 +784,7 @@ export function selectDashboard() {
   state.selectedBoardId = null
   state.selectedDocumentId = null
   state.selectedCanvasId = null
+  if (window.__saveSelectedState) window.__saveSelectedState()
   render()
 }
 
