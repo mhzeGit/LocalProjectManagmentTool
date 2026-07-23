@@ -1,10 +1,91 @@
-import { state, findDocument } from './data.js'
+import { findDocument } from './data.js'
 import { saveDocumentContent, setDocumentPaperSize } from './store.js'
 
 let _currentEditor = null
 let _resizeObserver = null
 
 const TIPTAP_VERSION = '2.6.6'
+
+let _tipTapModules = null
+let _tipTapPreloadPromise = null
+let _listBehaviorExtension = null
+
+export function preloadTipTap() {
+  if (_tipTapPreloadPromise) return _tipTapPreloadPromise
+  _tipTapPreloadPromise = (async function() {
+    const modules = await Promise.all([
+      import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION),
+      import('https://esm.sh/prosemirror-state@1.4.3'),
+      import('https://esm.sh/@tiptap/starter-kit@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-underline@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-link@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-image@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-task-list@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-task-item@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-placeholder@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-text-align@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-highlight@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-table@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-table-row@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-table-cell@' + TIPTAP_VERSION),
+      import('https://esm.sh/@tiptap/extension-table-header@' + TIPTAP_VERSION),
+    ])
+    const [core, pmState, starterKitMod, underlineMod, linkMod, imageMod,
+           taskListMod, taskItemMod, placeholderMod, textAlignMod, highlightMod,
+           tableMod, tableRowMod, tableCellMod, tableHeaderMod] = modules
+    _tipTapModules = {
+      Editor: core.Editor,
+      Extension: core.Extension,
+      TextSelection: pmState.TextSelection,
+      StarterKit: starterKitMod.default,
+      Underline: underlineMod.default,
+      Link: linkMod.default,
+      Image: imageMod.default,
+      TaskList: taskListMod.default,
+      TaskItem: taskItemMod.default,
+      Placeholder: placeholderMod.default,
+      TextAlign: textAlignMod.default,
+      Highlight: highlightMod.default,
+      Table: tableMod.default,
+      TableRow: tableRowMod.default,
+      TableCell: tableCellMod.default,
+      TableHeader: tableHeaderMod.default,
+    }
+    const { Extension, TextSelection } = _tipTapModules
+    _listBehaviorExtension = Extension.create({
+      name: 'listBehavior',
+      addKeyboardShortcuts() {
+        return {
+          Tab: () => this.editor.chain().focus().sinkListItem('listItem').run(),
+          'Shift-Tab': () => this.editor.chain().focus().liftListItem('listItem').run(),
+          Enter: () => {
+            const { editor } = this
+            const { $from } = editor.state.selection
+            const listItem = $from.node($from.depth - 1)
+            if (!listItem || listItem.type.name !== 'listItem') return false
+            const para = listItem.firstChild
+            const isEmpty = !para || para.textContent === ''
+            if (!isEmpty) {
+              return editor.chain().focus().splitListItem('listItem').run()
+            }
+            if (editor.chain().focus().liftListItem('listItem').run()) {
+              return true
+            }
+            const from = $from.before($from.depth - 1)
+            const to = $from.after($from.depth - 1)
+            const tr = editor.state.tr
+            const emptyPara = editor.schema.nodes.paragraph.create()
+            tr.replaceWith(from, to, emptyPara)
+            tr.setSelection(TextSelection.create(tr.doc, from + 1))
+            editor.view.dispatch(tr)
+            return true
+          },
+        }
+      },
+    })
+  })()
+  return _tipTapPreloadPromise
+}
 
 const PAPER_CONFIG = {
   free:   { label: 'Free' },
@@ -156,89 +237,40 @@ export async function renderDocument(documentId) {
     applyPaperSize(paperEl, containerEl, initialSize, initialZoom)
   }
 
-  const { Editor, Extension } = await import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION)
-  const { TextSelection } = await import('https://esm.sh/prosemirror-state@1.4.3')
-  const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@' + TIPTAP_VERSION)).default
-  const Underline = (await import('https://esm.sh/@tiptap/extension-underline@' + TIPTAP_VERSION)).default
-  const Link = (await import('https://esm.sh/@tiptap/extension-link@' + TIPTAP_VERSION)).default
-  const Image = (await import('https://esm.sh/@tiptap/extension-image@' + TIPTAP_VERSION)).default
-  const TaskList = (await import('https://esm.sh/@tiptap/extension-task-list@' + TIPTAP_VERSION)).default
-  const TaskItem = (await import('https://esm.sh/@tiptap/extension-task-item@' + TIPTAP_VERSION)).default
-  const Placeholder = (await import('https://esm.sh/@tiptap/extension-placeholder@' + TIPTAP_VERSION)).default
-  const TextAlign = (await import('https://esm.sh/@tiptap/extension-text-align@' + TIPTAP_VERSION)).default
-  const Highlight = (await import('https://esm.sh/@tiptap/extension-highlight@' + TIPTAP_VERSION)).default
-  const Table = (await import('https://esm.sh/@tiptap/extension-table@' + TIPTAP_VERSION)).default
-  const TableRow = (await import('https://esm.sh/@tiptap/extension-table-row@' + TIPTAP_VERSION)).default
-  const TableCell = (await import('https://esm.sh/@tiptap/extension-table-cell@' + TIPTAP_VERSION)).default
-  const TableHeader = (await import('https://esm.sh/@tiptap/extension-table-header@' + TIPTAP_VERSION)).default
+  await preloadTipTap()
+  const M = _tipTapModules
 
-  const ListBehavior = Extension.create({
-    name: 'listBehavior',
-    addKeyboardShortcuts() {
-      return {
-        Tab: () => this.editor.chain().focus().sinkListItem('listItem').run(),
-        'Shift-Tab': () => this.editor.chain().focus().liftListItem('listItem').run(),
-        Enter: () => {
-          const { editor } = this
-          const { $from } = editor.state.selection
-          const listItem = $from.node($from.depth - 1)
-          if (!listItem || listItem.type.name !== 'listItem') return false
-
-          const para = listItem.firstChild
-          const isEmpty = !para || para.textContent === ''
-
-          if (!isEmpty) {
-            return editor.chain().focus().splitListItem('listItem').run()
-          }
-
-          if (editor.chain().focus().liftListItem('listItem').run()) {
-            return true
-          }
-
-          const from = $from.before($from.depth - 1)
-          const to = $from.after($from.depth - 1)
-          const tr = editor.state.tr
-          const emptyPara = editor.schema.nodes.paragraph.create()
-          tr.replaceWith(from, to, emptyPara)
-          tr.setSelection(TextSelection.create(tr.doc, from + 1))
-          editor.view.dispatch(tr)
-          return true
-        },
-      }
-    },
-  })
-
-  _currentEditor = new Editor({
+  _currentEditor = new M.Editor({
     element: paperEl,
     extensions: [
-      StarterKit.configure({
+      M.StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
-      Underline,
-      Link.configure({
+      M.Underline,
+      M.Link.configure({
         openOnClick: false,
         HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' },
       }),
-      Image.configure({
+      M.Image.configure({
         inline: false,
         allowBase64: true,
       }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Placeholder.configure({
+      M.TaskList,
+      M.TaskItem.configure({ nested: true }),
+      M.Placeholder.configure({
         placeholder: 'Start writing your document...',
       }),
-      TextAlign.configure({
+      M.TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      Highlight.configure({ multicolor: true }),
-      Table.configure({
+      M.Highlight.configure({ multicolor: true }),
+      M.Table.configure({
         resizable: true,
       }),
-      TableRow,
-      TableCell,
-      TableHeader,
-      ListBehavior,
+      M.TableRow,
+      M.TableCell,
+      M.TableHeader,
+      _listBehaviorExtension,
     ],
     content: doc.content || '',
     onUpdate: function() {

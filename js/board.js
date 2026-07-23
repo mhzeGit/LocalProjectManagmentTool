@@ -564,9 +564,7 @@ function renderProjectPage(area) {
 }
 
 export async function renderDocumentView(documentId) {
-  const area = document.getElementById('boardArea')
   const doc = findDocument(documentId)
   if (!doc) return
-  area.innerHTML = '<div class="doc-loading">Loading editor...</div>'
   await renderDocument(documentId)
 }
