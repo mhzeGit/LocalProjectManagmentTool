@@ -40,6 +40,28 @@ export function switchView(view) {
 
 export function renderBoard() {
   const area = document.getElementById('boardArea')
+  if (!area._pageBoardCtxDone) {
+    area._pageBoardCtxDone = true
+    area.addEventListener('contextmenu', function(e) {
+      var w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
+      var p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
+      if (e.target.closest('.page-card, .card, .board-column, .column-header, .btn-add-card')) return
+      e.preventDefault()
+      document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+      var menu = document.createElement('div')
+      menu.className = 'tl-ctx-menu'
+      menu.style.left = e.clientX + 'px'
+      menu.style.top = e.clientY + 'px'
+      if (!w) {
+        menu.innerHTML = '<button class="tl-ctx-item" onclick="this.closest(\'.tl-ctx-menu\').remove();createWorkspaceInUser()">+ Create Workspace</button>'
+      } else if (w && !p) {
+        menu.innerHTML = '<button class="tl-ctx-item" onclick="this.closest(\'.tl-ctx-menu\').remove();addProjectDirect(\'' + w.id + '\')">+ Add Project</button>'
+      } else {
+        return
+      }
+      document.body.appendChild(menu)
+    })
+  }
   const breadcrumb = document.getElementById('breadcrumb')
   const viewSwitcher = document.querySelector('.view-switcher')
 
@@ -402,7 +424,7 @@ function renderWorkspacesPage(area) {
         html += '<p class="count">' + (ws.projects ? ws.projects.length : 0) + ' project' + ((ws.projects ? ws.projects.length : 0) !== 1 ? 's' : '') + '</p>'
         html += '</div>'
       } else {
-        html += '<div class="page-card page-card-unloaded" style="border-top:5px solid #555;opacity:0.7">'
+        html += '<div class="page-card page-card-unloaded" style="border-top:5px solid #555;opacity:0.7" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')">'
         html += '<h3>' + wsName + '</h3>'
         html += '<p class="count" style="color:var(--text-dim)">Workspace folder not located</p>'
         html += '<button class="btn-secondary btn-sm" onclick="event.stopPropagation();window.locateWorkspaceFile(\'' + ws.id + '\')">Locate File</button>'
@@ -416,7 +438,7 @@ function renderWorkspacesPage(area) {
 }
 
 function renderWorkspacePage(area, w) {
-  let html = '<div class="page-view" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + w.id + '\')">'
+  let html = '<div class="page-view">'
   html += '<div class="page-header"><div class="page-header-actions">'
   html += '<button class="btn-create" onclick="addProjectDirect(\'' + w.id + '\')">+ New Project</button>'
   html += '<button class="btn-secondary" onclick="window.locateExistingProjectInWorkspace(\'' + w.id + '\')" title="Load an existing project from its folder">Locate Project</button>'

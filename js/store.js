@@ -1,6 +1,6 @@
 import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument, findCanvas } from './data.js'
 import { render } from './sidebar.js'
-import { closeModal, openModal } from './modal.js'
+import { closeModal, openModal, confirmModal } from './modal.js'
 import { pushCommand } from './history.js'
 import { getCardEditorHTML } from './cardEditor.js'
 
@@ -29,8 +29,8 @@ export function createWorkspace() {
   window.createWorkspaceInUser()
 }
 
-export function deleteWorkspace(id) {
-  if (!confirm('Delete this workspace and all its project references?')) return
+export async function deleteWorkspace(id) {
+  if (!(await confirmModal('Delete this workspace and all its project references?'))) return
   const idx = data.workspaces.findIndex(w => w.id === id)
   if (idx === -1) return
   const removed = data.workspaces[idx]
@@ -64,8 +64,8 @@ export function createProject(workspaceId) {
   })
 }
 
-export function deleteProject(id) {
-  if (!confirm('Delete this project and everything inside?')) return
+export async function deleteProject(id) {
+  if (!(await confirmModal('Delete this project and everything inside?'))) return
   for (const w of data.workspaces) {
     const idx = w.projects.findIndex(p => p.id === id)
     if (idx !== -1) {
@@ -140,8 +140,8 @@ export function quickCreateBoard(projectId) {
   })
 }
 
-export function deleteBoard(id) {
-  if (!confirm('Delete this board and all its columns and cards?')) return
+export async function deleteBoard(id) {
+  if (!(await confirmModal('Delete this board and all its columns and cards?'))) return
   for (const w of data.workspaces) {
     for (const p of w.projects) {
       const idx = p.boards.findIndex(b => b.id === id)
@@ -319,8 +319,8 @@ export function archiveColumn(id) {
   }
 }
 
-export function deleteColumn(id) {
-  if (!confirm('Delete this column and all its cards?')) return
+export async function deleteColumn(id) {
+  if (!(await confirmModal('Delete this column and all its cards?'))) return
   for (const w of data.workspaces) {
     for (const p of w.projects) {
       for (const b of p.boards) {
@@ -590,8 +590,8 @@ export function moveCardToBoardColumn(cardId, targetBoardId, targetColumnId) {
   })
 }
 
-export function deleteCard(cardId) {
-  if (!confirm('Delete this card?')) return
+export async function deleteCard(cardId) {
+  if (!(await confirmModal('Delete this card?'))) return
   const col = findCardColumn(cardId)
   if (!col) return
   const idx = col.cards.findIndex(c => c.id === cardId)
@@ -788,8 +788,8 @@ export function quickCreateDocument(projectId) {
   })
 }
 
-export function deleteDocument(id) {
-  if (!confirm('Delete this document?')) return
+export async function deleteDocument(id) {
+  if (!(await confirmModal('Delete this document?'))) return
   for (const w of data.workspaces) {
     for (const p of w.projects) {
       if (!p.documents) continue
@@ -903,8 +903,8 @@ export function quickCreateCanvas(projectId) {
   })
 }
 
-export function deleteCanvas(id) {
-  if (!confirm('Delete this canvas board and all its content?')) return
+export async function deleteCanvas(id) {
+  if (!(await confirmModal('Delete this canvas board and all its content?'))) return
   for (const w of data.workspaces) {
     for (const p of w.projects) {
       if (!p.canvasBoards) continue

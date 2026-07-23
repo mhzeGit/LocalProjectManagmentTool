@@ -336,6 +336,42 @@ function renderChecklistItem(item, depth, isFirst) {
   return html
 }
 
+export function confirmModal(message, confirmLabel) {
+  return new Promise(function(resolve) {
+    const overlay = document.getElementById('modal')
+    const title = document.getElementById('modalTitle')
+    const body = document.getElementById('modalBody')
+    title.textContent = ''
+    body.innerHTML =
+      '<div style="text-align:center;padding:12px 0">' +
+        '<div style="font-size:40px;margin-bottom:12px">⚠️</div>' +
+        '<p style="color:var(--text-primary);font-size:14px;line-height:1.5;margin:0">' + message + '</p>' +
+      '</div>' +
+      '<div class="modal-actions" style="justify-content:center;margin-top:20px">' +
+        '<button class="btn-cancel" id="confirmCancel">Cancel</button>' +
+        '<button class="btn-danger" id="confirmOk">' + (confirmLabel || 'Delete') + '</button>' +
+      '</div>'
+    overlay.classList.add('open')
+
+    function cleanup() {
+      overlay.classList.remove('open')
+      body.querySelector('#confirmCancel')?.removeEventListener('click', onCancel)
+      body.querySelector('#confirmOk')?.removeEventListener('click', onOk)
+      document.removeEventListener('keydown', onKey)
+    }
+    function onCancel() { cleanup(); resolve(false) }
+    function onOk() { cleanup(); resolve(true) }
+    function onKey(e) {
+      if (e.key === 'Escape') { cleanup(); resolve(false) }
+      if (e.key === 'Enter') { cleanup(); resolve(true) }
+    }
+    body.querySelector('#confirmCancel').addEventListener('click', onCancel)
+    body.querySelector('#confirmOk').addEventListener('click', onOk)
+    document.addEventListener('keydown', onKey)
+    body.querySelector('#confirmOk').focus()
+  })
+}
+
 export function closeModal() {
   document.getElementById('modal').classList.remove('open')
   destroyCardEditor()
