@@ -143,8 +143,10 @@ export function render() {
       const folder = getFolderById(p, entryId)
       if (!folder) continue
       const isOpen = folder._open !== false
-      html += '<div class="sidebar-folder" data-folder-id="' + folder.id + '" draggable="true">'
-      html += '<div class="sidebar-folder-header" onclick="toggleFolder(\'' + folder.id + '\')" oncontextmenu="event.stopPropagation();showFolderContextMenu(event,\'' + folder.id + '\')">'
+      const folderKey = 'folder:' + folder.id
+      const folderSelected = state.selectedSidebarItems.indexOf(folderKey) !== -1
+      html += '<div class="sidebar-folder' + (folderSelected ? ' multi-selected' : '') + '" data-folder-id="' + folder.id + '" data-sidebar-key="' + folderKey + '" draggable="true">'
+      html += '<div class="sidebar-folder-header' + (folderSelected ? ' multi-selected' : '') + '" data-sidebar-key="' + folderKey + '" tabindex="0" onclick="handleFolderClick(event,\'' + folder.id + '\')" oncontextmenu="event.stopPropagation();showFolderContextMenu(event,\'' + folder.id + '\')">'
       html += '<span class="arrow' + (isOpen ? ' open' : '') + '">' + String.fromCharCode(9654) + '</span>'
       html += _folderIcon
       if (state.renamingFolderId === folder.id) {
@@ -1247,6 +1249,22 @@ function initSidebarKeyboardNav() {
       render()
       return
     }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'ArrowUp') moveSelectedUp()
+      else moveSelectedDown()
+      return
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'ArrowRight') moveSelectedIntoNearestFolder()
+      else moveSelectedOutOfFolder()
+      return
+    }
+
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       e.stopPropagation()
@@ -1315,6 +1333,107 @@ function resetSidebarNavFocus() {
   _sidebarNavItems = []
 }
 
+function moveSelectedIntoNearestFolder() {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  const selected = state.selectedSidebarItems.slice()
+  if (selected.length === 0) return
+
+  var targetFolderId = null
+  var targetFolderIdx = -1
+  for (var ei = 0; ei < p.sidebarOrder.length; ei++) {
+    var entry = p.sidebarOrder[ei]
+    if (entry.indexOf('folder:') === 0 && selected.indexOf(entry) === -1) {
+      targetFolderId = entry.substring(7)
+      targetFolderIdx = ei
+    }
+    if (selected.indexOf(entry) !== -1) {
+      if (targetFolderId) {
+        var alreadyInFolder = false
+        for (var fi = 0; fi < (p.folders || []).length; fi++) {
+          if ((p.folders)[fi].id === targetFolderId &&
+              (p.folders)[fi].itemOrder.indexOf(entry) !== -1) {
+            alreadyInFolder = true
+            break
+          }
+        }
+        if (!alreadyInFolder) {
+          moveSelectedToFolder(targetFolderId)
+          return
+        }
+      }
+      break
+    }
+  }
+}
+
+function moveSelectedOutOfFolder() {
+  const p = findProject(state.selectedProjectId)
+  if (!p) return
+  ensureSidebarOrder(p)
+  const selected = state.selectedSidebarItems.slice()
+  if (selected.length === 0) return
+
+  var commonFolder = null
+  for (var si = 0; si < selected.length; si++) {
+    var foundFolder = null
+    for (var fi = 0; fi < (p.folders || []).length; fi++) {
+      if ((p.folders)[fi].itemOrder.indexOf(selected[si]) !== -1) {
+        foundFolder = (p.folders)[fi]
+        break
+      }
+    }
+    if (si === 0) {
+      commonFolder = foundFolder
+    } else if (commonFolder !== foundFolder) {
+      commonFolder = null
+      break
+    }
+  }
+
+  if (!commonFolder) return
+
+  var snapshot = {
+    sidebarOrder: p.sidebarOrder.slice(),
+    folders: JSON.parse(JSON.stringify(p.folders)),
+    selected: selected.slice()
+  }
+
+  function applyMove() {
+    var fIdx = p.sidebarOrder.indexOf('folder:' + commonFolder.id)
+    var iIdx = fIdx >= 0 ? fIdx : p.sidebarOrder.length
+    for (var ri = 0; ri < selected.length; ri++) {
+      var itemIdx = commonFolder.itemOrder.indexOf(selected[ri])
+      if (itemIdx !== -1) commonFolder.itemOrder.splice(itemIdx, 1)
+      if (p.sidebarOrder.indexOf(selected[ri]) === -1) {
+        p.sidebarOrder.splice(iIdx, 0, selected[ri])
+        iIdx++
+      }
+    }
+    render()
+  }
+
+  applyMove()
+  pushCommand({
+    undo() {
+      p.sidebarOrder = snapshot.sidebarOrder
+      p.folders = snapshot.folders
+      state.selectedSidebarItems = snapshot.selected.slice()
+      _lastClickedKey = snapshot.selected[snapshot.selected.length - 1] || null
+      render()
+    },
+    redo() {
+      p.sidebarOrder = snapshot.sidebarOrder.slice()
+      p.folders = JSON.parse(JSON.stringify(snapshot.folders))
+      state.selectedSidebarItems = snapshot.selected.slice()
+      _lastClickedKey = snapshot.selected[snapshot.selected.length - 1] || null
+      applyMove()
+    },
+    description: 'Remove Items from Folder'
+  })
+}
+
 function doMoveSelected(direction) {
   const p = findProject(state.selectedProjectId)
   if (!p) return
@@ -1324,17 +1443,14 @@ function doMoveSelected(direction) {
 
   const snapshot = {
     sidebarOrder: p.sidebarOrder.slice(),
-    folders: JSON.parse(JSON.stringify(p.folders))
+    folders: JSON.parse(JSON.stringify(p.folders)),
+    selected: selected.slice()
   }
 
   function moveInArray(arr, keys, dir) {
     const indices = keys.map(function(k) { return arr.indexOf(k) }).filter(function(i) { return i !== -1 })
     if (indices.length === 0) return false
     indices.sort(dir > 0 ? function(a, b) { return a - b } : function(a, b) { return b - a })
-    const firstIdx = indices[0]
-    const lastIdx = indices[indices.length - 1]
-    if (dir < 0 && firstIdx === 0) return false
-    if (dir > 0 && lastIdx === arr.length - 1) return false
     for (const idx of indices) {
       const target = idx + dir
       if (target >= 0 && target < arr.length && keys.indexOf(arr[target]) === -1) {
@@ -1351,7 +1467,6 @@ function doMoveSelected(direction) {
       const folderSelected = selected.filter(function(k) { return f.itemOrder.indexOf(k) !== -1 })
       moveInArray(f.itemOrder, folderSelected, direction)
     }
-    state.selectedSidebarItems = []
     render()
   }
 
@@ -1360,11 +1475,15 @@ function doMoveSelected(direction) {
     undo() {
       p.sidebarOrder = snapshot.sidebarOrder
       p.folders = snapshot.folders
+      state.selectedSidebarItems = snapshot.selected.slice()
+      _lastClickedKey = snapshot.selected[snapshot.selected.length - 1] || null
       render()
     },
     redo() {
       p.sidebarOrder = snapshot.sidebarOrder.slice()
       p.folders = JSON.parse(JSON.stringify(snapshot.folders))
+      state.selectedSidebarItems = snapshot.selected.slice()
+      _lastClickedKey = snapshot.selected[snapshot.selected.length - 1] || null
       applyMove()
     },
     description: direction < 0 ? 'Move Items Up' : 'Move Items Down'
@@ -1390,7 +1509,8 @@ export function moveSelectedToFolder(folderId) {
 
   const snapshot = {
     sidebarOrder: p.sidebarOrder.slice(),
-    folders: JSON.parse(JSON.stringify(p.folders))
+    folders: JSON.parse(JSON.stringify(p.folders)),
+    selected: selected.slice()
   }
 
   function applyMove() {
@@ -1406,7 +1526,6 @@ export function moveSelectedToFolder(folderId) {
         dstFolder.itemOrder.push(key)
       }
     }
-    state.selectedSidebarItems = []
     render()
   }
 
@@ -1415,11 +1534,15 @@ export function moveSelectedToFolder(folderId) {
     undo() {
       p.sidebarOrder = snapshot.sidebarOrder
       p.folders = snapshot.folders
+      state.selectedSidebarItems = snapshot.selected.slice()
+      _lastClickedKey = snapshot.selected[snapshot.selected.length - 1] || null
       render()
     },
     redo() {
       p.sidebarOrder = snapshot.sidebarOrder.slice()
       p.folders = JSON.parse(JSON.stringify(snapshot.folders))
+      state.selectedSidebarItems = snapshot.selected.slice()
+      _lastClickedKey = snapshot.selected[snapshot.selected.length - 1] || null
       applyMove()
     },
     description: 'Move Items to Folder'
