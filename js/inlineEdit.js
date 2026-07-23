@@ -41,9 +41,9 @@ export function startRenameColumn(e, id) {
 
 export function startRenameCard(e, id) {
   e.stopPropagation()
-  const cardEl = e.target.closest('.card')
-  if (cardEl) cardEl.classList.add('renaming')
   const span = document.getElementById('cardTitle-' + id)
+  const cardEl = span ? span.closest('.card') : null
+  if (cardEl) cardEl.draggable = false
   const card = findCard(id)
   if (!span || !card) return
   const oldTitle = card.title
