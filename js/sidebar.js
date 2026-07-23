@@ -1568,24 +1568,18 @@ function doMoveSelected(direction) {
       if (idx !== -1) indices.push(idx)
     }
     if (indices.length === 0) return false
-    indices.sort(function(a, b) { return a - b })
-    if (dir < 0 && indices[0] === 0) return false
-    if (dir > 0 && indices[indices.length - 1] === arr.length - 1) return false
-    var items = []
-    for (var ri = indices.length - 1; ri >= 0; ri--) {
-      items.unshift(arr.splice(indices[ri], 1)[0])
-    }
-    var insertBase = indices[0] + dir
-    if (dir > 0) {
-      for (var bi = 0; bi < items.length; bi++) {
-        arr.splice(insertBase + bi, 0, items[bi])
-      }
-    } else {
-      for (var bi = items.length - 1; bi >= 0; bi--) {
-        arr.splice(insertBase + bi, 0, items[bi])
+    if (dir > 0) indices.sort(function(a, b) { return b - a })
+    else indices.sort(function(a, b) { return a - b })
+    var movedAny = false
+    for (var ii = 0; ii < indices.length; ii++) {
+      var idx = indices[ii]
+      var target = idx + dir
+      if (target >= 0 && target < arr.length && keys.indexOf(arr[target]) === -1) {
+        var tmp = arr[idx]; arr[idx] = arr[target]; arr[target] = tmp
+        movedAny = true
       }
     }
-    return true
+    return movedAny
   }
 
   function applyMove() {
