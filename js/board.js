@@ -29,6 +29,78 @@ const PRIORITY_BAR_CONFIG = {
   '5':    { filled: 5, color: '#ef4444' },
 }
 
+const PRIORITY_ORDER = { none: 0, low: 1, '1': 1, '2': 2, medium: 3, '3': 3, high: 4, '4': 4, urgent: 5, '5': 5 }
+const _columnSortState = new Map()
+const SORT_OPTIONS = [
+  { key: null,     label: 'Default',                 asc: true },
+  { key: 'title',      label: 'Name (A-Z)',             asc: true },
+  { key: 'title',      label: 'Name (Z-A)',             asc: false },
+  { key: 'priority',   label: 'Priority (High to Low)',  asc: false },
+  { key: 'priority',   label: 'Priority (Low to High)',  asc: true },
+  { key: 'startDate',  label: 'Start Date (Earliest)',   asc: true },
+  { key: 'startDate',  label: 'Start Date (Latest)',     asc: false },
+  { key: 'endDate',    label: 'End Date (Earliest)',     asc: true },
+  { key: 'endDate',    label: 'End Date (Latest)',       asc: false },
+  { key: 'completed',  label: 'Status (Incomplete)',     asc: true },
+  { key: 'completed',  label: 'Status (Completed)',      asc: false },
+  { key: 'members',    label: 'Members (A-Z)',           asc: true },
+  { key: 'members',    label: 'Members (Z-A)',           asc: false },
+]
+
+function getSortedCards(col) {
+  const s = _columnSortState.get(col.id)
+  if (!s || !s.key) return col.cards
+  const sorted = [...col.cards]
+  const key = s.key
+  const asc = s.asc
+  sorted.sort((a, b) => {
+    let cmp = 0
+    if (key === 'title') {
+      cmp = a.title.localeCompare(b.title)
+    } else if (key === 'priority') {
+      cmp = (PRIORITY_ORDER[a.priority] || 0) - (PRIORITY_ORDER[b.priority] || 0)
+    } else if (key === 'startDate') {
+      cmp = (a.startDate || '').localeCompare(b.startDate || '')
+    } else if (key === 'endDate') {
+      cmp = (a.endDate || '').localeCompare(b.endDate || '')
+    } else if (key === 'completed') {
+      cmp = (a.completed ? 1 : 0) - (b.completed ? 1 : 0)
+    } else if (key === 'members') {
+      const ma = (a.members && a.members.length > 0) ? a.members[0] : ''
+      const mb = (b.members && b.members.length > 0) ? b.members[0] : ''
+      cmp = ma.localeCompare(mb)
+    }
+    return asc ? cmp : -cmp
+  })
+  return sorted
+}
+
+function getColumnSortSubmenuHtml(colId) {
+  const current = _columnSortState.get(colId)
+  let html = ''
+  for (const opt of SORT_OPTIONS) {
+    const checked = current && current.key === opt.key && current.asc === opt.asc
+    const checkStr = checked ? '✓ ' : '  '
+    const cls = checked ? ' class="col-menu-sort-item col-menu-sort-item-active"' : ' class="col-menu-sort-item"'
+    if (opt.key === null) {
+      html += '<button' + cls + ' onclick="event.stopPropagation();clearColumnSort(\'' + colId + '\');closeAllColumnMenus()">' + checkStr + opt.label + '</button>'
+    } else {
+      html += '<button' + cls + ' onclick="event.stopPropagation();setColumnSort(\'' + colId + '\',\'' + opt.key + '\',' + opt.asc + ');closeAllColumnMenus()">' + checkStr + opt.label + '</button>'
+    }
+  }
+  return html
+}
+
+export function setColumnSort(colId, key, asc) {
+  _columnSortState.set(colId, { key, asc })
+  renderBoard()
+}
+
+export function clearColumnSort(colId) {
+  _columnSortState.delete(colId)
+  renderBoard()
+}
+
 export function switchView(view) {
   state.selectedView = view
   state.selectedDocumentId = null
@@ -255,10 +327,17 @@ export function renderBoard() {
     html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
     html += '  <span ondblclick="startRenameColumn(event,\'' + col.id + '\')" id="colTitle-' + col.id + '">' + col.name + '</span>'
     html += '  <span class="col-count">' + countStr + '</span>'
+    const sortState = _columnSortState.get(col.id)
+    if (sortState && sortState.key) {
+      const arrow = sortState.asc ? '▲' : '▼'
+      html += '  <span class="col-sort-indicator" title="Sorted">' + arrow + '</span>'
+    }
     html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();copyColumn(\'' + col.id + '\')">Copy</button>'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();pasteColumn(\'' + col.id + '\')">Paste</button>'
     html += '    <button class="col-menu-item" onclick="closeAllColumnMenus();duplicateColumn(\'' + col.id + '\')">Duplicate</button>'
+    html += '    <div class="col-menu-sep"></div>'
+    html += '    <div class="col-menu-item col-menu-sub-wrap">Sort<div class="col-menu-sort-submenu">' + getColumnSortSubmenuHtml(col.id) + '</div></div>'
     html += '    <div class="col-menu-sep"></div>'
     let colSwatches = ''
     for (const pc of PREDEFINED_COLORS) {
@@ -271,7 +350,8 @@ export function renderBoard() {
     html += '  </div>'
     html += '</div>'
     html += '<div class="column-cards" data-col-id="' + col.id + '">'
-    for (const c of col.cards) {
+    const cardsToRender = getSortedCards(col)
+    for (const c of cardsToRender) {
       if (filteredCardIds && !filteredCardIds.has(c.id)) continue
       const completed = c.completed ? ' completed' : ''
       const checked = c.completed ? ' checked' : ''
@@ -280,7 +360,7 @@ export function renderBoard() {
       html += '<div class="card' + completed + '" draggable="true" data-card-id="' + c.id + '" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
       html += '  <div class="card-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="card-check-circle"><svg class="card-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>'
       html += '  <div class="card-body">'
-      html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
+      html += '    <div class="card-title" onclick="event.stopPropagation()" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
       if (c.description) html += '    <div class="card-desc">' + c.description + '</div>'
       if (c.tags && c.tags.length > 0) {
         html += '    <div class="card-tags">'

@@ -3,7 +3,7 @@ import { render, selectWorkspace, selectProject, selectBoard, selectDocument, se
 import { setupModalKeyboard } from './modal.js'
 import { setInlineEditRender } from './inlineEdit.js'
 
-import { switchView, showWsCtxMenu, showProjectCtxMenu, selectWorkspaceHome } from './board.js'
+import { switchView, showWsCtxMenu, showProjectCtxMenu, selectWorkspaceHome, setColumnSort, clearColumnSort } from './board.js'
 import { openModal, closeModal, openCardDetail } from './modal.js'
 import {
   createWorkspace, deleteWorkspace,
@@ -116,6 +116,7 @@ Object.assign(window, {
   startRenameDocument,
   startRenameCanvas,
   showColumnContextMenu, showAddColContextMenu, closeAllColumnMenus,
+  setColumnSort, clearColumnSort,
   showSidebarContextMenu, showNavChildContextMenu, showFolderContextMenu, toggleFolder,
   createFolder, createFolderFromModal, deleteFolder, renameFolder,
   startRenameSidebarItem, moveItemToFolder, removeItemFromFolder, reorderSidebar, reorderFolderItems,
