@@ -6,7 +6,7 @@
 .btn-del { background: none; color: var(--danger); font-size: 12px; padding: 2px 6px; border-radius: 3px; margin-left: auto; opacity: 0; transition: opacity .15s; }
 .nav-item:hover .btn-del, .nav-child:hover .btn-del { opacity: 1; }
 .btn-del:hover { background: var(--danger-bg); }
-.sidebar-section { flex: 1; overflow-y: auto; }
+.sidebar-section { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
 .section-title { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 8px; font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
 .btn-add-board { color: var(--accent); cursor: pointer; font-size: 16px; font-weight: 700; line-height: 1; }
 .btn-add-board:hover { color: var(--accent-hover); }
@@ -55,7 +55,7 @@
 .sidebar-folder-header.multi-selected:hover,
 .sidebar-folder.multi-selected > .sidebar-folder-header:hover { background: var(--accent-subtle); }
 
-.sidebar-multi-toolbar { display: flex; align-items: center; gap: 4px; padding: 8px 12px; margin: 4px 8px; border-top: 1px solid var(--border); background: var(--bg-surface); border-radius: 6px; }
+.sidebar-multi-toolbar { display: flex; align-items: center; gap: 4px; padding: 8px 12px; margin: 4px 8px; margin-top: auto; border-top: 1px solid var(--border); background: var(--bg-surface); border-radius: 6px; }
 .multi-count { font-size: 11px; color: var(--text-dim); margin-right: auto; white-space: nowrap; }
 .multi-btn { background: var(--bg-surface-hover); border: none; color: var(--text-secondary); font-size: 13px; padding: 4px 8px; border-radius: 4px; cursor: pointer; line-height: 1; transition: background .12s; }
 .multi-btn:hover { background: var(--accent); color: var(--text-white); }

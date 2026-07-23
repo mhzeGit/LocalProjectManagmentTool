@@ -1515,7 +1515,7 @@ function moveSelectedOutOfFolder() {
 
   function applyMove() {
     var fIdx = p.sidebarOrder.indexOf('folder:' + commonFolder.id)
-    var iIdx = fIdx >= 0 ? fIdx : p.sidebarOrder.length
+    var iIdx = fIdx >= 0 ? fIdx + 1 : p.sidebarOrder.length
     for (var ri = 0; ri < selected.length; ri++) {
       if (selected[ri].startsWith('folder:')) continue
       var itemIdx = commonFolder.itemOrder.indexOf(selected[ri])
@@ -1562,13 +1562,27 @@ function doMoveSelected(direction) {
   }
 
   function moveInArray(arr, keys, dir) {
-    const indices = keys.map(function(k) { return arr.indexOf(k) }).filter(function(i) { return i !== -1 })
+    var indices = []
+    for (var mi = 0; mi < keys.length; mi++) {
+      var idx = arr.indexOf(keys[mi])
+      if (idx !== -1) indices.push(idx)
+    }
     if (indices.length === 0) return false
-    indices.sort(dir > 0 ? function(a, b) { return a - b } : function(a, b) { return b - a })
-    for (const idx of indices) {
-      const target = idx + dir
-      if (target >= 0 && target < arr.length && keys.indexOf(arr[target]) === -1) {
-        var tmp = arr[idx]; arr[idx] = arr[target]; arr[target] = tmp
+    indices.sort(function(a, b) { return a - b })
+    if (dir < 0 && indices[0] === 0) return false
+    if (dir > 0 && indices[indices.length - 1] === arr.length - 1) return false
+    var items = []
+    for (var ri = indices.length - 1; ri >= 0; ri--) {
+      items.unshift(arr.splice(indices[ri], 1)[0])
+    }
+    var insertBase = indices[0] + dir
+    if (dir > 0) {
+      for (var bi = 0; bi < items.length; bi++) {
+        arr.splice(insertBase + bi, 0, items[bi])
+      }
+    } else {
+      for (var bi = items.length - 1; bi >= 0; bi--) {
+        arr.splice(insertBase + bi, 0, items[bi])
       }
     }
     return true
