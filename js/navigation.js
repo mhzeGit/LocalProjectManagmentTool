@@ -67,6 +67,11 @@ function handleF2Rename() {
   }
 }
 
+function isInputEvent(e) {
+  const el = e.target
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+}
+
 function inputFocused() {
   const t = document.activeElement
   if (!t) return false
@@ -75,23 +80,28 @@ function inputFocused() {
 }
 
 function onGlobalKeyDown(e) {
-  if (!inputFocused() && _items.length > 0) {
+  if (_items.length > 0) {
+    const fromInput = isInputEvent(e)
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault()
-      _index = Math.min(_index + 1, _items.length - 1)
-      updateFocus()
-      _items[_index]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      if (!fromInput) {
+        e.preventDefault()
+        _index = Math.min(_index + 1, _items.length - 1)
+        updateFocus()
+        _items[_index]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
       return
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault()
-      _index = Math.max(_index - 1, 0)
-      updateFocus()
-      _items[_index]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      if (!fromInput) {
+        e.preventDefault()
+        _index = Math.max(_index - 1, 0)
+        updateFocus()
+        _items[_index]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
       return
     }
     if (e.key === 'Enter') {
-      if (_items[_index]) {
+      if (!fromInput && _items[_index]) {
         e.preventDefault()
         _items[_index].click()
       }
@@ -108,7 +118,7 @@ function onGlobalKeyDown(e) {
 
   if (e.key === 'Escape') {
     if (e.defaultPrevented) return
-    if (inputFocused()) return
+    if (isInputEvent(e)) return
     if (window.__isCanvasActive && window.__isCanvasActive()) return
 
     const ctxMenus = document.querySelectorAll('.tl-ctx-menu')
