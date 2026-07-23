@@ -14,6 +14,7 @@ import { renderCanvasView, destroyCanvas, isCanvasActive } from './canvas.js'
 import { renderDashboard } from './dashboard.js'
 import { updateMenuBar } from './menubar.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
+import { cleanupGrid, setupGrid } from './navigation.js'
 
 const PRIORITY_BAR_CONFIG = {
   none:   { filled: 3, color: '#f97316' },
@@ -40,6 +41,7 @@ export function switchView(view) {
 }
 
 export function renderBoard() {
+  cleanupGrid()
   const area = document.getElementById('boardArea')
   if (!area._pageBoardCtxDone) {
     area._pageBoardCtxDone = true
@@ -427,7 +429,7 @@ function renderWorkspacesPage(area) {
       var wsName = ws.name || 'Workspace'
       if (isLoaded) {
         const colorStyle = ws.color ? 'border-top:5px solid ' + ws.color + ';background:linear-gradient(180deg,' + ws.color + '25, #1e1e2e 100%);' : ''
-        html += '<div class="page-card" onclick="selectWorkspace(\'' + ws.id + '\')" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')" style="' + colorStyle + '">'
+        html += '<div class="page-card" onclick="selectWorkspace(\'' + ws.id + '\')" data-id="' + ws.id + '" oncontextmenu="event.preventDefault();event.stopPropagation();showWsCtxMenu(event,\'' + ws.id + '\')" style="' + colorStyle + '">'
         html += '<h3 id="workspaceTitle-' + ws.id + '" ondblclick="startRenameWorkspace(\'' + ws.id + '\')">' + wsName + '</h3>'
         html += '<p class="count">' + (ws.projects ? ws.projects.length : 0) + ' project' + ((ws.projects ? ws.projects.length : 0) !== 1 ? 's' : '') + '</p>'
         html += '</div>'
@@ -443,6 +445,8 @@ function renderWorkspacesPage(area) {
   }
   html += '</div>'
   area.innerHTML = html
+  const cards = area.querySelectorAll('.page-card:not(.page-card-unloaded)')
+  if (cards.length > 0) setupGrid(Array.from(cards))
 }
 
 function renderWorkspacePage(area, w) {
@@ -460,7 +464,7 @@ function renderWorkspacePage(area, w) {
       const isLoaded = !p._loadError
       const colorStyle = p.color ? 'border-top:5px solid ' + p.color + ';background:linear-gradient(180deg,' + p.color + '25, #1e1e2e 100%);' : ''
       if (isLoaded) {
-        html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" oncontextmenu="event.preventDefault();event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
+        html += '<div class="page-card" onclick="selectProject(\'' + p.id + '\')" data-id="' + p.id + '" oncontextmenu="event.preventDefault();event.stopPropagation();showProjectCtxMenu(event,\'' + p.id + '\')" style="' + colorStyle + '">'
         html += '<h3 id="projectTitle-' + p.id + '" ondblclick="startRenameProject(\'' + p.id + '\')">' + p.name + '</h3>'
         html += '<p class="count">' + count + ' board' + (count !== 1 ? 's' : '') + '</p>'
         html += '</div>'
@@ -476,6 +480,8 @@ function renderWorkspacePage(area, w) {
   }
   html += '</div>'
   area.innerHTML = html
+  const cards = area.querySelectorAll('.page-card:not(.page-card-unloaded)')
+  if (cards.length > 0) setupGrid(Array.from(cards))
 }
 
 export function selectWorkspaceHome() {

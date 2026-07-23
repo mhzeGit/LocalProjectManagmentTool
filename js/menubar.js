@@ -89,6 +89,7 @@ const menuDefs = [
   },
 ]
 
+window.__closeMenuBarMenus = function() { closeAllMenus() }
 function closeAllMenus() {
   document.querySelectorAll('.menubar-dropdown.open').forEach(el => el.classList.remove('open'))
   document.querySelectorAll('.menubar-label.open').forEach(el => el.classList.remove('open'))

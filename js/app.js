@@ -27,6 +27,7 @@ import { openPreferences, closePreferences, initTheme, initGlowMultiplier } from
 import { initPersistence, handleKeyDown, setupUserDirectory, openUserFile, createWorkspaceInUser, addExistingWorkspace, locateWorkspaceFile, addProjectToWorkspace, locateExistingProjectInWorkspace, locateProjectFolder, closeUserDirectory, getSaveMode, hasProjectHandle, reconnectUserFile } from './persistence.js'
 import { getCurrentWorkspace, state } from './data.js'
 import { initMenuBar } from './menubar.js'
+import { initNavigation } from './navigation.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
 import { performUndo, performRedo } from './history.js'
 import { isCanvasActive } from './canvas.js'
@@ -41,6 +42,7 @@ setupModalKeyboard()
 initSelfMember()
 initPersistence()
 initMenuBar()
+initNavigation()
 
 document.addEventListener('keydown', handleKeyDown)
 

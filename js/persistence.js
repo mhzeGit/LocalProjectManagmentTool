@@ -528,6 +528,9 @@ function loadAllFromUser() {
 
   return readJSONFromFileHandle(_userFileHandle).then(function(userData) {
     if (!userData) return null
+    if (typeof userData.version !== 'number' || !Array.isArray(userData.workspaces)) {
+      return null
+    }
 
     if (userData.selfMemberId) {
       state.selfMemberId = userData.selfMemberId
@@ -797,6 +800,10 @@ export function openUserFile() {
         state.selectedCanvasId = null
         render()
         showNotification('User file opened')
+      } else {
+        _userFileHandle = null
+        render()
+        showNotification('Invalid user file: the selected file is not a valid user data file.', 4000)
       }
       return null
     })

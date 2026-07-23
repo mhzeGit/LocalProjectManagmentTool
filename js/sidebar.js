@@ -108,6 +108,7 @@ export function render() {
     renderBoard()
     renderMemberBar()
     updateMenuBar()
+    if (window.__autoSave) window.__autoSave()
     return
   }
 
@@ -117,12 +118,13 @@ export function render() {
     renderBoard()
     renderMemberBar()
     updateMenuBar()
+    if (window.__autoSave) window.__autoSave()
     return
   }
 
   ensureSidebarOrder(p)
 
-  let html = '<div class="sidebar-project-name">' + p.name + '</div>'
+  let html = '<div class="sidebar-project-name" id="projectTitle-' + p.id + '">' + p.name + '</div>'
   const dashActive = state.selectedDashboard ? ' active' : ''
   html += `<div class="nav-child${dashActive}" onclick="selectDashboard()">
     <span class="name">Dashboard</span>

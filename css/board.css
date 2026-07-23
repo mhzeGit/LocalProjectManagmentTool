@@ -157,6 +157,7 @@
 .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .page-card { background: var(--bg-panel-alt); border-radius: 8px; padding: 28px; border: 1px solid var(--border); cursor: pointer; transition: border-color .15s, background .15s; }
 .page-card:hover { border-color: var(--accent); background: var(--bg-surface-hover); }
+.page-card.nav-focused { border-color: var(--accent); background: var(--bg-surface-hover); }
 .page-card h3 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
 .page-card .count { font-size: 13px; color: var(--text-secondary); }
 .page-card-unloaded { display: flex; flex-direction: column; gap: 8px; }
