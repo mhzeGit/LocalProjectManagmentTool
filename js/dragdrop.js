@@ -504,6 +504,7 @@ export function initDragDrop(renderFn) {
     if (_dragActive) { _dragActive = false; return }
     const card = e.target.closest('.card')
     if (card && card.dataset.cardId) {
+      if (card.querySelector('input:focus')) return
       openCardDetail(card.dataset.cardId)
     }
   })
