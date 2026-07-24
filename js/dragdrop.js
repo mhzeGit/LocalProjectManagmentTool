@@ -1,4 +1,5 @@
 import { findBoard, findColumn, findCard, findCardColumn, state } from './data.js'
+import { renderBoard } from './board.js'
 import { openCardDetail } from './modal.js'
 import { pushCommand } from './history.js'
 
@@ -510,7 +511,26 @@ export function initDragDrop(renderFn) {
     if (card && card.dataset.cardId) {
       if (card.querySelector('input:focus')) return
       if (card.dataset.archived === 'true') return
+      if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const id = card.dataset.cardId
+        const idx = state.selectedCardIds.indexOf(id)
+        if (e.shiftKey) {
+          if (idx === -1) state.selectedCardIds.push(id)
+        } else {
+          if (idx !== -1) state.selectedCardIds.splice(idx, 1)
+          else state.selectedCardIds.push(id)
+        }
+        renderBoard()
+        return
+      }
+      state.selectedCardIds = []
       openCardDetail(card.dataset.cardId)
+      return
+    }
+    if (state.selectedCardIds.length > 0 && !e.target.closest('.card, .btn-add-card, .column-header, .col-menu, .tl-ctx-menu')) {
+      state.selectedCardIds = []
+      renderBoard()
     }
   })
 }

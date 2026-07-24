@@ -26,6 +26,7 @@ export const state = {
   selectedDocumentId: null,
   selectedCanvasId: null,
   selectedDashboard: false,
+  selectedCardIds: [],
   renamingFolderId: null,
   renamingSidebarItemId: null,
   renamingSidebarItemType: null,

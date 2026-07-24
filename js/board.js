@@ -355,9 +355,10 @@ export function renderBoard() {
       if (filteredCardIds && !filteredCardIds.has(c.id)) continue
       const completed = c.completed ? ' completed' : ''
       const checked = c.completed ? ' checked' : ''
+      const selected = state.selectedCardIds.includes(c.id) ? ' selected' : ''
       const cardColorStyle = c.color ? '--card-color:' + c.color + ';' : ''
       const barCfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.medium
-      html += '<div class="card' + completed + '" draggable="true" data-card-id="' + c.id + '" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
+      html += '<div class="card' + completed + selected + '" draggable="true" data-card-id="' + c.id + '" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
       html += '  <div class="card-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="card-check-circle"><svg class="card-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>'
       html += '  <div class="card-body">'
       html += '    <div class="card-title" onclick="event.stopPropagation()" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
@@ -409,7 +410,8 @@ export function renderBoard() {
       for (const ac of colArchivedCards) {
         const cardColorStyle = ac.color ? '--card-color:' + ac.color + ';' : ''
         const barCfg = PRIORITY_BAR_CONFIG[ac.priority] || PRIORITY_BAR_CONFIG.medium
-        html += '<div class="card archived" draggable="false" data-card-id="' + ac.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
+        const selectedArch = state.selectedCardIds.includes(ac.id) ? ' selected' : ''
+        html += '<div class="card archived' + selectedArch + '" draggable="false" data-card-id="' + ac.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
         html += '  <div class="card-body">'
         html += '    <div class="card-title" id="cardTitle-' + ac.id + '">' + escapeHtml(ac.title) + '</div>'
         if (ac.description) html += '    <div class="card-desc">' + ac.description + '</div>'
@@ -474,7 +476,8 @@ export function renderBoard() {
       for (const c of col.cards) {
         const cardColorStyle = c.color ? '--card-color:' + c.color + ';' : ''
         const barCfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.medium
-        html += '<div class="card archived" draggable="false" data-card-id="' + c.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
+        const selectedArchCol = state.selectedCardIds.includes(c.id) ? ' selected' : ''
+        html += '<div class="card archived' + selectedArchCol + '" draggable="false" data-card-id="' + c.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
         html += '  <div class="card-body">'
         html += '    <div class="card-title" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
         if (c.description) html += '    <div class="card-desc">' + c.description + '</div>'
@@ -533,7 +536,8 @@ export function renderBoard() {
       for (const ac of unplacedArchived) {
         const cardColorStyle = ac.color ? '--card-color:' + ac.color + ';' : ''
         const barCfg = PRIORITY_BAR_CONFIG[ac.priority] || PRIORITY_BAR_CONFIG.medium
-        html += '<div class="card archived" draggable="false" data-card-id="' + ac.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';display:inline-block;width:260px;margin-right:8px;vertical-align:top">'
+        const selectedUnpl = state.selectedCardIds.includes(ac.id) ? ' selected' : ''
+        html += '<div class="card archived' + selectedUnpl + '" draggable="false" data-card-id="' + ac.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';display:inline-block;width:260px;margin-right:8px;vertical-align:top">'
         html += '  <div class="card-body"><div class="card-title">' + escapeHtml(ac.title) + '</div></div>'
         html += '  <div class="card-priority">'
         for (let i = 0; i < 5; i++) {

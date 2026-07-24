@@ -152,6 +152,8 @@
 .card[style*="--card-color"] { border-left: 4px solid var(--card-color); }
 .card[style*="--card-color"]:hover { border-color: var(--card-color); }
 .card { will-change: transform; }
+.card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 2px 10px var(--shadow-md); }
+.card.selected[style*="--card-color"] { border-color: var(--card-color); box-shadow: 0 0 0 2px var(--card-color), 0 2px 10px var(--shadow-md); }
 
 .card.archived { opacity: 0.55; filter: grayscale(0.5); cursor: default; }
 .card.archived:hover { border-color: var(--border); box-shadow: 0 1px 3px var(--shadow-sm); }
