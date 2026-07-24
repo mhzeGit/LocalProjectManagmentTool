@@ -1,9 +1,11 @@
 import { state, findBoard, findColumn, findCard, findCardColumn, genId } from './data.js'
+import { getUniqueCardName } from './store.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
 import { pushCommand } from './history.js'
+import { buildSetValueMenu } from './setValueMenu.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const PRIORITY_COLORS = {
@@ -637,6 +639,8 @@ function initTimelineDrag() {
       html += '<button class="tl-ctx-item" data-action="copy">Copy</button>'
       html += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
       html += '<div class="tl-ctx-divider"></div>'
+      html += buildSetValueMenu(bar.dataset.cardId)
+      html += '<div class="tl-ctx-divider"></div>'
       html += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
     }
     menu.innerHTML = html
@@ -766,7 +770,8 @@ document.addEventListener('click', function(e) {
         const existing = menu.dataset.cardId ? findCard(menu.dataset.cardId) : null
         const date = existing ? parseDate(existing.startDate) || parseDate(existing.endDate) || new Date() : pixelToDate(newPx)
         const endDate = existing ? parseDate(existing.endDate) || parseDate(existing.startDate) || new Date(date.getTime() + 86400000) : new Date(date.getTime() + 86400000)
-        const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: '3', tags: [], members: [], checklists: [] }
+        const board = findBoard(state.selectedBoardId)
+        const card = { id: genId(), title: board ? getUniqueCardName(board, 'New Card') : 'New Card', description: '', completed: false, startDate: formatDate(date), endDate: formatDate(endDate), priority: '3', tags: [], members: [], checklists: [] }
         col.cards.push(card)
         pushCommand({
           undo() {

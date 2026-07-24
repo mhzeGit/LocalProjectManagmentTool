@@ -3,7 +3,7 @@ import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCo
 import { render } from './sidebar.js'
 import { getResolvedAvatar } from './persistence.js'
 import { renderFilterBar, filterBoardCards, getActiveFilterCount } from './filters.js'
-import { showColumnContextMenu } from './columnMenu.js'
+import { showColumnContextMenu, closeAllColumnMenus } from './columnMenu.js'
 import { startRenameColumn, startRenameCard } from './inlineEdit.js'
 import { renderTimeline } from './timeline.js'
 import { renderCalendar } from './calendar.js'
@@ -14,6 +14,7 @@ import { renderCanvasView, destroyCanvas, isCanvasActive } from './canvas.js'
 import { renderDashboard } from './dashboard.js'
 import { updateMenuBar } from './menubar.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
+import { buildSetValueMenu } from './setValueMenu.js'
 import { cleanupGrid, setupGrid } from './navigation.js'
 
 const PRIORITY_BAR_CONFIG = {
@@ -463,14 +464,9 @@ export function renderBoard() {
     for (const col of b.archivedColumns) {
       const colColorStyle = col.color ? '--column-color:' + col.color + ';' : ''
       html += '<div class="board-column archived" draggable="false" data-column-id="' + col.id + '" data-archived="true" style="' + colColorStyle + '">'
-      html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
+      html += '<div class="column-header">'
       html += '  <span id="colTitle-' + col.id + '">' + escapeHtml(col.name) + '</span>'
       html += '  <span class="col-count">' + col.cards.length + '</span>'
-      html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
-      html += '    <button class="col-menu-item" onclick="event.stopPropagation();closeAllColumnMenus();restoreColumn(\'' + col.id + '\')">Restore</button>'
-      html += '    <div class="col-menu-sep"></div>'
-      html += '    <button class="col-menu-item danger" onclick="event.stopPropagation();closeAllColumnMenus();deleteColumnPermanently(\'' + col.id + '\')">Delete Permanently</button>'
-      html += '  </div>'
       html += '</div>'
       html += '<div class="column-cards" data-col-id="' + col.id + '">'
       for (const c of col.cards) {
@@ -590,18 +586,13 @@ export function renderBoard() {
           return
         }
 
-        let colorSwatches = ''
-        for (const pc of PREDEFINED_COLORS) {
-          colorSwatches += '<button class="ps-color-swatch" data-color="' + pc.value + '" style="background:' + pc.value + '" onclick="event.stopPropagation();setSelectedCardsColor(\'' + card.dataset.cardId + '\',\'' + pc.value + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'
-        }
-        colorSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setSelectedCardsColor(\'' + card.dataset.cardId + '\',null);this.closest(\'.tl-ctx-menu\').remove()" title="None">✕</button>'
         let ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();copySelected(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Copy</button>'
         ctxHtml += '<button class="tl-ctx-item" onclick="event.stopPropagation();duplicateSelected(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Duplicate</button>'
         if (window.getCopiedCard && window.getCopiedCard()) {
           ctxHtml += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
         }
         ctxHtml += '<div class="tl-ctx-divider"></div>'
-        ctxHtml += '<div class="tl-ctx-item tl-ctx-sub-wrap">Set Color<div class="ps-color-submenu">' + colorSwatches + '</div></div>'
+        ctxHtml += buildSetValueMenu(card.dataset.cardId)
         ctxHtml += '<div class="tl-ctx-divider"></div>'
 
         const currentBoardId = state.selectedBoardId
@@ -645,6 +636,28 @@ export function renderBoard() {
         menu.innerHTML = '<button class="tl-ctx-item" data-action="paste">Paste</button>'
         
         document.body.appendChild(menu)
+        return
+      }
+
+      const archivedColHeader = e.target.closest('.board-column.archived .column-header')
+      if (archivedColHeader) {
+        e.preventDefault()
+        e.stopPropagation()
+        closeAllColumnMenus()
+        document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+        const colEl = archivedColHeader.closest('[data-column-id]')
+        if (!colEl) return
+        const colId = colEl.dataset.columnId
+        const menu = document.createElement('div')
+        menu.className = 'tl-ctx-menu'
+        menu.style.left = e.clientX + 'px'
+        menu.style.top = e.clientY + 'px'
+        menu.innerHTML =
+          '<button class="tl-ctx-item" onclick="event.stopPropagation();this.closest(\'.tl-ctx-menu\').remove();restoreColumn(\'' + colId + '\')">Restore</button>' +
+          '<div class="tl-ctx-divider"></div>' +
+          '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();this.closest(\'.tl-ctx-menu\').remove();deleteColumnPermanently(\'' + colId + '\')">Delete Permanently</button>'
+        document.body.appendChild(menu)
+        return
       }
     })
   }

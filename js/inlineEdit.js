@@ -1,5 +1,6 @@
-import { findColumn, findCard, findProject, findDocument, findCanvas, findWorkspace } from './data.js'
+import { findColumn, findCard, findProject, findDocument, findCanvas, findWorkspace, findBoard, state } from './data.js'
 import { pushCommand } from './history.js'
+import { getUniqueCardName } from './store.js'
 
 let _renderFn = null
 
@@ -60,11 +61,13 @@ export function startRenameCard(e, id) {
     titleDiv.style.cssText = origCssText
     const val = titleDiv.textContent.trim()
     if (val && val !== oldTitle) {
-      card.title = val
+      const board = state.selectedBoardId ? findBoard(state.selectedBoardId) : null
+      const uniqueVal = board ? getUniqueCardName(board, val, id) : val
+      card.title = uniqueVal
       if (_renderFn) _renderFn()
       pushCommand({
         undo() { card.title = oldTitle; if (_renderFn) _renderFn() },
-        redo() { card.title = val; if (_renderFn) _renderFn() },
+        redo() { card.title = uniqueVal; if (_renderFn) _renderFn() },
         description: 'Rename Card'
       })
     } else if (_renderFn) _renderFn()

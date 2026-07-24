@@ -798,10 +798,37 @@ export function addProjectDirect(workspaceId) {
   window.addProjectToWorkspace(workspaceId)
 }
 
+export function getUniqueCardName(board, desiredName, excludeCardId) {
+  const existingTitles = new Set()
+  for (const col of board.columns) {
+    for (const c of col.cards) {
+      if (c.id !== excludeCardId) existingTitles.add(c.title)
+    }
+  }
+  if (board.archivedCards) {
+    for (const c of board.archivedCards) {
+      if (c.id !== excludeCardId) existingTitles.add(c.title)
+    }
+  }
+  if (board.archivedColumns) {
+    for (const col of board.archivedColumns) {
+      for (const c of col.cards) {
+        if (c.id !== excludeCardId) existingTitles.add(c.title)
+      }
+    }
+  }
+  if (!existingTitles.has(desiredName)) return desiredName
+  let suffix = 2
+  while (existingTitles.has(desiredName + ' ' + suffix)) suffix++
+  return desiredName + ' ' + suffix
+}
+
 export function addCardDirect(columnId) {
   const col = findColumn(columnId)
   if (!col) return
-  const card = { id: genId(), title: 'New Card', description: '', completed: false, startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [], color: null }
+  const board = state.selectedBoardId ? findBoard(state.selectedBoardId) : null
+  const title = board ? getUniqueCardName(board, 'New Card') : 'New Card'
+  const card = { id: genId(), title: title, description: '', completed: false, startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [], color: null }
   col.cards.push(card)
   render()
   pushCommand({
@@ -885,6 +912,81 @@ export function setCardColor(cardId, color) {
     undo() { c.color = oldColor; render() },
     redo() { c.color = color || null; render() },
     description: 'Set Card Color'
+  })
+}
+
+export function setCardPriority(cardId, priority) {
+  const c = findCard(cardId)
+  if (!c) return
+  const oldPriority = c.priority
+  c.priority = priority || 'none'
+  render()
+  pushCommand({
+    undo() { c.priority = oldPriority; render() },
+    redo() { c.priority = priority || 'none'; render() },
+    description: 'Set Card Priority'
+  })
+}
+
+export function toggleCardTag(cardId, tag) {
+  const c = findCard(cardId)
+  if (!c) return
+  const oldTags = (c.tags || []).slice()
+  if (!c.tags) c.tags = []
+  const idx = c.tags.indexOf(tag)
+  if (idx > -1) { c.tags.splice(idx, 1) } else { c.tags.push(tag) }
+  render()
+  pushCommand({
+    undo() { c.tags = oldTags; render() },
+    redo() {
+      const ci = c.tags.indexOf(tag)
+      if (ci > -1) { c.tags.splice(ci, 1) } else { c.tags.push(tag) }
+    },
+    description: 'Toggle Card Tag'
+  })
+}
+
+export function toggleCardMember(cardId, member) {
+  const c = findCard(cardId)
+  if (!c) return
+  const oldMembers = (c.members || []).slice()
+  if (!c.members) c.members = []
+  const idx = c.members.indexOf(member)
+  if (idx > -1) { c.members.splice(idx, 1) } else { c.members.push(member) }
+  render()
+  pushCommand({
+    undo() { c.members = oldMembers; render() },
+    redo() {
+      const mi = c.members.indexOf(member)
+      if (mi > -1) { c.members.splice(mi, 1) } else { c.members.push(member) }
+    },
+    description: 'Toggle Card Member'
+  })
+}
+
+export function setCardStartDate(cardId, date) {
+  const c = findCard(cardId)
+  if (!c) return
+  const oldDate = c.startDate
+  c.startDate = date || null
+  render()
+  pushCommand({
+    undo() { c.startDate = oldDate; render() },
+    redo() { c.startDate = date || null; render() },
+    description: 'Set Start Date'
+  })
+}
+
+export function setCardEndDate(cardId, date) {
+  const c = findCard(cardId)
+  if (!c) return
+  const oldDate = c.endDate
+  c.endDate = date || null
+  render()
+  pushCommand({
+    undo() { c.endDate = oldDate; render() },
+    redo() { c.endDate = date || null; render() },
+    description: 'Set End Date'
   })
 }
 
@@ -1405,6 +1507,31 @@ export function duplicateSelected(cardId) {
 export function setSelectedCardsColor(cardId, color) {
   const ids = _getMultiCardIds(cardId)
   for (const id of ids) setCardColor(id, color)
+}
+
+export function setSelectedCardsPriority(cardId, priority) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) setCardPriority(id, priority)
+}
+
+export function toggleSelectedCardsTag(cardId, tag) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) toggleCardTag(id, tag)
+}
+
+export function toggleSelectedCardsMember(cardId, member) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) toggleCardMember(id, member)
+}
+
+export function setSelectedCardsStartDate(cardId, date) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) setCardStartDate(id, date)
+}
+
+export function setSelectedCardsEndDate(cardId, date) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) setCardEndDate(id, date)
 }
 
 export function moveSelectedCards(cardId, targetBoardId, targetColumnId) {

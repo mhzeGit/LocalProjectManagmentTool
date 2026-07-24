@@ -3,6 +3,8 @@ import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCo
 import { getResolvedAvatar } from './persistence.js'
 import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
+import { wasRightDragged } from './dragscroll.js'
+import { buildSetValueMenu } from './setValueMenu.js'
 
 const PRIORITY_ORDER = { none: 0, low: 1, '1': 1, '2': 2, medium: 3, '3': 3, high: 4, '4': 4, urgent: 5, '5': 5 }
 
@@ -214,5 +216,31 @@ function initListViewEvents() {
         openCardDetail(row.dataset.cardId)
       }
     }
+  })
+
+  area.addEventListener('contextmenu', function(e) {
+    if (wasRightDragged()) return
+    if (state.selectedView !== 'list') return
+    const row = e.target.closest('.lv-row')
+    if (!row || !row.dataset.cardId) return
+    e.preventDefault()
+    e.stopPropagation()
+    document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
+    const menu = document.createElement('div')
+    menu.className = 'tl-ctx-menu'
+    menu.style.left = e.clientX + 'px'
+    menu.style.top = e.clientY + 'px'
+    menu.dataset.cardId = row.dataset.cardId
+    let html = '<button class="tl-ctx-item" onclick="event.stopPropagation();copySelected(\'' + row.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Copy</button>'
+    html += '<button class="tl-ctx-item" onclick="event.stopPropagation();duplicateSelected(\'' + row.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Duplicate</button>'
+    if (window.getCopiedCard && window.getCopiedCard()) {
+      html += '<button class="tl-ctx-item" onclick="event.stopPropagation();pasteCard(\'' + row.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Paste</button>'
+    }
+    html += '<div class="tl-ctx-divider"></div>'
+    html += buildSetValueMenu(row.dataset.cardId)
+    html += '<div class="tl-ctx-divider"></div>'
+    html += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();archiveSelected(\'' + row.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Archive</button>'
+    menu.innerHTML = html
+    document.body.appendChild(menu)
   })
 }

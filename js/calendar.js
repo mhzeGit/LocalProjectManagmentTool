@@ -1,9 +1,11 @@
 import { state, findBoard, findCard, genId, findCardColumn, findColumn } from './data.js'
+import { getUniqueCardName } from './store.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { filterCards, getActiveFilterCount } from './filters.js'
 import { openCardDetail } from './modal.js'
 import { wasRightDragged } from './dragscroll.js'
 import { pushCommand } from './history.js'
+import { buildSetValueMenu } from './setValueMenu.js'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -114,7 +116,7 @@ export function calendarAddCard(dateStr) {
   endDate.setDate(endDate.getDate() + 1)
   const card = {
     id: genId(),
-    title: 'New Card',
+    title: getUniqueCardName(b, 'New Card'),
     description: '',
     completed: false,
     startDate: formatDate(date),
@@ -335,6 +337,8 @@ function initCalendarDrag() {
       menu.dataset.cardId = card.dataset.cardId
       html += '<button class="tl-ctx-item" onclick="closeAllColumnMenus();calendarCopyCard(\'' + card.dataset.cardId + '\')">Copy</button>'
       html += '<button class="tl-ctx-item" onclick="closeAllColumnMenus();calendarDuplicateCard(\'' + card.dataset.cardId + '\')">Duplicate</button>'
+      html += '<div class="tl-ctx-divider"></div>'
+      html += buildSetValueMenu(card.dataset.cardId)
       html += '<div class="tl-ctx-divider"></div>'
       html += '<button class="tl-ctx-item tl-ctx-danger" onclick="closeAllColumnMenus();calendarArchiveCard(\'' + card.dataset.cardId + '\')">Archive</button>'
     } else {
