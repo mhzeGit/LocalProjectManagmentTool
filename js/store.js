@@ -1379,3 +1379,55 @@ export function reorderFolderItems(folderId, newOrder) {
     description: 'Reorder Folder Items'
   })
 }
+
+function _getMultiCardIds(cardId) {
+  if (state.selectedCardIds.includes(cardId) && state.selectedCardIds.length > 0) {
+    return [...state.selectedCardIds]
+  }
+  return [cardId]
+}
+
+export function archiveSelected(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) archiveCard(id)
+}
+
+export function copySelected(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  copyCard(ids[0] || cardId)
+}
+
+export function duplicateSelected(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) duplicateCard(id)
+}
+
+export function setSelectedCardsColor(cardId, color) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) setCardColor(id, color)
+}
+
+export function moveSelectedCards(cardId, targetBoardId, targetColumnId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) moveCardToBoardColumn(id, targetBoardId, targetColumnId)
+}
+
+export function restoreSelected(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) restoreCard(id)
+}
+
+export function deleteSelectedPermanently(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) deleteCardPermanently(id)
+}
+
+export function restoreSelectedFromArchivedColumn(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) restoreCardFromArchivedColumn(id)
+}
+
+export function deleteSelectedFromArchivedColumn(cardId) {
+  const ids = _getMultiCardIds(cardId)
+  for (const id of ids) deleteCardFromArchivedColumn(id)
+}

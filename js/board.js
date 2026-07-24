@@ -361,7 +361,7 @@ export function renderBoard() {
       html += '<div class="card' + completed + selected + '" draggable="true" data-card-id="' + c.id + '" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
       html += '  <div class="card-check' + checked + '" onclick="event.stopPropagation();toggleCardCompleted(\'' + c.id + '\')"><div class="card-check-circle"><svg class="card-check-check" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>'
       html += '  <div class="card-body">'
-      html += '    <div class="card-title" onclick="event.stopPropagation()" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
+      html += '    <div class="card-title" ondblclick="event.stopPropagation();startRenameCard(event,\'' + c.id + '\')" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
       if (c.description) html += '    <div class="card-desc">' + c.description + '</div>'
       if (c.tags && c.tags.length > 0) {
         html += '    <div class="card-tags">'
@@ -577,13 +577,13 @@ export function renderBoard() {
           const isColArchived = parentColEl && parentColEl.dataset.archived === 'true'
           let ctxHtml
           if (isColArchived) {
-            ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreCardFromArchivedColumn(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
+            ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreSelectedFromArchivedColumn(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
             ctxHtml += '<div class="tl-ctx-divider"></div>'
-            ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteCardFromArchivedColumn(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
+            ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteSelectedFromArchivedColumn(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
           } else {
-            ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreCard(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
+            ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreSelected(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
             ctxHtml += '<div class="tl-ctx-divider"></div>'
-            ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteCardPermanently(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
+            ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteSelectedPermanently(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
           }
           menu.innerHTML = ctxHtml
           document.body.appendChild(menu)
@@ -592,11 +592,11 @@ export function renderBoard() {
 
         let colorSwatches = ''
         for (const pc of PREDEFINED_COLORS) {
-          colorSwatches += '<button class="ps-color-swatch" data-color="' + pc.value + '" style="background:' + pc.value + '" onclick="event.stopPropagation();setCardColor(\'' + card.dataset.cardId + '\',\'' + pc.value + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'
+          colorSwatches += '<button class="ps-color-swatch" data-color="' + pc.value + '" style="background:' + pc.value + '" onclick="event.stopPropagation();setSelectedCardsColor(\'' + card.dataset.cardId + '\',\'' + pc.value + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'
         }
-        colorSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setCardColor(\'' + card.dataset.cardId + '\',null);this.closest(\'.tl-ctx-menu\').remove()" title="None">✕</button>'
-        let ctxHtml = '<button class="tl-ctx-item" data-action="copy">Copy</button>'
-        ctxHtml += '<button class="tl-ctx-item" data-action="duplicate">Duplicate</button>'
+        colorSwatches += '<button class="ps-color-swatch ps-color-none" onclick="event.stopPropagation();setSelectedCardsColor(\'' + card.dataset.cardId + '\',null);this.closest(\'.tl-ctx-menu\').remove()" title="None">✕</button>'
+        let ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();copySelected(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Copy</button>'
+        ctxHtml += '<button class="tl-ctx-item" onclick="event.stopPropagation();duplicateSelected(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Duplicate</button>'
         if (window.getCopiedCard && window.getCopiedCard()) {
           ctxHtml += '<button class="tl-ctx-item" data-action="paste">Paste</button>'
         }
@@ -612,7 +612,7 @@ export function renderBoard() {
             if (brd.id === currentBoardId || brd.columns.length === 0) continue
             let colHtml = ''
             for (const col of brd.columns) {
-              colHtml += '<button class="tl-ctx-item" onclick="event.stopPropagation();moveCardToBoardColumn(\'' + card.dataset.cardId + '\',\'' + brd.id + '\',\'' + col.id + '\');this.closest(\'.tl-ctx-menu\').remove()">' + escapeHtml(col.name) + '</button>'
+              colHtml += '<button class="tl-ctx-item" onclick="event.stopPropagation();moveSelectedCards(\'' + card.dataset.cardId + '\',\'' + brd.id + '\',\'' + col.id + '\');this.closest(\'.tl-ctx-menu\').remove()">' + escapeHtml(col.name) + '</button>'
             }
             moveHtml += '<div class="tl-ctx-item tl-ctx-sub-wrap move-board-item">' + escapeHtml(brd.name) + '<div class="move-col-submenu">' + colHtml + '</div></div>'
           }
@@ -622,7 +622,7 @@ export function renderBoard() {
           }
         }
 
-        ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" data-action="archive">Archive</button>'
+        ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();archiveSelected(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Archive</button>'
         menu.innerHTML = ctxHtml
         if (colId) menu.dataset.colId = colId
         

@@ -510,7 +510,6 @@ export function initDragDrop(renderFn) {
     const card = e.target.closest('.card')
     if (card && card.dataset.cardId) {
       if (card.querySelector('input:focus')) return
-      if (card.dataset.archived === 'true') return
       if (e.shiftKey || e.ctrlKey || e.metaKey) {
         e.preventDefault()
         const id = card.dataset.cardId
@@ -524,6 +523,7 @@ export function initDragDrop(renderFn) {
         renderBoard()
         return
       }
+      if (card.dataset.archived === 'true') return
       state.selectedCardIds = []
       openCardDetail(card.dataset.cardId)
       return
