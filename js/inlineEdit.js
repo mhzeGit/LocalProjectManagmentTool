@@ -41,20 +41,24 @@ export function startRenameColumn(e, id) {
 
 export function startRenameCard(e, id) {
   e.stopPropagation()
-  const span = document.getElementById('cardTitle-' + id)
-  const cardEl = span ? span.closest('.card') : null
+  const titleDiv = document.getElementById('cardTitle-' + id)
+  const cardEl = titleDiv ? titleDiv.closest('.card') : null
   if (cardEl) cardEl.draggable = false
   const card = findCard(id)
-  if (!span || !card) return
+  if (!titleDiv || !card) return
   const oldTitle = card.title
-  const input = document.createElement('input')
-  input.value = card.title
-  input.style.cssText = 'background:#12121e;border:1px solid #4f46e5;border-radius:4px;color:#e0e0e8;font-size:14px;font-weight:600;padding:2px 6px;width:100%;outline:none;'
-  span.replaceWith(input)
-  input.focus()
-  input.select()
+  const origCssText = titleDiv.style.cssText
+  titleDiv.style.cssText = origCssText + ';background:#12121e;border:1px solid #4f46e5;border-radius:4px;outline:none;padding:2px 6px;color:#e0e0e8;'
+  titleDiv.contentEditable = 'true'
+  const range = document.createRange()
+  range.selectNodeContents(titleDiv)
+  const sel = window.getSelection()
+  sel.removeAllRanges()
+  sel.addRange(range)
   function finish() {
-    const val = input.value.trim()
+    titleDiv.contentEditable = 'false'
+    titleDiv.style.cssText = origCssText
+    const val = titleDiv.textContent.trim()
     if (val && val !== oldTitle) {
       card.title = val
       if (_renderFn) _renderFn()
@@ -65,10 +69,10 @@ export function startRenameCard(e, id) {
       })
     } else if (_renderFn) _renderFn()
   }
-  input.addEventListener('blur', finish)
-  input.addEventListener('keydown', function(ev) {
-    if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+  titleDiv.addEventListener('blur', finish)
+  titleDiv.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); titleDiv.blur() }
+    if (ev.key === 'Escape') { ev.preventDefault(); titleDiv.contentEditable = 'false'; titleDiv.style.cssText = origCssText; if (_renderFn) _renderFn() }
   })
 }
 
