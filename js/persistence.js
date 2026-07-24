@@ -600,26 +600,10 @@ function reconstructProject(pMeta, allData) {
       newB.columns.push(newC)
     }
 
-    var archivedCards = (bMeta.archivedCards || []).slice()
-    for (var aci = 0; aci < (bMeta.archivedColumns || []).length; aci++) {
-      var acMeta = allData.columns[bMeta.archivedColumns[aci]]
-      if (!acMeta) continue
-      for (var acdi = 0; acdi < (acMeta.cards || []).length; acdi++) {
-        archivedCards.push(acMeta.cards[acdi])
-      }
-    }
-    var seen = {}
-    var uniqueArchived = []
-    for (var aai = 0; aai < archivedCards.length; aai++) {
-      if (!seen[archivedCards[aai]]) {
-        seen[archivedCards[aai]] = true
-        uniqueArchived.push(archivedCards[aai])
-      }
-    }
-    if (uniqueArchived.length > 0) {
+    if ((bMeta.archivedCards || []).length > 0) {
       newB.archivedCards = []
-      for (var uai = 0; uai < uniqueArchived.length; uai++) {
-        var cdMeta = allData.cards[uniqueArchived[uai]]
+      for (var aci = 0; aci < bMeta.archivedCards.length; aci++) {
+        var cdMeta = allData.cards[bMeta.archivedCards[aci]]
         if (!cdMeta) continue
         newB.archivedCards.push({
           id: cdMeta.id, title: cdMeta.title,
@@ -633,6 +617,31 @@ function reconstructProject(pMeta, allData) {
           checklists: cdMeta.checklists || [],
           color: cdMeta.color || null
         })
+      }
+    }
+    if ((bMeta.archivedColumns || []).length > 0) {
+      newB.archivedColumns = []
+      for (var aci = 0; aci < bMeta.archivedColumns.length; aci++) {
+        var acMeta = allData.columns[bMeta.archivedColumns[aci]]
+        if (!acMeta) continue
+        var newCol = { id: acMeta.id, name: acMeta.name, cards: [], color: acMeta.color || null }
+        for (var acdi = 0; acdi < (acMeta.cards || []).length; acdi++) {
+          var cdMeta = allData.cards[acMeta.cards[acdi]]
+          if (!cdMeta) continue
+          newCol.cards.push({
+            id: cdMeta.id, title: cdMeta.title,
+            description: cdMeta.description || '',
+            completed: cdMeta.completed || false,
+            startDate: cdMeta.startDate || null,
+            endDate: cdMeta.endDate || null,
+            priority: cdMeta.priority || '3',
+            tags: cdMeta.tags || [],
+            members: cdMeta.members || [],
+            checklists: cdMeta.checklists || [],
+            color: cdMeta.color || null
+          })
+        }
+        newB.archivedColumns.push(newCol)
       }
     }
     project.boards.push(newB)
