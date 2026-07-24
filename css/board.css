@@ -159,6 +159,11 @@
 .card.archived .card-priority-bar:not(.filled) { opacity: 0; }
 .card.archived .card-priority-bar.filled { opacity: 0.3; }
 
+.board-column.archived { opacity: 0.6; filter: grayscale(0.5); }
+.board-column.archived .column-header { color: var(--text-dim); }
+.board-column.archived .col-count { opacity: 0.5; }
+.board-column.archived .column-footer { display: none; }
+
 .card[style*="--card-color"]::after {
   content: '';
   position: absolute;

@@ -457,6 +457,69 @@ export function renderBoard() {
     html += '  <button class="btn-add-card" onclick="addCardDirect(\'' + col.id + '\')">+ Add a card</button>'
     html += '</div></div>'
   }
+  if (state.showArchived && b.archivedColumns && b.archivedColumns.length > 0) {
+    for (const col of b.archivedColumns) {
+      const colColorStyle = col.color ? '--column-color:' + col.color + ';' : ''
+      html += '<div class="board-column archived" draggable="false" data-column-id="' + col.id + '" data-archived="true" style="' + colColorStyle + '">'
+      html += '<div class="column-header" oncontextmenu="showColumnContextMenu(event,\'' + col.id + '\')">'
+      html += '  <span id="colTitle-' + col.id + '">' + escapeHtml(col.name) + '</span>'
+      html += '  <span class="col-count">' + col.cards.length + '</span>'
+      html += '  <div class="col-menu" id="colMenu-' + col.id + '">'
+      html += '    <button class="col-menu-item" onclick="event.stopPropagation();closeAllColumnMenus();restoreColumn(\'' + col.id + '\')">Restore</button>'
+      html += '    <div class="col-menu-sep"></div>'
+      html += '    <button class="col-menu-item danger" onclick="event.stopPropagation();closeAllColumnMenus();deleteColumnPermanently(\'' + col.id + '\')">Delete Permanently</button>'
+      html += '  </div>'
+      html += '</div>'
+      html += '<div class="column-cards" data-col-id="' + col.id + '">'
+      for (const c of col.cards) {
+        const cardColorStyle = c.color ? '--card-color:' + c.color + ';' : ''
+        const barCfg = PRIORITY_BAR_CONFIG[c.priority] || PRIORITY_BAR_CONFIG.medium
+        html += '<div class="card archived" draggable="false" data-card-id="' + c.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
+        html += '  <div class="card-body">'
+        html += '    <div class="card-title" id="cardTitle-' + c.id + '">' + escapeHtml(c.title) + '</div>'
+        if (c.description) html += '    <div class="card-desc">' + c.description + '</div>'
+        if (c.tags && c.tags.length > 0) {
+          html += '    <div class="card-tags">'
+          for (const t of c.tags) {
+            const tagColor = getTagColor(t)
+            html += '      <span class="card-tag" style="background:' + tagColor + '">' + escapeHtml(t) + '</span>'
+          }
+          html += '    </div>'
+        }
+        if (c.checklists && c.checklists.length > 0) {
+          const total = countChecklistItems(c.checklists)
+          const done = countCompletedChecklistItems(c.checklists)
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0
+          html += '    <div class="card-cl-progress"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
+        }
+        if (c.members && c.members.length > 0) {
+          let memberHtml = ''
+          for (const m of c.members) {
+            const mo = w && w.members ? w.members.find(wm => wm.name === m) : null
+            if (mo) {
+              const avatarUrl = getResolvedAvatar(mo)
+              if (avatarUrl) {
+                memberHtml += '<img class="card-member-avatar" src="' + avatarUrl + '">'
+              } else {
+                memberHtml += '<span class="card-member-avatar card-member-avatar-initials">' + getInitials(m) + '</span>'
+              }
+            }
+          }
+          if (memberHtml) html += '    <div class="card-members">' + memberHtml + '</div>'
+        }
+        html += '  </div>'
+        html += '  <div class="card-priority">'
+        for (let i = 0; i < 5; i++) {
+          const filled = i < barCfg.filled ? ' filled' : ''
+          html += '<div class="card-priority-bar' + filled + '" style="background:' + barCfg.color + ';color:' + barCfg.color + '"></div>'
+        }
+        html += '  </div>'
+        html += '</div>'
+      }
+      html += '</div>'
+      html += '</div>'
+    }
+  }
   html += '<div class="board-column add-column" onclick="addColumnDirect(\'' + b.id + '\')" oncontextmenu="showAddColContextMenu(event,\'' + b.id + '\')">'
   html += '  <span style="color:#888;font-size:13px;">+ Add Another Column</span>'
   html += '  <div class="col-menu" id="addColMenu-' + b.id + '">'
@@ -506,9 +569,18 @@ export function renderBoard() {
         const isArchived = card.dataset.archived === 'true'
 
         if (isArchived) {
-          let ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreCard(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
-          ctxHtml += '<div class="tl-ctx-divider"></div>'
-          ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteCardPermanently(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
+          const parentColEl = card.closest('[data-column-id]')
+          const isColArchived = parentColEl && parentColEl.dataset.archived === 'true'
+          let ctxHtml
+          if (isColArchived) {
+            ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreCardFromArchivedColumn(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
+            ctxHtml += '<div class="tl-ctx-divider"></div>'
+            ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteCardFromArchivedColumn(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
+          } else {
+            ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreCard(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
+            ctxHtml += '<div class="tl-ctx-divider"></div>'
+            ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteCardPermanently(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
+          }
           menu.innerHTML = ctxHtml
           document.body.appendChild(menu)
           return

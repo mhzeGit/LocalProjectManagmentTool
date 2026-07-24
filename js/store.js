@@ -1,4 +1,4 @@
-import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument, findCanvas } from './data.js'
+import { data, state, genId, findWorkspace, findProject, findBoard, findColumn, findCard, findCardColumn, findDocument, findCanvas, findArchivedColumn } from './data.js'
 import { render } from './sidebar.js'
 import { closeModal, openModal, confirmModal } from './modal.js'
 import { pushCommand } from './history.js'
@@ -289,30 +289,82 @@ export function archiveColumn(id) {
         const idx = b.columns.findIndex(c => c.id === id)
         if (idx !== -1) {
           const col = b.columns[idx]
-          if (!b.archivedCards) b.archivedCards = []
-          const movedCards = col.cards.slice()
-          for (const card of col.cards) card._archivedFromColId = col.id
-          b.archivedCards.push(...col.cards)
           b.columns.splice(idx, 1)
+          if (!b.archivedColumns) b.archivedColumns = []
+          b.archivedColumns.push(col)
           render()
           pushCommand({
             undo() {
+              const ai = b.archivedColumns.indexOf(col)
+              if (ai !== -1) b.archivedColumns.splice(ai, 1)
               b.columns.splice(idx, 0, col)
-              col.cards = movedCards
-              if (b.archivedCards) {
-                for (const mc of movedCards) {
-                  const ai = b.archivedCards.indexOf(mc)
-                  if (ai !== -1) b.archivedCards.splice(ai, 1)
-                }
-              }
             },
             redo() {
-              if (!b.archivedCards) b.archivedCards = []
-              b.archivedCards.push(...col.cards)
-              const ci = b.columns.findIndex(x => x.id === col.id)
+              const ci = b.columns.indexOf(col)
               if (ci !== -1) b.columns.splice(ci, 1)
+              if (!b.archivedColumns) b.archivedColumns = []
+              b.archivedColumns.push(col)
             },
             description: 'Archive Column'
+          })
+          return
+        }
+      }
+    }
+  }
+}
+
+export function restoreColumn(id) {
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      for (const b of p.boards) {
+        const idx = b.archivedColumns ? b.archivedColumns.findIndex(c => c.id === id) : -1
+        if (idx !== -1) {
+          const col = b.archivedColumns[idx]
+          b.archivedColumns.splice(idx, 1)
+          b.columns.push(col)
+          render()
+          pushCommand({
+            undo() {
+              const ci = b.columns.indexOf(col)
+              if (ci !== -1) b.columns.splice(ci, 1)
+              if (!b.archivedColumns) b.archivedColumns = []
+              b.archivedColumns.push(col)
+            },
+            redo() {
+              const ai = b.archivedColumns.indexOf(col)
+              if (ai !== -1) b.archivedColumns.splice(ai, 1)
+              b.columns.push(col)
+            },
+            description: 'Restore Column'
+          })
+          return
+        }
+      }
+    }
+  }
+}
+
+export async function deleteColumnPermanently(id) {
+  if (!(await confirmModal('Permanently delete this archived column and all its cards?'))) return
+  for (const w of data.workspaces) {
+    for (const p of w.projects) {
+      for (const b of p.boards) {
+        const idx = b.archivedColumns ? b.archivedColumns.findIndex(c => c.id === id) : -1
+        if (idx !== -1) {
+          const removed = b.archivedColumns[idx]
+          b.archivedColumns.splice(idx, 1)
+          render()
+          pushCommand({
+            undo() {
+              if (!b.archivedColumns) b.archivedColumns = []
+              b.archivedColumns.splice(idx, 0, removed)
+            },
+            redo() {
+              const ri = b.archivedColumns.findIndex(x => x.id === id)
+              if (ri !== -1) b.archivedColumns.splice(ri, 1)
+            },
+            description: 'Delete Column Permanently'
           })
           return
         }
@@ -619,6 +671,61 @@ export async function deleteCardPermanently(cardId) {
     },
     description: 'Permanently Delete Card'
   })
+}
+
+export function restoreCardFromArchivedColumn(cardId) {
+  const b = findBoard(state.selectedBoardId)
+  if (!b || !b.archivedColumns) return
+  for (const col of b.archivedColumns) {
+    const idx = col.cards.findIndex(c => c.id === cardId)
+    if (idx !== -1) {
+      const card = col.cards[idx]
+      col.cards.splice(idx, 1)
+      let targetCol = b.columns.length > 0 ? b.columns[0] : null
+      if (!targetCol) { col.cards.splice(idx, 0, card); return }
+      targetCol.cards.push(card)
+      render()
+      pushCommand({
+        undo() {
+          const ti = targetCol.cards.indexOf(card)
+          if (ti !== -1) targetCol.cards.splice(ti, 1)
+          col.cards.splice(idx, 0, card)
+        },
+        redo() {
+          const ri = col.cards.indexOf(card)
+          if (ri !== -1) col.cards.splice(ri, 1)
+          targetCol.cards.push(card)
+        },
+        description: 'Restore Card from Archived Column'
+      })
+      return
+    }
+  }
+}
+
+export async function deleteCardFromArchivedColumn(cardId) {
+  if (!(await confirmModal('Permanently delete this archived card?'))) return
+  const b = findBoard(state.selectedBoardId)
+  if (!b || !b.archivedColumns) return
+  for (const col of b.archivedColumns) {
+    const idx = col.cards.findIndex(c => c.id === cardId)
+    if (idx !== -1) {
+      const removed = col.cards[idx]
+      col.cards.splice(idx, 1)
+      render()
+      pushCommand({
+        undo() {
+          col.cards.splice(idx, 0, removed)
+        },
+        redo() {
+          const ri = col.cards.indexOf(removed)
+          if (ri !== -1) col.cards.splice(ri, 1)
+        },
+        description: 'Delete Card from Archived Column'
+      })
+      return
+    }
+  }
 }
 
 export function moveCardToBoardColumn(cardId, targetBoardId, targetColumnId) {
