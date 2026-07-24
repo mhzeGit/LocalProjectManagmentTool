@@ -229,6 +229,12 @@ export function renderFilterBar() {
   html += '  </div>'
   html += '</div>'
 
+  const archivedActive = state.showArchived
+  html += '<button class="filter-dd-btn' + (archivedActive ? ' has-active' : '') + '" id="btnToggleArchived" title="Show archived cards" style="margin-left:4px">'
+  html += '  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+  html += '  Archived' + (archivedActive ? ' <span class="filter-dd-badge">ON</span>' : '')
+  html += '</button>'
+
   if (activeCount > 0) {
     const chips = []
     if (f.search) chips.push('"' + f.search + '"')
@@ -266,6 +272,11 @@ export function initFilterEvents() {
   })
 
   bar.addEventListener('click', function(e) {
+    if (e.target.closest('#btnToggleArchived')) {
+      if (window.toggleShowArchived) window.toggleShowArchived()
+      return
+    }
+
     if (e.target.closest('#filterSearchClear')) {
       state.filters.search = ''
       render()

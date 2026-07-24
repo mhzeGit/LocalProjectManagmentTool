@@ -1,4 +1,4 @@
-import { data, state, findBoard, findProject, findWorkspace, findDocument, findCanvas, getTagColor, PREDEFINED_COLORS } from './data.js'
+import { data, state, findBoard, findProject, findWorkspace, findDocument, findCanvas, findCard, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { escapeHtml, getProgressColor, getInitials, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { render } from './sidebar.js'
 import { getResolvedAvatar } from './persistence.js'
@@ -401,6 +401,57 @@ export function renderBoard() {
       html += '  </div>'
       html += '</div>'
     }
+    if (state.showArchived && b.archivedCards && b.archivedCards.length > 0) {
+      const colArchivedCards = b.archivedCards.filter(ac => ac._archivedFromColId === col.id)
+      if (colArchivedCards.length > 0) {
+        html += '<div class="archived-separator">Archived</div>'
+      }
+      for (const ac of colArchivedCards) {
+        const cardColorStyle = ac.color ? '--card-color:' + ac.color + ';' : ''
+        const barCfg = PRIORITY_BAR_CONFIG[ac.priority] || PRIORITY_BAR_CONFIG.medium
+        html += '<div class="card archived" draggable="false" data-card-id="' + ac.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';">'
+        html += '  <div class="card-body">'
+        html += '    <div class="card-title" id="cardTitle-' + ac.id + '">' + escapeHtml(ac.title) + '</div>'
+        if (ac.description) html += '    <div class="card-desc">' + ac.description + '</div>'
+        if (ac.tags && ac.tags.length > 0) {
+          html += '    <div class="card-tags">'
+          for (const t of ac.tags) {
+            const tagColor = getTagColor(t)
+            html += '      <span class="card-tag" style="background:' + tagColor + '">' + escapeHtml(t) + '</span>'
+          }
+          html += '    </div>'
+        }
+        if (ac.checklists && ac.checklists.length > 0) {
+          const total = countChecklistItems(ac.checklists)
+          const done = countCompletedChecklistItems(ac.checklists)
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0
+          html += '    <div class="card-cl-progress"><div class="card-cl-progress-bar" style="width:' + pct + '%;background:' + getProgressColor(pct) + '"></div></div>'
+        }
+        if (ac.members && ac.members.length > 0) {
+          let memberHtml = ''
+          for (const m of ac.members) {
+            const mo = w && w.members ? w.members.find(wm => wm.name === m) : null
+            if (mo) {
+              const avatarUrl = getResolvedAvatar(mo)
+              if (avatarUrl) {
+                memberHtml += '<img class="card-member-avatar" src="' + avatarUrl + '">'
+              } else {
+                memberHtml += '<span class="card-member-avatar card-member-avatar-initials">' + getInitials(m) + '</span>'
+              }
+            }
+          }
+          if (memberHtml) html += '    <div class="card-members">' + memberHtml + '</div>'
+        }
+        html += '  </div>'
+        html += '  <div class="card-priority">'
+        for (let i = 0; i < 5; i++) {
+          const filled = i < barCfg.filled ? ' filled' : ''
+          html += '<div class="card-priority-bar' + filled + '" style="background:' + barCfg.color + ';color:' + barCfg.color + '"></div>'
+        }
+        html += '  </div>'
+        html += '</div>'
+      }
+    }
     html += '</div>'
     html += '<div class="column-footer">'
     html += '  <button class="btn-add-card" onclick="addCardDirect(\'' + col.id + '\')">+ Add a card</button>'
@@ -412,6 +463,26 @@ export function renderBoard() {
     html += '    <button class="col-menu-item" onclick="event.stopPropagation();closeAllColumnMenus();pasteColumnToBoard(\'' + b.id + '\')">Paste</button>'
   html += '  </div>'
   html += '</div>'
+  if (state.showArchived && b.archivedCards && b.archivedCards.length > 0) {
+    const unplacedArchived = b.archivedCards.filter(ac => !ac._archivedFromColId || !b.columns.some(col => col.id === ac._archivedFromColId))
+    if (unplacedArchived.length > 0) {
+      html += '<div class="archived-section"><div class="archived-section-title">Archived (no column)</div>'
+      for (const ac of unplacedArchived) {
+        const cardColorStyle = ac.color ? '--card-color:' + ac.color + ';' : ''
+        const barCfg = PRIORITY_BAR_CONFIG[ac.priority] || PRIORITY_BAR_CONFIG.medium
+        html += '<div class="card archived" draggable="false" data-card-id="' + ac.id + '" data-archived="true" style="' + cardColorStyle + '--card-priority-color:' + barCfg.color + ';display:inline-block;width:260px;margin-right:8px;vertical-align:top">'
+        html += '  <div class="card-body"><div class="card-title">' + escapeHtml(ac.title) + '</div></div>'
+        html += '  <div class="card-priority">'
+        for (let i = 0; i < 5; i++) {
+          const filled = i < barCfg.filled ? ' filled' : ''
+          html += '<div class="card-priority-bar' + filled + '" style="background:' + barCfg.color + ';color:' + barCfg.color + '"></div>'
+        }
+        html += '  </div>'
+        html += '</div>'
+      }
+      html += '</div>'
+    }
+  }
   html += '</div>'
   area.innerHTML = html
 
@@ -432,6 +503,17 @@ export function renderBoard() {
         menu.style.top = e.clientY + 'px'
         menu.dataset.cardId = card.dataset.cardId
         const colId = card.closest('[data-col-id]')?.dataset.colId || ''
+        const isArchived = card.dataset.archived === 'true'
+
+        if (isArchived) {
+          let ctxHtml = '<button class="tl-ctx-item" onclick="event.stopPropagation();restoreCard(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Restore</button>'
+          ctxHtml += '<div class="tl-ctx-divider"></div>'
+          ctxHtml += '<button class="tl-ctx-item tl-ctx-danger" onclick="event.stopPropagation();deleteCardPermanently(\'' + card.dataset.cardId + '\');this.closest(\'.tl-ctx-menu\').remove()">Delete Permanently</button>'
+          menu.innerHTML = ctxHtml
+          document.body.appendChild(menu)
+          return
+        }
+
         let colorSwatches = ''
         for (const pc of PREDEFINED_COLORS) {
           colorSwatches += '<button class="ps-color-swatch" data-color="' + pc.value + '" style="background:' + pc.value + '" onclick="event.stopPropagation();setCardColor(\'' + card.dataset.cardId + '\',\'' + pc.value + '\');this.closest(\'.tl-ctx-menu\').remove()"></button>'

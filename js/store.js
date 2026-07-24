@@ -291,6 +291,7 @@ export function archiveColumn(id) {
           const col = b.columns[idx]
           if (!b.archivedCards) b.archivedCards = []
           const movedCards = col.cards.slice()
+          for (const card of col.cards) card._archivedFromColId = col.id
           b.archivedCards.push(...col.cards)
           b.columns.splice(idx, 1)
           render()
@@ -538,6 +539,7 @@ export function archiveCard(cardId) {
   const b = findBoard(state.selectedBoardId)
   if (b) {
     if (!b.archivedCards) b.archivedCards = []
+    card._archivedFromColId = srcCol.id
     b.archivedCards.push(card)
   }
   render()
@@ -558,6 +560,64 @@ export function archiveCard(cardId) {
       }
     },
     description: 'Archive Card'
+  })
+}
+
+export function toggleShowArchived() {
+  state.showArchived = !state.showArchived
+  render()
+}
+
+export function restoreCard(cardId) {
+  const b = findBoard(state.selectedBoardId)
+  if (!b || !b.archivedCards) return
+  const idx = b.archivedCards.findIndex(c => c.id === cardId)
+  if (idx === -1) return
+  const card = b.archivedCards[idx]
+  const colId = card._archivedFromColId
+  let targetCol = colId ? findColumn(colId) : null
+  if (!targetCol) {
+    if (b.columns.length === 0) return
+    targetCol = b.columns[0]
+  }
+  b.archivedCards.splice(idx, 1)
+  targetCol.cards.push(card)
+  render()
+  pushCommand({
+    undo() {
+      const ci = targetCol.cards.indexOf(card)
+      if (ci !== -1) targetCol.cards.splice(ci, 1)
+      if (!b.archivedCards) b.archivedCards = []
+      b.archivedCards.push(card)
+    },
+    redo() {
+      const ai = b.archivedCards.indexOf(card)
+      if (ai !== -1) b.archivedCards.splice(ai, 1)
+      targetCol.cards.push(card)
+    },
+    description: 'Restore Card'
+  })
+}
+
+export async function deleteCardPermanently(cardId) {
+  if (!(await confirmModal('Permanently delete this archived card?'))) return
+  const b = findBoard(state.selectedBoardId)
+  if (!b || !b.archivedCards) return
+  const idx = b.archivedCards.findIndex(c => c.id === cardId)
+  if (idx === -1) return
+  const removed = b.archivedCards[idx]
+  b.archivedCards.splice(idx, 1)
+  render()
+  pushCommand({
+    undo() {
+      if (!b.archivedCards) b.archivedCards = []
+      b.archivedCards.splice(idx, 0, removed)
+    },
+    redo() {
+      const ri = b.archivedCards.findIndex(x => x.id === cardId)
+      if (ri !== -1) b.archivedCards.splice(ri, 1)
+    },
+    description: 'Permanently Delete Card'
   })
 }
 

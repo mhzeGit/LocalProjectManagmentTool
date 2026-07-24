@@ -43,6 +43,7 @@ export const state = {
     endDateTo: '',
     completed: 'all',
   },
+  showArchived: false,
 }
 
 export function getCurrentWorkspace() {
@@ -55,6 +56,7 @@ export function findBoard(id) { for (const w of data.workspaces) { for (const p 
 export function findColumn(id) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { const c = b.columns.find(cl => cl.id === id); if (c) return c } } } return null }
 export function findCard(id) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { for (const c of b.columns) { const cd = c.cards.find(crd => crd.id === id); if (cd) return cd } } } } return null }
 export function findCardColumn(cardId) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { for (const c of b.columns) { if (c.cards.find(crd => crd.id === cardId)) return c } } } } return null }
+export function findArchivedCard(id) { for (const w of data.workspaces) { for (const p of w.projects) { for (const b of p.boards) { if (b.archivedCards) { const c = b.archivedCards.find(crd => crd.id === id); if (c) return c } } } } return null }
 export function findDocument(id) { for (const w of data.workspaces) { for (const p of w.projects) { const d = p.documents.find(doc => doc.id === id); if (d) return d } } return null }
 export function findCanvas(id) { for (const w of data.workspaces) { for (const p of w.projects) { const c = p.canvasBoards.find(cb => cb.id === id); if (c) return c } } return null }
 

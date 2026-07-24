@@ -10,7 +10,7 @@ import {
   createProject, deleteProject,   archiveProject, copyProject, setProjectColor, setWorkspaceColor,
   createBoard, quickCreateBoard, deleteBoard,
   deleteColumn, archiveColumn, copyColumn, pasteColumn, duplicateColumn, pasteColumnToBoard, setColumnColor,
-  createCard, saveCard, deleteCard, archiveCard, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor, moveCardToBoardColumn,
+  createCard, saveCard, deleteCard, archiveCard, restoreCard, deleteCardPermanently, copyCard, duplicateCard, pasteCard, pasteIntoColumn, getCopiedCard, toggleCardCompleted, setCardColor, moveCardToBoardColumn, toggleShowArchived,
   addProjectDirect, addCardDirect, addColumnDirect,
   createDocument, quickCreateDocument, deleteDocument, setDocumentPaperSize,
   createCanvas, quickCreateCanvas, deleteCanvas, renameCanvas,
@@ -92,6 +92,8 @@ Object.assign(window, {
   saveCard,
   deleteCard,
   archiveCard,
+  restoreCard,
+  deleteCardPermanently,
   copyCard,
   duplicateCard,
   pasteCard,
@@ -142,6 +144,7 @@ Object.assign(window, {
   closeUserDirectory,
   exportBoardCSV,
   importBoardCSV,
+  toggleShowArchived,
 })
 
 Object.assign(window, {

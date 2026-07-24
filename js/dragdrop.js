@@ -509,6 +509,7 @@ export function initDragDrop(renderFn) {
     const card = e.target.closest('.card')
     if (card && card.dataset.cardId) {
       if (card.querySelector('input:focus')) return
+      if (card.dataset.archived === 'true') return
       openCardDetail(card.dataset.cardId)
     }
   })
