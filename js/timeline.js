@@ -406,8 +406,8 @@ function initTimelineDrag() {
   area.addEventListener('dragend', function() {
     removeDragPreview()
     removeRowInsertLine()
-    area.querySelectorAll('.dragging, .drag-over, .tl-row-dragging').forEach(function(el) {
-      el.classList.remove('dragging', 'drag-over', 'tl-row-dragging')
+    area.querySelectorAll('.dragging, .drag-over, .drag-over-us, .tl-row-dragging').forEach(function(el) {
+      el.classList.remove('dragging', 'drag-over', 'drag-over-us', 'tl-row-dragging')
     })
     _dragCardId = null
     _dragActiveType = null
@@ -419,12 +419,30 @@ function initTimelineDrag() {
       e.preventDefault()
       e.dataTransfer.dropEffect = 'move'
       const track = e.target.closest('.tl-track')
-      if (!track) return
-      area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
-        if (el !== track) el.classList.remove('drag-over')
-      })
-      track.classList.add('drag-over')
-      if (_dragCardId) showDragPreview(track, e)
+      if (track) {
+        area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
+          if (el !== track) el.classList.remove('drag-over')
+        })
+        area.querySelectorAll('.tl-us-row.drag-over-us').forEach(function(el) {
+          el.classList.remove('drag-over-us')
+        })
+        track.classList.add('drag-over')
+        if (_dragCardId) showDragPreview(track, e)
+        return
+      }
+      const usCards = e.target.closest('.tl-us-cards')
+      if (usCards) {
+        area.querySelectorAll('.tl-track.drag-over').forEach(function(el) {
+          el.classList.remove('drag-over')
+        })
+        removeDragPreview()
+        area.querySelectorAll('.tl-us-row.drag-over-us').forEach(function(el) {
+          el.classList.remove('drag-over-us')
+        })
+        const usRow = usCards.closest('.tl-us-row')
+        if (usRow) usRow.classList.add('drag-over-us')
+        return
+      }
       return
     }
     if (_dragActiveType === 'tlrow') {
@@ -500,6 +518,8 @@ function initTimelineDrag() {
     if (_dragActiveType === 'ucard') {
       const track = e.target.closest('.tl-track')
       if (track && !track.contains(e.relatedTarget)) track.classList.remove('drag-over')
+      const usRow = e.target.closest('.tl-us-row')
+      if (usRow && !usRow.contains(e.relatedTarget)) usRow.classList.remove('drag-over-us')
       return
     }
     if (_dragActiveType === 'tlrow') {
@@ -512,12 +532,21 @@ function initTimelineDrag() {
     if (_dragActiveType === 'ucard') {
       e.preventDefault()
       removeDragPreview()
-      area.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over') })
+      area.querySelectorAll('.drag-over, .drag-over-us').forEach(function(el) {
+        el.classList.remove('drag-over', 'drag-over-us')
+      })
       const id = _dragCardId
       _dragCardId = null; _dragActiveType = null
       const track = e.target.closest('.tl-track')
-      if (!track) return
-      handleUndatedCardDrop(id, track.dataset.colId, e, track)
+      if (track) {
+        handleUndatedCardDrop(id, track.dataset.colId, e, track)
+        return
+      }
+      const targetUsRow = e.target.closest('.tl-us-row')
+      if (targetUsRow) {
+        handleUnsortedReorder(id, targetUsRow.dataset.colId, e)
+        return
+      }
       return
     }
     if (_dragActiveType === 'tlrow') {
@@ -1149,6 +1178,76 @@ function handleUndatedCardDrop(cardId, targetColId, e, track) {
       }
     },
     description: 'Schedule Card'
+  })
+
+  renderTimeline()
+}
+
+function handleUnsortedReorder(cardId, targetColId, e) {
+  const card = findCard(cardId)
+  if (!card) return
+
+  const sourceCol = findCardColumn(cardId)
+  const oldColId = sourceCol?.id
+
+  const targetCol = findColumn(targetColId)
+  if (!targetCol) return
+
+  const oldIndex = sourceCol ? sourceCol.cards.indexOf(card) : -1
+
+  const targetCardsEl = document.querySelector('.tl-us-row[data-col-id="' + targetColId + '"] .tl-us-cards')
+  let insertIdx = targetCol.cards.length
+
+  if (targetCardsEl) {
+    const ucards = targetCardsEl.querySelectorAll('.tl-ucard')
+    for (let i = 0; i < ucards.length; i++) {
+      const rect = ucards[i].getBoundingClientRect()
+      if (e.clientY < rect.top + rect.height / 2) {
+        insertIdx = i
+        break
+      }
+    }
+  }
+
+  if (targetColId === oldColId && oldIndex < insertIdx) {
+    insertIdx--
+  }
+
+  if (sourceCol) {
+    const idx = sourceCol.cards.indexOf(card)
+    if (idx !== -1) sourceCol.cards.splice(idx, 1)
+  }
+
+  targetCol.cards.splice(insertIdx, 0, card)
+
+  pushCommand({
+    undo() {
+      const c = findCard(cardId)
+      if (!c) return
+      const tgt = findColumn(targetColId)
+      if (tgt) {
+        const ci = tgt.cards.indexOf(c)
+        if (ci !== -1) tgt.cards.splice(ci, 1)
+      }
+      const src = findColumn(oldColId)
+      if (src) {
+        src.cards.splice(oldIndex, 0, c)
+      }
+    },
+    redo() {
+      const c = findCard(cardId)
+      if (!c) return
+      const src = findColumn(oldColId)
+      if (src) {
+        const ci = src.cards.indexOf(c)
+        if (ci !== -1) src.cards.splice(ci, 1)
+      }
+      const tgt = findColumn(targetColId)
+      if (tgt) {
+        tgt.cards.splice(insertIdx, 0, c)
+      }
+    },
+    description: 'Reorder Unscheduled Card'
   })
 
   renderTimeline()
