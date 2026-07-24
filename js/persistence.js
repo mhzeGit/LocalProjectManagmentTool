@@ -129,7 +129,7 @@ function verifyHandlePermission(handle) {
     return handle.requestPermission({ mode: 'readwrite' }).then(function(p) {
       return p === 'granted'
     }, function() {
-      return false
+      return null
     })
   })
 }
@@ -338,7 +338,32 @@ function computeColumnFilenames(columns) {
   return filenames
 }
 
-function listColumnFiles(dirHandle) {
+function computeCardFilenames(cards) {
+  var filenames = {}
+  var used = {}
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i]
+    var base = 'card_' + sanitizeFilename(card.title) + '.json'
+    if (!used[base]) {
+      used[base] = 1
+      filenames[card.id] = base
+    } else {
+      var n = 1
+      while (true) {
+        var alt = base.replace('.json', '_' + n + '.json')
+        if (!used[alt]) {
+          used[alt] = 1
+          filenames[card.id] = alt
+          break
+        }
+        n++
+      }
+    }
+  }
+  return filenames
+}
+
+function listPrefixedFiles(dirHandle, prefix) {
   var files = []
   try {
     var iter = dirHandle.values()
@@ -346,7 +371,7 @@ function listColumnFiles(dirHandle) {
       return iter.next().then(function(result) {
         if (result.done) return files
         var entry = result.value
-        if (entry.kind === 'file' && entry.name.startsWith('column_') && entry.name.endsWith('.json')) {
+        if (entry.kind === 'file' && entry.name.startsWith(prefix) && entry.name.endsWith('.json')) {
           files.push(entry.name)
         }
         return next()
@@ -372,6 +397,7 @@ function saveProjectToDir(project, dirHandle) {
   }))
 
   var allCols = []
+  var allCards = []
   for (var bi = 0; bi < (project.boards || []).length; bi++) {
     var b = project.boards[bi]
     promises.push(writeFile(dirHandle, 'board_' + b.id + '.json', {
@@ -387,27 +413,13 @@ function saveProjectToDir(project, dirHandle) {
 
       for (var cdi = 0; cdi < (c.cards || []).length; cdi++) {
         var cd = c.cards[cdi]
-        promises.push(writeFile(dirHandle, 'card_' + cd.id + '.json', {
-          type: 'card', id: cd.id, title: cd.title,
-          description: cd.description || '', completed: cd.completed || false,
-          startDate: cd.startDate || null, endDate: cd.endDate || null,
-          priority: cd.priority || '3', tags: cd.tags || [],
-          members: cd.members || [], checklists: cd.checklists || [],
-          color: cd.color || null, columnId: c.id
-        }))
+        allCards.push({ card: cd, columnId: c.id })
       }
     }
 
     for (var aci = 0; aci < (b.archivedCards || []).length; aci++) {
       var ac = b.archivedCards[aci]
-      promises.push(writeFile(dirHandle, 'card_' + ac.id + '.json', {
-        type: 'card', id: ac.id, title: ac.title,
-        description: ac.description || '', completed: ac.completed || false,
-        startDate: ac.startDate || null, endDate: ac.endDate || null,
-        priority: ac.priority || '3', tags: ac.tags || [],
-        members: ac.members || [], checklists: ac.checklists || [],
-        color: ac.color || null, archived: true, boardId: b.id
-      }))
+      allCards.push({ card: ac, archived: true, boardId: b.id })
     }
 
     for (var axci = 0; axci < (b.archivedColumns || []).length; axci++) {
@@ -416,14 +428,7 @@ function saveProjectToDir(project, dirHandle) {
 
       for (var axcdi = 0; axcdi < (axc.cards || []).length; axcdi++) {
         var axcd = axc.cards[axcdi]
-        promises.push(writeFile(dirHandle, 'card_' + axcd.id + '.json', {
-          type: 'card', id: axcd.id, title: axcd.title,
-          description: axcd.description || '', completed: axcd.completed || false,
-          startDate: axcd.startDate || null, endDate: axcd.endDate || null,
-          priority: axcd.priority || '3', tags: axcd.tags || [],
-          members: axcd.members || [], checklists: axcd.checklists || [],
-          color: axcd.color || null, archived: true, columnId: axc.id
-        }))
+        allCards.push({ card: axcd, archived: true, columnId: axc.id })
       }
     }
   }
@@ -438,6 +443,29 @@ function saveProjectToDir(project, dirHandle) {
       archived: item.archived || undefined,
       cards: (col.cards || []).map(function(cd) { return cd.id })
     }))
+  }
+
+  var cardFilenames = computeCardFilenames(allCards.map(function(item) { return item.card }))
+  for (var ci3 = 0; ci3 < allCards.length; ci3++) {
+    var item2 = allCards[ci3]
+    var card = item2.card
+    var filename2 = cardFilenames[card.id]
+    var cardData = {
+      type: 'card', id: card.id, title: card.title,
+      description: card.description || '', completed: card.completed || false,
+      startDate: card.startDate || null, endDate: card.endDate || null,
+      priority: card.priority || '3', tags: card.tags || [],
+      members: card.members || [], checklists: card.checklists || [],
+      color: card.color || null
+    }
+    if (item2.archived) {
+      cardData.archived = true
+      if (item2.boardId) cardData.boardId = item2.boardId
+      if (item2.columnId) cardData.columnId = item2.columnId
+    } else {
+      cardData.columnId = item2.columnId
+    }
+    promises.push(writeFile(dirHandle, filename2, cardData))
   }
 
   for (var di = 0; di < (project.documents || []).length; di++) {
@@ -461,9 +489,12 @@ function saveProjectToDir(project, dirHandle) {
   for (var key in colFilenames) {
     validFilenames[colFilenames[key]] = true
   }
+  for (var key2 in cardFilenames) {
+    validFilenames[cardFilenames[key2]] = true
+  }
 
   return Promise.all(promises).then(function() {
-    return listColumnFiles(dirHandle).then(function(files) {
+    return listPrefixedFiles(dirHandle, 'column_').then(function(files) {
       var removePromises = []
       for (var fi = 0; fi < files.length; fi++) {
         if (!validFilenames[files[fi]]) {
@@ -471,6 +502,16 @@ function saveProjectToDir(project, dirHandle) {
         }
       }
       return Promise.all(removePromises)
+    }).then(function() {
+      return listPrefixedFiles(dirHandle, 'card_').then(function(files2) {
+        var removePromises2 = []
+        for (var fi2 = 0; fi2 < files2.length; fi2++) {
+          if (!validFilenames[files2[fi2]]) {
+            removePromises2.push(dirHandle.removeEntry(files2[fi2]).catch(function() {}))
+          }
+        }
+        return Promise.all(removePromises2)
+      })
     })
   })
 }
@@ -499,29 +540,25 @@ function loadProjectFromDir(dirHandle) {
     }
 
     return Promise.all(loadPromises).then(function() {
-      return listColumnFiles(dirHandle).then(function(columnFiles) {
+      return listPrefixedFiles(dirHandle, 'column_').then(function(columnFiles) {
         var columnLoadPromises = columnFiles.map(function(fname) {
           return readJSON(dirHandle, fname).then(function(data) {
             if (data) allData.columns[data.id] = data
           })
         })
         return Promise.all(columnLoadPromises)
+      }).then(function() {
+        return listPrefixedFiles(dirHandle, 'card_').then(function(cardFiles) {
+          var cardLoadPromises = cardFiles.map(function(fname) {
+            return readJSON(dirHandle, fname).then(function(data) {
+              if (data) allData.cards[data.id] = data
+            })
+          })
+          return Promise.all(cardLoadPromises)
+        })
       })
     }).then(function() {
-      var cardLoadPromises = []
-      var colIds = Object.keys(allData.columns)
-      for (var ck = 0; ck < colIds.length; ck++) {
-        var cMeta = allData.columns[colIds[ck]]
-        for (var cdk = 0; cdk < (cMeta.cards || []).length; cdk++) {
-          cardLoadPromises.push(readJSON(dirHandle, 'card_' + cMeta.cards[cdk] + '.json').then(function(data) {
-            if (data) allData.cards[data.id] = data
-          }))
-        }
-      }
-
-      return Promise.all(cardLoadPromises).then(function() {
-        return reconstructProject(pMeta, allData)
-      })
+      return reconstructProject(pMeta, allData)
     })
   })
 }
@@ -872,28 +909,7 @@ export function openUserFile() {
     _workspaceFileHandles = {}
     _projectDirHandles = {}
     data.workspaces.splice(0, data.workspaces.length)
-    return getAllKeys().then(function(keys) {
-      var handlePromises = []
-      for (var i = 0; i < (keys || []).length; i++) {
-        (function(k) {
-          if (k === 'user_file') return
-          handlePromises.push(
-            getHandleFromDB(k).then(function(h) {
-              if (!h) return
-              return verifyHandlePermission(h).then(function(ok) {
-                if (!ok) return
-                if (typeof k === 'string' && k.startsWith('workspace_')) {
-                  _workspaceFileHandles[k.replace('workspace_', '')] = h
-                } else if (typeof k === 'string' && k.startsWith('project_')) {
-                  _projectDirHandles[k.replace('project_', '')] = h
-                }
-              })
-            })
-          )
-        })(keys[i])
-      }
-      return Promise.all(handlePromises)
-    }).then(function() {
+    return loadAllHandlesFromDB().then(function() {
       return loadAllFromUser()
     }).then(function(result) {
       if (result) {
@@ -1258,6 +1274,70 @@ export function closeUserDirectory() {
   showNotification('User file closed')
 }
 
+function loadAllHandlesFromDB() {
+  return getAllKeys().then(function(keys) {
+    var handlePromises = []
+    for (var i = 0; i < (keys || []).length; i++) {
+      (function(k) {
+        if (k === 'user_file') return
+        handlePromises.push(
+          getHandleFromDB(k).then(function(h) {
+            if (!h) return
+            return verifyHandlePermission(h).then(function(ok) {
+              if (ok === false) { removeHandleFromDB(k).catch(function() {}); return }
+              if (ok === null) return
+              if (typeof k === 'string' && k.startsWith('workspace_')) {
+                _workspaceFileHandles[k.replace('workspace_', '')] = h
+              } else if (typeof k === 'string' && k.startsWith('project_')) {
+                _projectDirHandles[k.replace('project_', '')] = h
+              }
+            })
+          })
+        )
+      })(keys[i])
+    }
+    return Promise.all(handlePromises)
+  })
+}
+
+function scheduleHandleRetry() {
+  var retrying = false
+  function onGesture() {
+    if (retrying) return
+    retrying = true
+    document.removeEventListener('click', onGesture, true)
+    document.removeEventListener('keydown', onGesture, true)
+    getAllKeys().then(function(keys) {
+      var promises = []
+      for (var i = 0; i < (keys || []).length; i++) {
+        (function(k) {
+          if (typeof k !== 'string') return
+          if (k === 'user_file') return
+          var isWs = k.startsWith('workspace_')
+          var isProj = k.startsWith('project_')
+          if (!isWs && !isProj) return
+          var id = isWs ? k.replace('workspace_', '') : k.replace('project_', '')
+          var existing = isWs ? _workspaceFileHandles[id] : _projectDirHandles[id]
+          if (existing) return
+          promises.push(
+            getHandleFromDB(k).then(function(h) {
+              if (!h) return
+              return verifyHandlePermission(h).then(function(ok) {
+                if (ok !== true) return
+                if (isWs) _workspaceFileHandles[id] = h
+                else _projectDirHandles[id] = h
+              })
+            })
+          )
+        })(keys[i])
+      }
+      return Promise.all(promises)
+    })
+  }
+  document.addEventListener('click', onGesture, true)
+  document.addEventListener('keydown', onGesture, true)
+}
+
 export function initPersistence() {
   if (_initialized) return Promise.resolve()
   _initialized = true
@@ -1276,13 +1356,16 @@ export function initPersistence() {
     document.addEventListener('keydown', onUserGesture, true)
   }
 
-  return getHandleFromDB('user_file').then(function(handle) {
+  return loadAllHandlesFromDB().then(function() {
+    return getHandleFromDB('user_file')
+  }).then(function(handle) {
     if (!handle) {
       if (loadCachedData()) {
         _saveMode = 'user'
         restoreSelectedState()
         render()
         scheduleAutoReconnect()
+        scheduleHandleRetry()
       }
       return
     }
@@ -1297,6 +1380,7 @@ export function initPersistence() {
           render()
         }
         scheduleAutoReconnect()
+        scheduleHandleRetry()
         return
       }
       _userFileHandle = handle
@@ -1304,28 +1388,7 @@ export function initPersistence() {
       _workspaceFileHandles = {}
       _projectDirHandles = {}
       data.workspaces.splice(0, data.workspaces.length)
-      return getAllKeys().then(function(keys) {
-        var handlePromises = []
-        for (var i = 0; i < (keys || []).length; i++) {
-          (function(k) {
-            if (k === 'user_file') return
-            handlePromises.push(
-              getHandleFromDB(k).then(function(h) {
-                if (!h) return
-                return verifyHandlePermission(h).then(function(ok) {
-                  if (!ok) { removeHandleFromDB(k).catch(function() {}); return }
-                  if (typeof k === 'string' && k.startsWith('workspace_')) {
-                    _workspaceFileHandles[k.replace('workspace_', '')] = h
-                  } else if (typeof k === 'string' && k.startsWith('project_')) {
-                    _projectDirHandles[k.replace('project_', '')] = h
-                  }
-                })
-              })
-            )
-          })(keys[i])
-        }
-        return Promise.all(handlePromises)
-      }).then(function() {
+      return loadAllHandlesFromDB().then(function() {
         return loadAllFromUser()
       }).then(function(result) {
         if (result) {
@@ -1334,6 +1397,7 @@ export function initPersistence() {
           restoreSelectedState()
           render()
         }
+        scheduleHandleRetry()
         return null
       })
     })
@@ -1348,10 +1412,12 @@ export function initPersistence() {
         render()
       }
       scheduleAutoReconnect()
+      scheduleHandleRetry()
     } else if (loadCachedData()) {
       _saveMode = 'user'
       restoreSelectedState()
       render()
+      scheduleHandleRetry()
     }
   })
 }
@@ -1382,11 +1448,13 @@ export function reconnectUserFile() {
       multiple: false
     }).then(function(handles) {
       _userFileHandle = handles[0]
-      _saveMode = 'user'
-      cacheFullData()
-      render()
-      showNotification('User file connected')
-      return true
+      return loadAllHandlesFromDB().then(function() {
+        _saveMode = 'user'
+        cacheFullData()
+        render()
+        showNotification('User file connected')
+        return true
+      })
     })
   }
 
@@ -1394,28 +1462,7 @@ export function reconnectUserFile() {
     if (!valid) return false
     _userFileHandle = _storedUserFileHandle
     _storedUserFileHandle = null
-    return getAllKeys().then(function(keys) {
-      var handlePromises = []
-      for (var i = 0; i < (keys || []).length; i++) {
-        (function(k) {
-          if (k === 'user_file') return
-          handlePromises.push(
-            getHandleFromDB(k).then(function(h) {
-              if (!h) return
-              return verifyHandlePermission(h).then(function(ok) {
-                if (!ok) { removeHandleFromDB(k).catch(function() {}); return }
-                if (typeof k === 'string' && k.startsWith('workspace_')) {
-                  _workspaceFileHandles[k.replace('workspace_', '')] = h
-                } else if (typeof k === 'string' && k.startsWith('project_')) {
-                  _projectDirHandles[k.replace('project_', '')] = h
-                }
-              })
-            })
-          )
-        })(keys[i])
-      }
-      return Promise.all(handlePromises)
-    }).then(function() {
+    return loadAllHandlesFromDB().then(function() {
       _saveMode = 'user'
       cacheFullData()
       restoreSelectedState()
