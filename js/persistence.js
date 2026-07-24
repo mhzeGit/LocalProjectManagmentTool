@@ -5,6 +5,8 @@ const DB_NAME = 'kanboard-user-v3'
 const DB_VERSION = 1
 const STORE_NAME = 'handles'
 const SAVE_DELAY = 500
+const LS_KEY_WORKSPACES = 'kanboard_workspaces'
+const LS_KEY_STATE = 'kanboard_state'
 
 let _userFileHandle = null
 let _workspaceFileHandles = {}
@@ -124,10 +126,62 @@ function readJSONFromFileHandle(fileHandle) {
 function verifyHandlePermission(handle) {
   return handle.queryPermission({ mode: 'readwrite' }).then(function(perm) {
     if (perm === 'granted') return true
+    if (perm === 'denied') return false
     return handle.requestPermission({ mode: 'readwrite' }).then(function(p) {
       return p === 'granted'
+    }, function() {
+      return false
     })
   })
+}
+
+/* ======== LOCALSTORAGE BACKUP ======== */
+
+function saveWorkspacesToLocalStorage() {
+  if (_saveMode !== 'user') return
+  try {
+    localStorage.setItem(LS_KEY_WORKSPACES, JSON.stringify(data.workspaces))
+    localStorage.setItem(LS_KEY_STATE, JSON.stringify({
+      selectedWorkspaceId: state.selectedWorkspaceId,
+      selectedProjectId: state.selectedProjectId,
+      selectedBoardId: state.selectedBoardId,
+      selectedDocumentId: state.selectedDocumentId,
+      selectedCanvasId: state.selectedCanvasId,
+      selectedDashboard: state.selectedDashboard,
+      selectedView: state.selectedView,
+      selfMemberId: state.selfMemberId,
+    }))
+  } catch {}
+}
+
+function loadWorkspacesFromLocalStorage() {
+  try {
+    var ws = JSON.parse(localStorage.getItem(LS_KEY_WORKSPACES))
+    if (!Array.isArray(ws) || ws.length === 0) return false
+    data.workspaces.splice(0, data.workspaces.length)
+    for (var i = 0; i < ws.length; i++) {
+      data.workspaces.push(ws[i])
+    }
+    var st = JSON.parse(localStorage.getItem(LS_KEY_STATE))
+    if (st) {
+      if (st.selectedWorkspaceId) state.selectedWorkspaceId = st.selectedWorkspaceId
+      if (st.selectedProjectId) state.selectedProjectId = st.selectedProjectId
+      if (st.selectedBoardId) state.selectedBoardId = st.selectedBoardId
+      if (st.selectedDocumentId) state.selectedDocumentId = st.selectedDocumentId
+      if (st.selectedCanvasId) state.selectedCanvasId = st.selectedCanvasId
+      if (st.selectedDashboard) state.selectedDashboard = st.selectedDashboard
+      if (st.selectedView) state.selectedView = st.selectedView
+      if (st.selfMemberId) state.selfMemberId = st.selfMemberId
+    }
+    return true
+  } catch { return false }
+}
+
+function clearLocalStorageBackup() {
+  try {
+    localStorage.removeItem(LS_KEY_WORKSPACES)
+    localStorage.removeItem(LS_KEY_STATE)
+  } catch {}
 }
 
 /* ======== USER FILE ======== */
@@ -688,9 +742,13 @@ function saveAll() {
     promises.push(saveUserFile())
   }
 
-  if (promises.length === 0) return Promise.resolve()
+  if (promises.length === 0) {
+    saveWorkspacesToLocalStorage()
+    return Promise.resolve()
+  }
 
   return Promise.all(promises).then(function() {
+    saveWorkspacesToLocalStorage()
     showNotification('Auto-saved')
   })
 }
@@ -743,6 +801,7 @@ export function setupUserDirectory() {
     state.selectedWorkspaceId = null
     state.selectedProjectId = null
     state.selectedBoardId = null
+    saveWorkspacesToLocalStorage()
     render()
     showNotification('User file set up')
   }).catch(function(e) {
@@ -798,6 +857,7 @@ export function openUserFile() {
         state.selectedBoardId = null
         state.selectedDocumentId = null
         state.selectedCanvasId = null
+        saveWorkspacesToLocalStorage()
         render()
         showNotification('User file opened')
       } else {
@@ -1138,6 +1198,7 @@ export function closeUserDirectory() {
     _saveTimer = null
   }
   _saveMode = 'memory'
+  clearLocalStorageBackup()
   removeHandleFromDB('user_file').catch(function() {})
 
   getAllKeys().then(function(keys) {
@@ -1166,10 +1227,26 @@ export function initPersistence() {
   _initialized = true
 
   return getHandleFromDB('user_file').then(function(handle) {
-    if (!handle) return
+    if (!handle) {
+      if (loadWorkspacesFromLocalStorage()) {
+        _saveMode = 'memory'
+        restoreSelectedState()
+        render()
+      }
+      return
+    }
     _storedUserFileHandle = handle
     return verifyHandlePermission(handle).then(function(valid) {
-      if (!valid) return
+      if (!valid) {
+        if (!loadWorkspacesFromLocalStorage()) {
+          render()
+          return
+        }
+        _saveMode = 'memory'
+        restoreSelectedState()
+        render()
+        return
+      }
       _userFileHandle = handle
       _storedUserFileHandle = null
       _workspaceFileHandles = {}
@@ -1201,6 +1278,7 @@ export function initPersistence() {
       }).then(function(result) {
         if (result) {
           _saveMode = 'user'
+          saveWorkspacesToLocalStorage()
           restoreSelectedState()
           render()
         }
@@ -1209,6 +1287,15 @@ export function initPersistence() {
     })
   }).catch(function(err) {
     console.error('Persistence init error:', err)
+    if (_storedUserFileHandle) {
+      if (!loadWorkspacesFromLocalStorage()) {
+        render()
+        return
+      }
+      _saveMode = 'memory'
+      restoreSelectedState()
+      render()
+    }
   })
 }
 
@@ -1265,6 +1352,7 @@ export function reconnectUserFile() {
     }).then(function(result) {
       if (result) {
         _saveMode = 'user'
+        saveWorkspacesToLocalStorage()
         restoreSelectedState()
         render()
         showNotification('User file reconnected')
