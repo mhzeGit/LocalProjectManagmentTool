@@ -363,6 +363,81 @@ function computeCardFilenames(cards) {
   return filenames
 }
 
+function computeBoardFilenames(boards) {
+  var filenames = {}
+  var used = {}
+  for (var i = 0; i < boards.length; i++) {
+    var board = boards[i]
+    var base = 'board_' + sanitizeFilename(board.name) + '.json'
+    if (!used[base]) {
+      used[base] = 1
+      filenames[board.id] = base
+    } else {
+      var n = 1
+      while (true) {
+        var alt = base.replace('.json', '_' + n + '.json')
+        if (!used[alt]) {
+          used[alt] = 1
+          filenames[board.id] = alt
+          break
+        }
+        n++
+      }
+    }
+  }
+  return filenames
+}
+
+function computeDocumentFilenames(documents) {
+  var filenames = {}
+  var used = {}
+  for (var i = 0; i < documents.length; i++) {
+    var doc = documents[i]
+    var base = 'document_' + sanitizeFilename(doc.name) + '.json'
+    if (!used[base]) {
+      used[base] = 1
+      filenames[doc.id] = base
+    } else {
+      var n = 1
+      while (true) {
+        var alt = base.replace('.json', '_' + n + '.json')
+        if (!used[alt]) {
+          used[alt] = 1
+          filenames[doc.id] = alt
+          break
+        }
+        n++
+      }
+    }
+  }
+  return filenames
+}
+
+function computeCanvasFilenames(canvases) {
+  var filenames = {}
+  var used = {}
+  for (var i = 0; i < canvases.length; i++) {
+    var canvas = canvases[i]
+    var base = 'canvas_' + sanitizeFilename(canvas.name) + '.json'
+    if (!used[base]) {
+      used[base] = 1
+      filenames[canvas.id] = base
+    } else {
+      var n = 1
+      while (true) {
+        var alt = base.replace('.json', '_' + n + '.json')
+        if (!used[alt]) {
+          used[alt] = 1
+          filenames[canvas.id] = alt
+          break
+        }
+        n++
+      }
+    }
+  }
+  return filenames
+}
+
 function listPrefixedFiles(dirHandle, prefix) {
   var files = []
   try {
@@ -400,12 +475,6 @@ function saveProjectToDir(project, dirHandle) {
   var allCards = []
   for (var bi = 0; bi < (project.boards || []).length; bi++) {
     var b = project.boards[bi]
-    promises.push(writeFile(dirHandle, 'board_' + b.id + '.json', {
-      type: 'board', id: b.id, name: b.name, projectId: project.id,
-      columns: (b.columns || []).map(function(c) { return c.id }),
-      archivedCards: (b.archivedCards || []).map(function(c) { return c.id }),
-      archivedColumns: (b.archivedColumns || []).map(function(c) { return c.id })
-    }))
 
     for (var ci = 0; ci < (b.columns || []).length; ci++) {
       var c = b.columns[ci]
@@ -434,6 +503,22 @@ function saveProjectToDir(project, dirHandle) {
   }
 
   var colFilenames = computeColumnFilenames(allCols.map(function(item) { return item.col }))
+  var cardFilenames = computeCardFilenames(allCards.map(function(item) { return item.card }))
+  var boardFilenames = computeBoardFilenames(project.boards || [])
+  var documentFilenames = computeDocumentFilenames(project.documents || [])
+  var canvasFilenames = computeCanvasFilenames(project.canvasBoards || [])
+
+  for (var bi2 = 0; bi2 < (project.boards || []).length; bi2++) {
+    var b = project.boards[bi2]
+    var boardFilename = boardFilenames[b.id]
+    promises.push(writeFile(dirHandle, boardFilename, {
+      type: 'board', id: b.id, name: b.name, projectId: project.id,
+      columns: (b.columns || []).map(function(c) { return c.id }),
+      archivedCards: (b.archivedCards || []).map(function(c) { return c.id }),
+      archivedColumns: (b.archivedColumns || []).map(function(c) { return c.id })
+    }))
+  }
+
   for (var ci2 = 0; ci2 < allCols.length; ci2++) {
     var item = allCols[ci2]
     var col = item.col
@@ -445,7 +530,6 @@ function saveProjectToDir(project, dirHandle) {
     }))
   }
 
-  var cardFilenames = computeCardFilenames(allCards.map(function(item) { return item.card }))
   for (var ci3 = 0; ci3 < allCards.length; ci3++) {
     var item2 = allCards[ci3]
     var card = item2.card
@@ -470,7 +554,8 @@ function saveProjectToDir(project, dirHandle) {
 
   for (var di = 0; di < (project.documents || []).length; di++) {
     var doc = project.documents[di]
-    promises.push(writeFile(dirHandle, 'document_' + doc.id + '.json', {
+    var docFilename = documentFilenames[doc.id]
+    promises.push(writeFile(dirHandle, docFilename, {
       type: 'document', id: doc.id, name: doc.name,
       content: doc.content || '', projectId: project.id,
       paperSize: doc.paperSize || null, paperZoom: doc.paperZoom || null
@@ -479,67 +564,76 @@ function saveProjectToDir(project, dirHandle) {
 
   for (var cai = 0; cai < (project.canvasBoards || []).length; cai++) {
     var ca = project.canvasBoards[cai]
-    promises.push(writeFile(dirHandle, 'canvas_' + ca.id + '.json', {
+    var caFilename = canvasFilenames[ca.id]
+    promises.push(writeFile(dirHandle, caFilename, {
       type: 'canvas', id: ca.id, name: ca.name,
       data: ca.data || null, projectId: project.id
     }))
   }
 
   var validFilenames = {}
-  for (var key in colFilenames) {
-    validFilenames[colFilenames[key]] = true
-  }
-  for (var key2 in cardFilenames) {
-    validFilenames[cardFilenames[key2]] = true
-  }
+  for (var key in colFilenames) validFilenames[colFilenames[key]] = true
+  for (var key2 in cardFilenames) validFilenames[cardFilenames[key2]] = true
+  for (var key3 in boardFilenames) validFilenames[boardFilenames[key3]] = true
+  for (var key4 in documentFilenames) validFilenames[documentFilenames[key4]] = true
+  for (var key5 in canvasFilenames) validFilenames[canvasFilenames[key5]] = true
 
   return Promise.all(promises).then(function() {
-    return listPrefixedFiles(dirHandle, 'column_').then(function(files) {
-      var removePromises = []
-      for (var fi = 0; fi < files.length; fi++) {
-        if (!validFilenames[files[fi]]) {
-          removePromises.push(dirHandle.removeEntry(files[fi]).catch(function() {}))
-        }
-      }
-      return Promise.all(removePromises)
-    }).then(function() {
-      return listPrefixedFiles(dirHandle, 'card_').then(function(files2) {
-        var removePromises2 = []
-        for (var fi2 = 0; fi2 < files2.length; fi2++) {
-          if (!validFilenames[files2[fi2]]) {
-            removePromises2.push(dirHandle.removeEntry(files2[fi2]).catch(function() {}))
+    function cleanupPrefix(prefix) {
+      return listPrefixedFiles(dirHandle, prefix).then(function(files) {
+        var removePromises = []
+        for (var fi = 0; fi < files.length; fi++) {
+          if (!validFilenames[files[fi]]) {
+            removePromises.push(dirHandle.removeEntry(files[fi]).catch(function() {}))
           }
         }
-        return Promise.all(removePromises2)
+        return Promise.all(removePromises)
       })
+    }
+    return cleanupPrefix('column_').then(function() {
+      return cleanupPrefix('card_')
+    }).then(function() {
+      return cleanupPrefix('board_')
+    }).then(function() {
+      return cleanupPrefix('document_')
+    }).then(function() {
+      return cleanupPrefix('canvas_')
     })
   })
 }
 
 function loadProjectFromDir(dirHandle) {
   var allData = { boards: {}, columns: {}, cards: {}, documents: {}, canvases: {} }
-  var loadPromises = []
-
-  function queueLoad(filename, targetMap) {
-    loadPromises.push(readJSON(dirHandle, filename).then(function(data) {
-      if (data) targetMap[data.id] = data
-    }))
-  }
 
   return readJSON(dirHandle, 'project.json').then(function(pMeta) {
     if (!pMeta || pMeta.type !== 'project') return null
 
-    for (var bi = 0; bi < (pMeta.boards || []).length; bi++) {
-      queueLoad('board_' + pMeta.boards[bi] + '.json', allData.boards)
-    }
-    for (var di = 0; di < (pMeta.documents || []).length; di++) {
-      queueLoad('document_' + pMeta.documents[di] + '.json', allData.documents)
-    }
-    for (var cai = 0; cai < (pMeta.canvases || []).length; cai++) {
-      queueLoad('canvas_' + pMeta.canvases[cai] + '.json', allData.canvases)
-    }
-
-    return Promise.all(loadPromises).then(function() {
+    return listPrefixedFiles(dirHandle, 'board_').then(function(boardFiles) {
+      var boardLoadPromises = boardFiles.map(function(fname) {
+        return readJSON(dirHandle, fname).then(function(data) {
+          if (data) allData.boards[data.id] = data
+        })
+      })
+      return Promise.all(boardLoadPromises)
+    }).then(function() {
+      return listPrefixedFiles(dirHandle, 'document_').then(function(docFiles) {
+        var docLoadPromises = docFiles.map(function(fname) {
+          return readJSON(dirHandle, fname).then(function(data) {
+            if (data) allData.documents[data.id] = data
+          })
+        })
+        return Promise.all(docLoadPromises)
+      })
+    }).then(function() {
+      return listPrefixedFiles(dirHandle, 'canvas_').then(function(canvasFiles) {
+        var canvasLoadPromises = canvasFiles.map(function(fname) {
+          return readJSON(dirHandle, fname).then(function(data) {
+            if (data) allData.canvases[data.id] = data
+          })
+        })
+        return Promise.all(canvasLoadPromises)
+      })
+    }).then(function() {
       return listPrefixedFiles(dirHandle, 'column_').then(function(columnFiles) {
         var columnLoadPromises = columnFiles.map(function(fname) {
           return readJSON(dirHandle, fname).then(function(data) {
