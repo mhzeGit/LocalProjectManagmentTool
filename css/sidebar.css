@@ -30,7 +30,7 @@
 .sidebar-folder { margin: 2px 0; }
 .sidebar-folder-header { display: flex; align-items: center; gap: 4px; padding: 6px 12px; margin: 2px 8px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; user-select: none; }
 .sidebar-folder-header:hover { background: var(--bg-surface-hover); color: var(--text-bright); }
-.sidebar-folder-header .arrow { font-size: 10px; color: var(--text-dim); transition: transform .15s; width: 10px; flex-shrink: 0; }
+.sidebar-folder-header .arrow { font-size: 10px; color: var(--text-dim); transition: transform .15s; width: 14px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 .sidebar-folder-header .arrow.open { transform: rotate(90deg); }
 .sidebar-folder-header .name { flex: 1; }
 .sidebar-folder-header .btn-del { opacity: 0; }
