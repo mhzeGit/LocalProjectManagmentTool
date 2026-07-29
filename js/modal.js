@@ -322,8 +322,8 @@ function renderChecklistItem(item, depth, isFirst) {
     html += '</label>'
   }
   html += '<span class="cd-cl-text">' + escapeHtml(item.text) + '</span>'
-  html += '<button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button>'
-  html += '<button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button>'
+   html += '<button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button>'
+   html += '<button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button>'
   html += '<button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
   if (hasChildren) {
     html += '<div class="cd-cl-children">'
@@ -776,7 +776,7 @@ function addChecklistItem(input) {
   const item = document.createElement('div')
   item.className = 'cd-checklist-item'
   item.draggable = true
-  item.innerHTML = '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span><label class="cd-cl-checkbox"><input type="checkbox"><span class="cd-cl-checkmark"></span></label><span class="cd-cl-text">' + escapeHtml(val) + '</span><button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button><button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button><button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
+  item.innerHTML = '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span><label class="cd-cl-checkbox"><input type="checkbox"><span class="cd-cl-checkmark"></span></label><span class="cd-cl-text">' + escapeHtml(val) + '</span><button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button><button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button><button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
   container.appendChild(item)
   input.value = ''
   input.focus()
