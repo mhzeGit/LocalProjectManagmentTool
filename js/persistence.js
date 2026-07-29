@@ -908,6 +908,11 @@ function loadAllFromUser() {
 /* ======== SAVE ALL ======== */
 
 function saveAll() {
+  if (_saveMode !== 'user') {
+    cacheFullData()
+    return Promise.resolve()
+  }
+
   var promises = []
 
   for (var wi = 0; wi < data.workspaces.length; wi++) {
@@ -1022,15 +1027,17 @@ export function openUserFile() {
         state.selectedBoardId = null
         state.selectedDocumentId = null
         state.selectedCanvasId = null
-        cacheFullData()
-        render()
-        showNotification('User file opened')
+        return saveHandleToDB('user_file', _userFileHandle).then(function() {
+          cacheFullData()
+          render()
+          showNotification('User file opened')
+        })
       } else {
         _userFileHandle = null
         render()
         showNotification('Invalid user file: the selected file is not a valid user data file.', 4000)
+        return null
       }
-      return null
     })
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
@@ -1451,9 +1458,11 @@ export function initPersistence() {
       if (reconnecting) return
       if (!_storedUserFileHandle || _userFileHandle) return
       reconnecting = true
-      document.removeEventListener('click', onUserGesture, true)
-      document.removeEventListener('keydown', onUserGesture, true)
-      reconnectUserFile()
+      reconnectUserFile().then(function(success) {
+        if (!success) {
+          reconnecting = false
+        }
+      })
     }
     document.addEventListener('click', onUserGesture, true)
     document.addEventListener('keydown', onUserGesture, true)
@@ -1463,25 +1472,25 @@ export function initPersistence() {
     return getHandleFromDB('user_file')
   }).then(function(handle) {
     if (!handle) {
-      if (loadCachedData()) {
-        _saveMode = 'user'
+      return getAllKeys().then(function(keys) {
+        var hasStoredHandles = keys && keys.length > 0
+        if (!hasStoredHandles) {
+          loadCachedData()
+        }
         restoreSelectedState()
         render()
         scheduleAutoReconnect()
         scheduleHandleRetry()
-      }
-      return
+      })
     }
     _storedUserFileHandle = handle
+    _workspaceFileHandles = {}
+    _projectDirHandles = {}
+    data.workspaces.splice(0, data.workspaces.length)
     return verifyHandlePermission(handle).then(function(valid) {
       if (!valid) {
-        if (loadCachedData()) {
-          _saveMode = 'user'
-          restoreSelectedState()
-          render()
-        } else {
-          render()
-        }
+        restoreSelectedState()
+        render()
         scheduleAutoReconnect()
         scheduleHandleRetry()
         return
@@ -1507,20 +1516,24 @@ export function initPersistence() {
   }).catch(function(err) {
     console.error('Persistence init error:', err)
     if (_storedUserFileHandle) {
-      if (loadCachedData()) {
-        _saveMode = 'user'
-        restoreSelectedState()
-        render()
-      } else {
-        render()
-      }
-      scheduleAutoReconnect()
-      scheduleHandleRetry()
-    } else if (loadCachedData()) {
-      _saveMode = 'user'
+      clearCache()
+      data.workspaces.splice(0, data.workspaces.length)
+      _workspaceFileHandles = {}
+      _projectDirHandles = {}
       restoreSelectedState()
       render()
+      scheduleAutoReconnect()
       scheduleHandleRetry()
+    } else {
+      getAllKeys().then(function(keys) {
+        var hasStoredHandles = keys && keys.length > 0
+        if (!hasStoredHandles) {
+          loadCachedData()
+        }
+        restoreSelectedState()
+        render()
+        scheduleHandleRetry()
+      })
     }
   })
 }
@@ -1551,12 +1564,26 @@ export function reconnectUserFile() {
       multiple: false
     }).then(function(handles) {
       _userFileHandle = handles[0]
+      _workspaceFileHandles = {}
+      _projectDirHandles = {}
+      data.workspaces.splice(0, data.workspaces.length)
       return loadAllHandlesFromDB().then(function() {
-        _saveMode = 'user'
-        cacheFullData()
+        return loadAllFromUser()
+      }).then(function(result) {
+        if (result) {
+          _saveMode = 'user'
+          return saveHandleToDB('user_file', _userFileHandle).then(function() {
+            cacheFullData()
+            restoreSelectedState()
+            render()
+            showNotification('User file connected')
+            return true
+          })
+        }
+        _userFileHandle = null
         render()
-        showNotification('User file connected')
-        return true
+        showNotification('Invalid user file: the selected file is not a valid user data file.', 4000)
+        return false
       })
     })
   }
@@ -1565,13 +1592,23 @@ export function reconnectUserFile() {
     if (!valid) return false
     _userFileHandle = _storedUserFileHandle
     _storedUserFileHandle = null
+    _workspaceFileHandles = {}
+    _projectDirHandles = {}
+    data.workspaces.splice(0, data.workspaces.length)
     return loadAllHandlesFromDB().then(function() {
-      _saveMode = 'user'
-      cacheFullData()
-      restoreSelectedState()
+      return loadAllFromUser()
+    }).then(function(result) {
+      if (result) {
+        _saveMode = 'user'
+        cacheFullData()
+        restoreSelectedState()
+        render()
+        showNotification('User file reconnected')
+        return true
+      }
+      _userFileHandle = null
       render()
-      showNotification('User file reconnected')
-      return true
+      return false
     })
   })
 }
