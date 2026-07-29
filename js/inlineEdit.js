@@ -164,6 +164,46 @@ export function startRenameWorkspace(workspaceId) {
   })
 }
 
+export function startRenameChecklistItem(e) {
+  e.stopPropagation()
+  const span = e.target.closest('.cd-cl-text')
+  if (!span || span.contentEditable === 'true') return
+  const item = span.closest('.cd-checklist-item')
+  const ancestors = []
+  if (item) {
+    item.draggable = false
+    let parent = item.parentElement?.closest('.cd-checklist-item')
+    while (parent) {
+      ancestors.push(parent)
+      parent.draggable = false
+      parent = parent.parentElement?.closest('.cd-checklist-item')
+    }
+  }
+  const oldText = span.textContent
+  const origCssText = span.style.cssText
+  span.contentEditable = 'true'
+  span.style.cssText = origCssText + ';background:#12121e;border:1px solid #4f46e5;border-radius:4px;outline:none;padding:0 6px;'
+  const range = document.createRange()
+  range.selectNodeContents(span)
+  const sel = window.getSelection()
+  sel.removeAllRanges()
+  sel.addRange(range)
+  function finish() {
+    span.contentEditable = 'false'
+    span.style.cssText = origCssText
+    span.textContent = span.textContent.trim() || oldText
+    if (item) {
+      item.draggable = true
+      for (const a of ancestors) a.draggable = true
+    }
+  }
+  span.addEventListener('blur', finish)
+  span.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); span.blur() }
+    if (ev.key === 'Escape') { ev.preventDefault(); span.contentEditable = 'false'; span.style.cssText = origCssText; finish() }
+  })
+}
+
 export function startRenameDocument(documentId) {
   const span = document.getElementById('docTitle-' + documentId)
   const d = findDocument(documentId)

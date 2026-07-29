@@ -2,6 +2,7 @@ import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor, PREDEFIN
 import { initCardEditor, destroyCardEditor, getCardEditorHTML } from './cardEditor.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { getResolvedAvatar } from './persistence.js'
+import { startRenameChecklistItem } from './inlineEdit.js'
 
 function getInitials(name) {
   return name.split(/\s+/).map(s => s[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -507,6 +508,16 @@ export function setupModalKeyboard() {
     if (action === 'unparent-item') {
       const item = target.closest('.cd-checklist-item')
       if (item) unparentChecklistItem(item)
+      return
+    }
+  })
+
+  overlay.addEventListener('dblclick', function(e) {
+    if (!this.classList.contains('open')) return
+    const textEl = e.target.closest('.cd-cl-text')
+    if (textEl) {
+      e.preventDefault()
+      startRenameChecklistItem(e)
       return
     }
   })
