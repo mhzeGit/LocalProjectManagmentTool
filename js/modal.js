@@ -312,6 +312,7 @@ function renderChecklistItem(item, depth, isFirst) {
   let html = '<div class="cd-checklist-item' + doneClass + '" draggable="true" style="padding-left:' + indent + 'px">'
   html += '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span>'
   if (hasChildren) {
+    html += '<button class="cd-cl-toggle" data-action="toggle-checklist-children">▼</button>'
     html += '<label class="cd-cl-checkbox">'
     html += '  <input type="checkbox" disabled' + (allDone ? ' checked' : '') + '>'
     html += '  <span class="cd-cl-checkmark"></span>'
@@ -461,13 +462,28 @@ export function setupModalKeyboard() {
       return
     }
 
+    if (action === 'toggle-checklist-children') {
+      const item = target.closest('.cd-checklist-item')
+      if (item) item.classList.toggle('cd-cl-collapsed')
+      return
+    }
+
     if (action === 'remove-checklist-item') {
       const item = target.closest('.cd-checklist-item')
       const parentContainer = item.parentElement
       item.remove()
       if (parentContainer && parentContainer.classList.contains('cd-cl-children')) {
         const grandparent = parentContainer.closest('.cd-checklist-item')
-        if (grandparent) propagateChecklistUp(grandparent)
+        if (grandparent) {
+          if (parentContainer.children.length === 0) {
+            parentContainer.remove()
+            const toggle = grandparent.querySelector(':scope > .cd-cl-toggle')
+            if (toggle) toggle.remove()
+            const gpCb = grandparent.querySelector('input[type="checkbox"]')
+            if (gpCb) gpCb.disabled = false
+          }
+          propagateChecklistUp(grandparent)
+        }
       }
       updateChecklistProgress()
       return
@@ -742,14 +758,21 @@ function nestChecklistItem(item) {
   const prev = item.previousElementSibling
   if (!prev || !prev.classList.contains('cd-checklist-item')) return
   let childrenContainer = prev.querySelector(':scope > .cd-cl-children')
+  const isNewParent = !childrenContainer
   if (!childrenContainer) {
     childrenContainer = document.createElement('div')
     childrenContainer.className = 'cd-cl-children'
     prev.appendChild(childrenContainer)
+    const toggle = document.createElement('button')
+    toggle.className = 'cd-cl-toggle'
+    toggle.dataset.action = 'toggle-checklist-children'
+    toggle.textContent = '▼'
+    const dragHandle = prev.querySelector(':scope > .cd-cl-drag-handle')
+    if (dragHandle) dragHandle.after(toggle)
   }
   childrenContainer.appendChild(item)
   const prevCb = prev.querySelector('input[type="checkbox"]')
-  if (prevCb) prevCb.checked = false
+  if (prevCb) { prevCb.disabled = true; prevCb.checked = false }
   propagateChecklistUp(prev)
   updateChecklistProgress()
 }
@@ -762,13 +785,17 @@ function unparentChecklistItem(item) {
   const container = grandparent.parentElement
   if (!container) return
   container.insertBefore(item, grandparent.nextSibling)
-  if (parent.children.length === 0) {
+  const stillHasChildren = parent.children.length > 0
+  if (!stillHasChildren) {
     parent.remove()
+    const toggle = grandparent.querySelector(':scope > .cd-cl-toggle')
+    if (toggle) toggle.remove()
   }
   const gpCb = grandparent.querySelector('input[type="checkbox"]')
   if (gpCb) {
     gpCb.checked = false
     gpCb.indeterminate = false
+    gpCb.disabled = stillHasChildren
   }
   grandparent.classList.remove('cd-cl-done')
   const cb = item.querySelector('input[type="checkbox"]')
