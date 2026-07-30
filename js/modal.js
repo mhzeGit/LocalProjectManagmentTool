@@ -310,9 +310,8 @@ function renderChecklistItem(item, depth, isFirst) {
   const doneClass = allDone ? ' cd-cl-done' : ''
   const indent = depth * 24
   let html = '<div class="cd-checklist-item' + doneClass + '" draggable="true" style="padding-left:' + indent + 'px">'
-  html += '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span>'
+   html += '<span class="cd-cl-drag-handle" data-action="drag-handle">⠿</span>'
   if (hasChildren) {
-    html += '<button class="cd-cl-toggle" data-action="toggle-checklist-children">▼</button>'
     html += '<label class="cd-cl-checkbox">'
     html += '  <input type="checkbox" disabled' + (allDone ? ' checked' : '') + '>'
     html += '  <span class="cd-cl-checkmark"></span>'
@@ -324,9 +323,12 @@ function renderChecklistItem(item, depth, isFirst) {
     html += '</label>'
   }
   html += '<span class="cd-cl-text">' + escapeHtml(item.text) + '</span>'
+  if (hasChildren) {
+    html += '<button class="cd-cl-toggle" data-action="toggle-checklist-children">▼</button>'
+  }
    html += '<button class="cd-cl-unparent" data-action="unparent-item" title="Unparent">←</button>'
    html += '<button class="cd-cl-nest" data-action="nest-item" title="Nest under item above">→</button>'
-  html += '<button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
+   html += '<button class="cd-cl-remove" data-action="remove-checklist-item">×</button>'
   if (hasChildren) {
     html += '<div class="cd-cl-children">'
     for (let i = 0; i < item.items.length; i++) {
@@ -447,6 +449,11 @@ export function setupModalKeyboard() {
     closeAllDropdowns()
 
     if (!action) {
+      const parentItem = target.closest('.cd-checklist-item')
+      if (parentItem && parentItem.querySelector(':scope > .cd-cl-toggle') && !target.closest('button') && !target.closest('input') && !target.closest('label')) {
+        parentItem.classList.toggle('cd-cl-collapsed')
+        return
+      }
       if (e.target === this) {
         const confirmBtn = this.querySelector('.btn-confirm')
         if (confirmBtn) { confirmBtn.click() }
@@ -767,8 +774,9 @@ function nestChecklistItem(item) {
     toggle.className = 'cd-cl-toggle'
     toggle.dataset.action = 'toggle-checklist-children'
     toggle.textContent = '▼'
-    const dragHandle = prev.querySelector(':scope > .cd-cl-drag-handle')
-    if (dragHandle) dragHandle.after(toggle)
+    const textSpan = prev.querySelector(':scope > .cd-cl-text')
+    if (textSpan) textSpan.after(toggle)
+    else prev.appendChild(toggle)
   }
   childrenContainer.appendChild(item)
   const prevCb = prev.querySelector('input[type="checkbox"]')
