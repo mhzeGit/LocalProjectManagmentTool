@@ -908,8 +908,8 @@ function loadAllFromUser() {
 
 /* ======== SAVE ALL ======== */
 
-function saveAll() {
-  if (window.__flushPendingEdits) window.__flushPendingEdits()
+function saveAll(flushPending) {
+  if (flushPending && window.__flushPendingEdits) window.__flushPendingEdits()
 
   if (_saveMode !== 'user') {
     cacheFullData()
@@ -1350,7 +1350,7 @@ export function saveNow() {
     _saveTimer = null
   }
   _dirty = false
-  return saveAll().then(function() {
+  return saveAll(true).then(function() {
     showNotification('Saved!')
   }).catch(function(err) {
     console.error('Save error:', err)
