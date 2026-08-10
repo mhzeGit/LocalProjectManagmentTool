@@ -15,6 +15,7 @@ let _dirty = false
 let _saveTimer = null
 let _initialized = false
 let _storedUserFileHandle = null
+let _saveChain = Promise.resolve()
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -908,6 +909,8 @@ function loadAllFromUser() {
 /* ======== SAVE ALL ======== */
 
 function saveAll() {
+  if (window.__flushPendingEdits) window.__flushPendingEdits()
+
   if (_saveMode !== 'user') {
     cacheFullData()
     return Promise.resolve()
@@ -938,10 +941,14 @@ function saveAll() {
     return Promise.resolve()
   }
 
-  return Promise.all(promises).then(function() {
+  var result = _saveChain.then(function() {
+    return Promise.all(promises)
+  }).then(function() {
     cacheFullData()
     showNotification('Auto-saved')
   })
+  _saveChain = result.catch(function() {})
+  return result
 }
 
 /* ======== COUNT WORKSPACES FOR UID CHECK ======== */
@@ -1331,6 +1338,7 @@ export function markDirty() {
       _dirty = false
       saveAll().catch(function(err) {
         console.error('Auto-save error:', err)
+        showNotification('Auto-save failed: ' + (err && err.message ? err.message : 'unknown error'), 3000)
       })
     }
   }, SAVE_DELAY)
@@ -1346,7 +1354,7 @@ export function saveNow() {
     showNotification('Saved!')
   }).catch(function(err) {
     console.error('Save error:', err)
-    showNotification('Save failed: ' + err.message, 3000)
+    showNotification('Save failed: ' + (err && err.message ? err.message : 'unknown error'), 3000)
   })
 }
 
@@ -1451,6 +1459,13 @@ function scheduleHandleRetry() {
 export function initPersistence() {
   if (_initialized) return Promise.resolve()
   _initialized = true
+
+  window.addEventListener('pagehide', function() {
+    if (window.__flushPendingEdits) window.__flushPendingEdits()
+    if (_dirty || _saveMode === 'user') {
+      saveNow()
+    }
+  })
 
   function scheduleAutoReconnect() {
     var reconnecting = false

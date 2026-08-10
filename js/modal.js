@@ -110,6 +110,9 @@ export function openModal(type, parentId) {
     body.innerHTML = buildCardForm({ title: '', description: '', startDate: null, endDate: null, priority: '3', tags: [], members: [], checklists: [] }, 'createCard(\'' + parentId + '\')')
     renderPriorityPicker()
     initCardEditor('')
+    window.__setPendingCommit && window.__setPendingCommit(function() {
+      if (overlay.classList.contains('open') && window.createCard) window.createCard(parentId)
+    })
   } else if (type === 'document') {
     title.textContent = 'Create Document'
     body.innerHTML = '<label>Document Name</label><input id="modalInput" placeholder="e.g. Meeting Notes" autofocus><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-confirm" onclick="createDocument(\'' + parentId + '\')">Create</button></div>'
@@ -131,6 +134,9 @@ export async function openCardDetail(cardId) {
   overlay.classList.add('open')
   renderPriorityPicker()
   body.querySelector('.cd-title-input')?.focus()
+  window.__setPendingCommit && window.__setPendingCommit(function() {
+    if (overlay.classList.contains('open') && window.saveCard) window.saveCard(cardId)
+  })
   await initCardEditor(c.description || '')
 }
 
@@ -359,6 +365,7 @@ export function confirmModal(message, confirmLabel) {
 
     function cleanup() {
       overlay.classList.remove('open')
+      window.__clearPendingCommit && window.__clearPendingCommit()
       body.querySelector('#confirmCancel')?.removeEventListener('click', onCancel)
       body.querySelector('#confirmOk')?.removeEventListener('click', onOk)
       document.removeEventListener('keydown', onKey)
@@ -379,6 +386,7 @@ export function confirmModal(message, confirmLabel) {
 export function closeModal() {
   document.getElementById('modal').classList.remove('open')
   destroyCardEditor()
+  window.__clearPendingCommit && window.__clearPendingCommit()
 }
 
 export function setupModalKeyboard() {

@@ -208,11 +208,17 @@ export function render() {
     if (input) {
       input.focus()
       input.select()
-      input.addEventListener('blur', function() { finishFolderRename(input) })
+      const commit = function() { finishFolderRename(input) }
+      window.__setPendingCommit && window.__setPendingCommit(commit)
+      input.addEventListener('blur', function() {
+        window.__clearPendingCommit && window.__clearPendingCommit()
+        finishFolderRename(input)
+      })
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
           input.blur()
         } else if (e.key === 'Escape') {
+          window.__clearPendingCommit && window.__clearPendingCommit()
           state.renamingFolderId = null
           render()
         }
@@ -225,11 +231,17 @@ export function render() {
     if (input) {
       input.focus()
       input.select()
-      input.addEventListener('blur', function() { finishSidebarItemRename(input) })
+      const commit = function() { finishSidebarItemRename(input) }
+      window.__setPendingCommit && window.__setPendingCommit(commit)
+      input.addEventListener('blur', function() {
+        window.__clearPendingCommit && window.__clearPendingCommit()
+        finishSidebarItemRename(input)
+      })
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
           input.blur()
         } else if (e.key === 'Escape') {
+          window.__clearPendingCommit && window.__clearPendingCommit()
           state.renamingSidebarItemId = null
           state.renamingSidebarItemType = null
           render()

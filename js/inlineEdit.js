@@ -8,6 +8,32 @@ export function setInlineEditRender(renderFn) {
   _renderFn = renderFn
 }
 
+let _pendingCommit = null
+
+function trackPendingCommit(finish) {
+  const tracked = function() {
+    if (_pendingCommit === tracked) _pendingCommit = null
+    finish()
+  }
+  _pendingCommit = tracked
+  return tracked
+}
+
+function clearPendingCommit() {
+  _pendingCommit = null
+}
+
+function flushPendingEdits() {
+  if (!_pendingCommit) return
+  const commit = _pendingCommit
+  _pendingCommit = null
+  commit()
+}
+
+window.__setPendingCommit = function(commit) { _pendingCommit = commit }
+window.__clearPendingCommit = clearPendingCommit
+window.__flushPendingEdits = flushPendingEdits
+
 export function startRenameColumn(e, id) {
   e.stopPropagation()
   const span = document.getElementById('colTitle-' + id)
@@ -33,10 +59,11 @@ export function startRenameColumn(e, id) {
       })
     } else if (_renderFn) _renderFn()
   }
-  input.addEventListener('blur', finish)
+  const trackedFinish = trackPendingCommit(finish)
+  input.addEventListener('blur', trackedFinish)
   input.addEventListener('keydown', function(ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+    if (ev.key === 'Escape') { ev.preventDefault(); clearPendingCommit(); if (_renderFn) _renderFn() }
   })
 }
 
@@ -72,10 +99,11 @@ export function startRenameCard(e, id) {
       })
     } else if (_renderFn) _renderFn()
   }
-  titleDiv.addEventListener('blur', finish)
+  const trackedFinish = trackPendingCommit(finish)
+  titleDiv.addEventListener('blur', trackedFinish)
   titleDiv.addEventListener('keydown', function(ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); titleDiv.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); titleDiv.contentEditable = 'false'; titleDiv.style.cssText = origCssText; if (_renderFn) _renderFn() }
+    if (ev.key === 'Escape') { ev.preventDefault(); titleDiv.contentEditable = 'false'; titleDiv.style.cssText = origCssText; clearPendingCommit(); if (_renderFn) _renderFn() }
   })
 }
 
@@ -102,10 +130,11 @@ export function startRenameProject(projectId) {
       })
     } else if (_renderFn) _renderFn()
   }
-  input.addEventListener('blur', finish)
+  const trackedFinish = trackPendingCommit(finish)
+  input.addEventListener('blur', trackedFinish)
   input.addEventListener('keydown', function(ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+    if (ev.key === 'Escape') { ev.preventDefault(); clearPendingCommit(); if (_renderFn) _renderFn() }
   })
 }
 
@@ -132,10 +161,11 @@ export function startRenameCanvas(canvasId) {
       })
     } else if (_renderFn) _renderFn()
   }
-  input.addEventListener('blur', finish)
+  const trackedFinish = trackPendingCommit(finish)
+  input.addEventListener('blur', trackedFinish)
   input.addEventListener('keydown', function(ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+    if (ev.key === 'Escape') { ev.preventDefault(); clearPendingCommit(); if (_renderFn) _renderFn() }
   })
 }
 
@@ -157,10 +187,11 @@ export function startRenameWorkspace(workspaceId) {
       if (_renderFn) _renderFn()
     } else if (_renderFn) _renderFn()
   }
-  input.addEventListener('blur', finish)
+  const trackedFinish = trackPendingCommit(finish)
+  input.addEventListener('blur', trackedFinish)
   input.addEventListener('keydown', function(ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+    if (ev.key === 'Escape') { ev.preventDefault(); clearPendingCommit(); if (_renderFn) _renderFn() }
   })
 }
 
@@ -227,9 +258,10 @@ export function startRenameDocument(documentId) {
       })
     } else if (_renderFn) _renderFn()
   }
-  input.addEventListener('blur', finish)
+  const trackedFinish = trackPendingCommit(finish)
+  input.addEventListener('blur', trackedFinish)
   input.addEventListener('keydown', function(ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); input.blur() }
-    if (ev.key === 'Escape') { ev.preventDefault(); if (_renderFn) _renderFn() }
+    if (ev.key === 'Escape') { ev.preventDefault(); clearPendingCommit(); if (_renderFn) _renderFn() }
   })
 }
