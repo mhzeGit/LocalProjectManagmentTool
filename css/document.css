@@ -35,14 +35,24 @@
   cursor: text;
 }
 
-.document-pages {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
+.document-paper {
   margin: 0 auto;
-  padding: 8px 0 32px;
-  width: fit-content;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.document-paper[data-size="free"] {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px 40px;
+  min-height: 400px;
+}
+
+.document-paper[data-size="fixed"] {
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .document-page {
@@ -51,25 +61,10 @@
   border-radius: 8px;
   padding: 32px 40px;
   cursor: text;
-  flex-shrink: 0;
-  max-width: 100%;
   box-sizing: border-box;
-}
-
-.document-page[data-size="free"] {
-  width: 100%;
-  min-height: 400px;
-  height: auto;
-  box-shadow: none;
-}
-
-.document-page:not([data-size="free"]) {
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-}
-
-.page-editor {
-  min-height: 100%;
-  width: 100%;
+  min-height: var(--page-height, 600px);
+  margin-bottom: 24px;
 }
 
 /* TipTap editor content styles */

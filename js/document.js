@@ -3,13 +3,8 @@ import { saveDocumentContent, setDocumentPaperSize } from './store.js'
 
 let _currentEditor = null
 let _resizeObserver = null
-
-let _pageEditors = []
-let _activePageIndex = 0
 let _docId = null
-let _pagesEl = null
 let _measureEl = null
-let _pageBlockCounts = []
 let _pageSizes = { free: false, w: 0, h: 0 }
 let _reflowTimer = null
 let _resizeTimer = null
@@ -47,6 +42,8 @@ export function preloadTipTap() {
       Editor: core.Editor,
       Extension: core.Extension,
       TextSelection: pmState.TextSelection,
+      Node: core.Node,
+      mergeAttributes: core.mergeAttributes,
       StarterKit: starterKitMod.default,
       Underline: underlineMod.default,
       Link: linkMod.default,
@@ -86,6 +83,24 @@ const ZOOM_LEVELS = [
 const PAGE_PAD_X = 40
 const PAGE_PAD_Y = 32
 
+function createPageExtension(M) {
+  const { Node, mergeAttributes } = M
+  return Node.create({
+    name: 'page',
+    group: 'block',
+    content: 'block+',
+    defining: true,
+
+    parseHTML() {
+      return [{ tag: 'div[data-type="page"]' }]
+    },
+
+    renderHTML({ HTMLAttributes }) {
+      return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'page', class: 'document-page' }), 0]
+    },
+  })
+}
+
 function getEditorExtensions(M) {
   const listBehavior = M.Extension.create({
     name: 'listBehavior',
@@ -119,7 +134,9 @@ function getEditorExtensions(M) {
     },
   })
   return [
-    M.StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+    M.StarterKit.configure({
+      heading: { levels: [1, 2, 3] },
+    }),
     M.Underline.configure({}),
     M.Link.configure({
       openOnClick: false,
@@ -136,6 +153,7 @@ function getEditorExtensions(M) {
     M.TableCell.configure({}),
     M.TableHeader.configure({}),
     listBehavior,
+    createPageExtension(M),
   ]
 }
 
@@ -157,27 +175,41 @@ function computePageSizes(containerEl, size, zoom) {
   _pageSizes.h = h
 }
 
-function applyPageSizes() {
-  if (!_pagesEl || _pageSizes.free) return
-  const pages = _pagesEl.querySelectorAll('.document-page')
-  for (let i = 0; i < pages.length; i++) {
-    pages[i].style.width = _pageSizes.w + 'px'
-    pages[i].style.height = _pageSizes.h + 'px'
+function applyPaperLayout(paperEl) {
+  if (!paperEl) return
+  if (_pageSizes.free) {
+    paperEl.dataset.size = 'free'
+    paperEl.style.width = ''
+    paperEl.style.height = ''
+    paperEl.style.removeProperty('--page-height')
+    return
   }
+  paperEl.dataset.size = 'fixed'
+  paperEl.style.width = _pageSizes.w + 'px'
+  paperEl.style.height = ''
+  paperEl.style.setProperty('--page-height', _pageSizes.h + 'px')
 }
 
-function extractBlocks(html) {
+function extractBlocksHtml(html) {
   const tmp = document.createElement('div')
   tmp.innerHTML = html || ''
   const blocks = []
-  for (let i = 0; i < tmp.children.length; i++) {
-    blocks.push(tmp.children[i].outerHTML)
+  function collect(el) {
+    for (let i = 0; i < el.children.length; i++) {
+      const child = el.children[i]
+      if (child.dataset && child.dataset.type === 'page') {
+        collect(child)
+      } else {
+        blocks.push(child.outerHTML)
+      }
+    }
   }
+  collect(tmp)
   return blocks
 }
 
 function measureBlocks(blocks) {
-  if (!_measureEl || !_pagesEl) return blocks.map(function() { return 0 })
+  if (!_measureEl || !_currentEditor) return blocks.map(function() { return 0 })
   const prose = _measureEl.querySelector('.ProseMirror')
   _measureEl.style.width = (_pageSizes.w - PAGE_PAD_X * 2) + 'px'
   prose.innerHTML = blocks.join('')
@@ -216,196 +248,172 @@ function packBlocks(blocks) {
   return pages
 }
 
+function buildPagesHtml(pages) {
+  if (pages.length === 0) pages = [[]]
+  return pages.map(function(p) {
+    return '<div data-type="page" class="document-page">' + (p.length ? p.join('') : '<p></p>') + '</div>'
+  }).join('')
+}
+
 function serializeDocument() {
-  let out = ''
-  for (let i = 0; i < _pageEditors.length; i++) {
-    if (_pageEditors[i]) out += _pageEditors[i].getHTML()
-  }
-  return out
+  return _currentEditor ? _currentEditor.getHTML() : ''
 }
 
-function createEditor(el, html, index) {
-  const M = _tipTapModules
-  const ed = new M.Editor({
-    element: el,
-    extensions: getEditorExtensions(M),
-    content: html,
-    onUpdate: function() {
-      if (!_docId) return
-      const full = serializeDocument()
-      saveDocumentContent(_docId, full)
-      if (window.__autoSave) window.__autoSave()
-      scheduleReflow()
-    },
-  })
-  ed.on('focus', function() {
-    _activePageIndex = index
-    _currentEditor = ed
-  })
-  ed.on('selectionUpdate', function() {
-    const toolbar = document.getElementById('toolbar-' + _docId)
-    if (toolbar) updateToolbarState(toolbar, ed)
-  })
-  return ed
-}
-
-function createPage(index, html) {
-  const page = document.createElement('div')
-  page.className = 'document-page'
-  page.dataset.pageIndex = String(index)
-  const edEl = document.createElement('div')
-  edEl.className = 'page-editor'
-  page.appendChild(edEl)
-  _pagesEl.appendChild(page)
-  _pageEditors[index] = createEditor(edEl, html, index)
-}
-
-function createFreePage(html) {
-  const page = document.createElement('div')
-  page.className = 'document-page'
-  page.dataset.size = 'free'
-  const edEl = document.createElement('div')
-  edEl.className = 'page-editor'
-  page.appendChild(edEl)
-  _pagesEl.appendChild(page)
-  _pageEditors[0] = createEditor(edEl, html, 0)
-}
-
-function destroyPageEditors() {
-  for (let i = 0; i < _pageEditors.length; i++) {
-    if (_pageEditors[i]) {
-      try { _pageEditors[i].destroy() } catch (e) {}
-      _pageEditors[i] = null
-    }
-  }
-  _pageEditors = []
-  if (_pagesEl) _pagesEl.innerHTML = ''
-  _currentEditor = null
-}
-
-function buildPages() {
-  const doc = findDocument(_docId)
-  if (!doc) return
-  destroyPageEditors()
-  _lastFullHtml = null
-  if (_pageSizes.free) {
-    createFreePage(doc.content || '')
-    _pageBlockCounts = [1]
-    return
-  }
-  const blocks = extractBlocks(doc.content || '')
-  const pages = packBlocks(blocks)
-  _pageBlockCounts = pages.map(function(p) { return p.length })
-  pages.forEach(function(pageBlocks, i) {
-    createPage(i, pageBlocks.join(''))
-  })
-  applyPageSizes()
-}
-
-function findActiveEditor() {
-  for (let i = 0; i < _pageEditors.length; i++) {
-    const ed = _pageEditors[i]
-    if (!ed || !ed.view) continue
-    const dom = ed.view.dom
-    if (document.activeElement && (dom === document.activeElement || dom.contains(document.activeElement))) {
-      return { index: i, editor: ed }
-    }
-  }
-  const idx = _activePageIndex >= 0 && _activePageIndex < _pageEditors.length ? _activePageIndex : 0
-  return { index: idx, editor: _pageEditors[idx] }
-}
-
-function captureCaret() {
-  if (_pageEditors.length === 0) return null
-  const active = findActiveEditor()
-  if (!active || !active.editor || !active.editor.view) return null
-  const dom = active.editor.view.dom
+function captureCaretInDoc(doc) {
+  if (!_currentEditor || !_currentEditor.view) return null
+  const dom = _currentEditor.view.dom
   if (!document.activeElement || !(dom === document.activeElement || dom.contains(document.activeElement))) {
     return null
   }
-  const ed = active.editor
-  const from = ed.state.selection.from
-  const doc = ed.state.doc
-  let beforeCount = 0
-  for (let i = 0; i < active.index; i++) beforeCount += _pageBlockCounts[i] || 0
-  if (from === 0 && doc.childCount > 0) return { globalBlock: beforeCount, offset: 0 }
+  const from = _currentEditor.state.selection.from
+  if (from === 0 && doc.childCount > 0) return { block: 0, offset: 0 }
   let pos = 1
-  for (let b = 0; b < doc.childCount; b++) {
-    const child = doc.child(b)
-    const childSize = child.nodeSize
-    if (from >= pos && from < pos + childSize) {
-      return { globalBlock: beforeCount + b, offset: Math.min(Math.max(0, from - pos), child.content.size) }
+  let global = 0
+  for (let i = 0; i < doc.childCount; i++) {
+    const child = doc.child(i)
+    if (child.type.name === 'page') {
+      let inner = pos + 1
+      for (let j = 0; j < child.childCount; j++) {
+        const b = child.child(j)
+        if (from >= inner && from <= inner + b.content.size) {
+          return { block: global, offset: from - inner }
+        }
+        inner += b.nodeSize
+        global++
+      }
+      pos += child.nodeSize
+    } else {
+      if (from >= pos && from <= pos + child.content.size) {
+        return { block: global, offset: from - pos }
+      }
+      pos += child.nodeSize
+      global++
     }
-    pos += childSize
   }
-  return { globalBlock: beforeCount + doc.childCount, offset: 0 }
+  return { block: global, offset: 0 }
 }
 
-function restoreCaret(caret) {
-  if (!caret) return
-  let running = 0
-  for (let i = 0; i < _pageBlockCounts.length; i++) {
-    if (caret.globalBlock < running + _pageBlockCounts[i] || i === _pageBlockCounts.length - 1) {
-      const ed = _pageEditors[i]
-      if (!ed) return
-      const local = Math.max(0, caret.globalBlock - running)
-      const doc = ed.state.doc
-      let pos = 1
-      let idx = 0
-      while (idx < local && idx < doc.childCount) {
-        pos += doc.child(idx).nodeSize
-        idx++
-      }
-      const maxPos = doc.content.size + 1
-      const target = Math.min(Math.max(0, pos + caret.offset), maxPos)
-      try {
-        const tr = ed.state.tr.setSelection(_tipTapModules.TextSelection.near(ed.state.doc.resolve(target)))
-        ed.view.dispatch(tr)
-        ed.view.focus()
-        if (ed.view.dom.scrollIntoView) {
-          ed.view.dom.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+function restoreCaretInDoc(doc, caret) {
+  if (!caret || !_currentEditor) return
+  let pos = 1
+  let global = 0
+  for (let i = 0; i < doc.childCount; i++) {
+    const child = doc.child(i)
+    if (child.type.name === 'page') {
+      let inner = pos + 1
+      for (let j = 0; j < child.childCount; j++) {
+        const b = child.child(j)
+        if (global === caret.block) {
+          const maxPos = inner + b.content.size
+          const target = Math.min(Math.max(inner, inner + caret.offset), maxPos)
+          setCaret(target)
+          return
         }
-        _activePageIndex = i
-        _currentEditor = ed
-      } catch (e) {}
-      return
+        inner += b.nodeSize
+        global++
+      }
+      pos += child.nodeSize
+    } else {
+      if (global === caret.block) {
+        const maxPos = pos + child.content.size
+        const target = Math.min(Math.max(pos, pos + caret.offset), maxPos)
+        setCaret(target)
+        return
+      }
+      pos += child.nodeSize
+      global++
     }
-    running += _pageBlockCounts[i]
   }
+}
+
+function setCaret(pos) {
+  if (!_currentEditor) return
+  try {
+    const tr = _currentEditor.state.tr.setSelection(
+      _tipTapModules.TextSelection.near(_currentEditor.state.doc.resolve(pos))
+    )
+    _currentEditor.view.dispatch(tr)
+    _currentEditor.view.focus()
+  } catch (e) {}
+}
+
+function fragFromNodes(schema, nodes) {
+  return schema.topNodeType.create(null, nodes).content
 }
 
 function reflow() {
   if (!_docId || _pageSizes.free) return
-  const doc = findDocument(_docId)
-  if (!doc) return
-  const caret = captureCaret()
-  const fullHtml = serializeDocument()
+  const editor = _currentEditor
+  if (!editor) return
+  if (editor.view.composing) {
+    scheduleReflow()
+    return
+  }
+  const caret = captureCaretInDoc(editor.state.doc)
+  const fullHtml = editor.getHTML()
   if (fullHtml === _lastFullHtml) return
-  const blocks = extractBlocks(fullHtml)
-  const pages = packBlocks(blocks)
-  const same = pages.length === _pageEditors.length && pages.every(function(p, i) {
-    return _pageEditors[i] && p.join('') === _pageEditors[i].getHTML()
-  })
-  if (same) {
+  const blocksHtml = extractBlocksHtml(fullHtml)
+  const pages = packBlocks(blocksHtml)
+  const newHtml = buildPagesHtml(pages)
+  if (newHtml === fullHtml) {
     _lastFullHtml = fullHtml
     return
   }
-  destroyPageEditors()
-  _pageBlockCounts = pages.map(function(p) { return p.length })
-  pages.forEach(function(pageBlocks, i) {
-    createPage(i, pageBlocks.join(''))
-  })
-  applyPageSizes()
-  _currentEditor = _pageEditors[0] || null
-  _lastFullHtml = fullHtml
-  restoreCaret(caret)
+
+  const doc = editor.state.doc
+  const schema = editor.schema
+  const pageType = schema.nodes.page
+  const blockNodes = []
+  function collectBlocks(node) {
+    if (node.type.name === 'page') {
+      node.content.forEach(function(b) { collectBlocks(b) })
+    } else {
+      blockNodes.push(node)
+    }
+  }
+  doc.content.forEach(function(child) { collectBlocks(child) })
+
+  const pageNodes = []
+  let idx = 0
+  for (let i = 0; i < pages.length; i++) {
+    const inner = []
+    for (let j = 0; j < pages[i].length; j++) {
+      inner.push(blockNodes[idx] || schema.nodes.paragraph.create())
+      idx++
+    }
+    if (inner.length === 0) inner.push(schema.nodes.paragraph.create())
+    pageNodes.push(pageType.create(null, fragFromNodes(schema, inner)))
+  }
+
+  const docFragment = fragFromNodes(schema, pageNodes)
+  const tr = editor.state.tr
+  try {
+    tr.replaceWith(0, doc.content.size, docFragment)
+    tr.setMeta('addToHistory', false)
+    editor.view.dispatch(tr)
+  } catch (e) {
+    console.error('Document reflow error:', e)
+    return
+  }
+  _lastFullHtml = serializeDocument()
+  restoreCaretInDoc(editor.state.doc, caret)
 }
 
-function rebuildWithCaretPreserved() {
-  const caret = captureCaret()
-  buildPages()
-  _currentEditor = _pageEditors[0] || null
-  restoreCaret(caret)
+function refreshLayout() {
+  const doc = findDocument(_docId)
+  if (!doc) return
+  const editor = _currentEditor
+  const paperEl = editor ? editor.view.dom : null
+  if (!editor || !paperEl) return
+  _lastFullHtml = null
+  if (_pageSizes.free) {
+    const blocks = extractBlocksHtml(doc.content || '')
+    editor.commands.setContent(blocks.join('') || '<p></p>', true)
+    applyPaperLayout(paperEl)
+    return
+  }
+  applyPaperLayout(paperEl)
+  reflow()
 }
 
 function scheduleReflow() {
@@ -425,7 +433,7 @@ export async function renderDocument(documentId) {
   destroyEditor()
 
   _docId = documentId
-  _activePageIndex = 0
+  _lastFullHtml = null
 
   const initialSize = doc.paperSize || 'a4'
   const initialZoom = doc.paperZoom || 1.0
@@ -492,13 +500,13 @@ export async function renderDocument(documentId) {
   html += '    </div>'
   html += '  </div>'
   html += '  <div class="editor-content" id="editor-container-' + doc.id + '">'
-  html += '    <div class="document-pages" id="doc-pages-' + doc.id + '"></div>'
+  html += '    <div class="document-paper" id="editor-' + doc.id + '"></div>'
   html += '  </div>'
   html += '</div>'
   area.innerHTML = html
 
   const containerEl = document.getElementById('editor-container-' + doc.id)
-  _pagesEl = document.getElementById('doc-pages-' + doc.id)
+  const paperEl = document.getElementById('editor-' + doc.id)
   const paperSelect = document.getElementById('paperSize-' + doc.id)
   const zoomSelect = document.getElementById('paperZoom-' + doc.id)
   if (paperSelect) paperSelect.value = initialSize
@@ -519,10 +527,23 @@ export async function renderDocument(documentId) {
   }
 
   await preloadTipTap()
+  const M = _tipTapModules
 
   computePageSizes(containerEl, initialSize, initialZoom)
-  buildPages()
-  _currentEditor = _pageEditors[0] || null
+  applyPaperLayout(paperEl)
+
+  _currentEditor = new M.Editor({
+    element: paperEl,
+    extensions: getEditorExtensions(M),
+    content: doc.content || '',
+    onUpdate: function() {
+      if (!_docId) return
+      const full = serializeDocument()
+      saveDocumentContent(_docId, full)
+      if (window.__autoSave) window.__autoSave()
+      scheduleReflow()
+    },
+  })
 
   const toolbar = document.getElementById('toolbar-' + doc.id)
   if (toolbar) {
@@ -573,6 +594,10 @@ export async function renderDocument(documentId) {
       if (actions[cmd]) actions[cmd]()
       updateToolbarState(toolbar, ed)
     })
+
+    _currentEditor.on('selectionUpdate', function() {
+      updateToolbarState(toolbar, _currentEditor)
+    })
   }
 
   if (paperSelect && containerEl) {
@@ -582,7 +607,7 @@ export async function renderDocument(documentId) {
       const zoom = zoomSelect ? parseFloat(zoomSelect.value) : 1.0
       doc.paperZoom = zoom
       computePageSizes(containerEl, size, zoom)
-      rebuildWithCaretPreserved()
+      refreshLayout()
       setDocumentPaperSize(doc.id, size)
       if (window.__autoSave) window.__autoSave()
     })
@@ -593,10 +618,12 @@ export async function renderDocument(documentId) {
       const size = paperSelect ? paperSelect.value : 'a4'
       doc.paperZoom = zoom
       computePageSizes(containerEl, size, zoom)
-      rebuildWithCaretPreserved()
+      refreshLayout()
       if (window.__autoSave) window.__autoSave()
     })
   }
+
+  refreshLayout()
 
   if (containerEl) {
     if (_resizeObserver) {
@@ -609,7 +636,7 @@ export async function renderDocument(documentId) {
         const size = paperSelect ? paperSelect.value : 'a4'
         const zoom = zoomSelect ? parseFloat(zoomSelect.value) : 1.0
         computePageSizes(containerEl, size, zoom)
-        rebuildWithCaretPreserved()
+        refreshLayout()
       }, 150)
     })
     _resizeObserver.observe(containerEl)
@@ -644,7 +671,10 @@ function updateToolbarState(toolbar, editor) {
 }
 
 export function destroyEditor() {
-  destroyPageEditors()
+  if (_currentEditor) {
+    try { _currentEditor.destroy() } catch (e) {}
+    _currentEditor = null
+  }
   if (_resizeObserver) {
     _resizeObserver.disconnect()
     _resizeObserver = null
@@ -658,4 +688,5 @@ export function destroyEditor() {
   _resizeTimer = null
   _docId = null
   _pageSizes = { free: false, w: 0, h: 0 }
+  _lastFullHtml = null
 }
