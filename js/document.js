@@ -84,12 +84,13 @@ const PAGE_PAD_X = 40
 const PAGE_PAD_Y = 32
 
 function createPageExtension(M) {
-  const { Node, mergeAttributes } = M
+  const { Node, mergeAttributes, TextSelection } = M
   return Node.create({
     name: 'page',
     group: 'block',
     content: 'block+',
     defining: true,
+    priority: 1000,
 
     parseHTML() {
       return [{ tag: 'div[data-type="page"]' }]
@@ -98,7 +99,123 @@ function createPageExtension(M) {
     renderHTML({ HTMLAttributes }) {
       return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'page', class: 'document-page' }), 0]
     },
+
+    addKeyboardShortcuts() {
+      return {
+        Backspace: () => {
+          const { state } = this.editor
+          if (!state.selection.empty) return false
+          const $cursor = state.selection.$cursor
+          if (!$cursor || $cursor.parentOffset > 0) return false
+          if ($cursor.depth < 2) return false
+          const page = $cursor.node($cursor.depth - 1)
+          if (!page || page.type.name !== 'page') return false
+          if ($cursor.index($cursor.depth - 1) !== 0) return false
+          return joinBackwardAcrossPage(this.editor, M)
+        },
+        Delete: () => {
+          const { state } = this.editor
+          if (!state.selection.empty) return false
+          const $cursor = state.selection.$cursor
+          if (!$cursor || $cursor.parentOffset < $cursor.parent.content.size) return false
+          if ($cursor.depth < 2) return false
+          const page = $cursor.node($cursor.depth - 1)
+          if (!page || page.type.name !== 'page') return false
+          if ($cursor.index($cursor.depth - 1) !== page.childCount - 1) return false
+          return joinForwardAcrossPage(this.editor, M)
+        },
+      }
+    },
   })
+}
+
+function findCutBefore($pos) {
+  if (!$pos.parent.type.spec.isolating) {
+    for (let i = $pos.depth - 1; i >= 0; i--) {
+      if ($pos.index(i) > 0) return $pos.doc.resolve($pos.before(i + 1))
+      if ($pos.node(i).type.spec.isolating) break
+    }
+  }
+  return null
+}
+
+function findCutAfter($pos) {
+  if (!$pos.parent.type.spec.isolating) {
+    for (let i = $pos.depth - 1; i >= 0; i--) {
+      const parent = $pos.node(i)
+      if ($pos.index(i) + 1 < parent.childCount) return $pos.doc.resolve($pos.after(i + 1))
+      if (parent.type.spec.isolating) break
+    }
+  }
+  return null
+}
+
+function joinBackwardAcrossPage(editor, M) {
+  const { state, view } = editor
+  const $cursor = state.selection.$cursor
+  if (!$cursor) return false
+  const $cut = findCutBefore($cursor)
+  if (!$cut) return false
+  const before = $cut.nodeBefore
+  if (!before) return false
+  let beforeText = before
+  let beforePos = $cut.pos - 1
+  for (; !beforeText.isTextblock; beforePos--) {
+    if (beforeText.type.spec.isolating) return false
+    const child = beforeText.lastChild
+    if (!child) return false
+    beforeText = child
+  }
+  const after = $cut.nodeAfter
+  if (!after) return false
+  let afterText = after
+  let afterPos = $cut.pos + 1
+  for (; !afterText.isTextblock; afterPos++) {
+    if (afterText.type.spec.isolating) return false
+    const child = afterText.firstChild
+    if (!child) return false
+    afterText = child
+  }
+  if (beforePos >= afterPos) return false
+  const tr = state.tr.delete(beforePos, afterPos)
+  if (!tr.steps.length) return false
+  tr.setSelection(M.TextSelection.near(tr.doc.resolve(Math.min(beforePos, tr.doc.content.size))))
+  view.dispatch(tr)
+  return true
+}
+
+function joinForwardAcrossPage(editor, M) {
+  const { state, view } = editor
+  const $cursor = state.selection.$cursor
+  if (!$cursor) return false
+  const $cut = findCutAfter($cursor)
+  if (!$cut) return false
+  const after = $cut.nodeAfter
+  if (!after) return false
+  let afterText = after
+  let afterPos = $cut.pos + 1
+  for (; !afterText.isTextblock; afterPos++) {
+    if (afterText.type.spec.isolating) return false
+    const child = afterText.firstChild
+    if (!child) return false
+    afterText = child
+  }
+  const before = $cut.nodeBefore
+  if (!before) return false
+  let beforeText = before
+  let beforePos = $cut.pos - 1
+  for (; !beforeText.isTextblock; beforePos--) {
+    if (beforeText.type.spec.isolating) return false
+    const child = beforeText.lastChild
+    if (!child) return false
+    beforeText = child
+  }
+  if (beforePos >= afterPos) return false
+  const tr = state.tr.delete(beforePos, afterPos)
+  if (!tr.steps.length) return false
+  tr.setSelection(M.TextSelection.near(tr.doc.resolve(Math.min(beforePos, tr.doc.content.size))))
+  view.dispatch(tr)
+  return true
 }
 
 function getEditorExtensions(M) {
@@ -136,6 +253,7 @@ function getEditorExtensions(M) {
   return [
     M.StarterKit.configure({
       heading: { levels: [1, 2, 3] },
+      gapcursor: false,
     }),
     M.Underline.configure({}),
     M.Link.configure({
