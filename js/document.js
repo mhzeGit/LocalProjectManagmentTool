@@ -387,28 +387,33 @@ function captureCaretInDoc(doc) {
   if (from === 0 && doc.childCount > 0) return { block: 0, offset: 0 }
   let pos = 1
   let global = 0
+  let lastContentSize = 0
   for (let i = 0; i < doc.childCount; i++) {
     const child = doc.child(i)
     if (child.type.name === 'page') {
-      let inner = pos + 1
+      let blockStart = pos + 1
       for (let j = 0; j < child.childCount; j++) {
         const b = child.child(j)
-        if (from >= inner && from <= inner + b.content.size) {
-          return { block: global, offset: from - inner }
+        const contentStart = blockStart + 1
+        lastContentSize = b.content.size
+        if (from >= contentStart && from <= contentStart + lastContentSize) {
+          return { block: global, offset: from - contentStart }
         }
-        inner += b.nodeSize
+        blockStart += b.nodeSize
         global++
       }
       pos += child.nodeSize
     } else {
-      if (from >= pos && from <= pos + child.content.size) {
-        return { block: global, offset: from - pos }
+      const contentStart = pos + 1
+      lastContentSize = child.content.size
+      if (from >= contentStart && from <= contentStart + lastContentSize) {
+        return { block: global, offset: from - contentStart }
       }
       pos += child.nodeSize
       global++
     }
   }
-  return { block: global, offset: 0 }
+  return { block: Math.max(0, global - 1), offset: lastContentSize }
 }
 
 function restoreCaretInDoc(doc, caret) {
@@ -418,23 +423,25 @@ function restoreCaretInDoc(doc, caret) {
   for (let i = 0; i < doc.childCount; i++) {
     const child = doc.child(i)
     if (child.type.name === 'page') {
-      let inner = pos + 1
+      let blockStart = pos + 1
       for (let j = 0; j < child.childCount; j++) {
         const b = child.child(j)
         if (global === caret.block) {
-          const maxPos = inner + b.content.size
-          const target = Math.min(Math.max(inner, inner + caret.offset), maxPos)
+          const contentStart = blockStart + 1
+          const maxPos = contentStart + b.content.size
+          const target = Math.min(Math.max(contentStart, contentStart + caret.offset), maxPos)
           setCaret(target)
           return
         }
-        inner += b.nodeSize
+        blockStart += b.nodeSize
         global++
       }
       pos += child.nodeSize
     } else {
       if (global === caret.block) {
-        const maxPos = pos + child.content.size
-        const target = Math.min(Math.max(pos, pos + caret.offset), maxPos)
+        const contentStart = pos + 1
+        const maxPos = contentStart + child.content.size
+        const target = Math.min(Math.max(contentStart, contentStart + caret.offset), maxPos)
         setCaret(target)
         return
       }
@@ -442,6 +449,7 @@ function restoreCaretInDoc(doc, caret) {
       global++
     }
   }
+  setCaret(_currentEditor.state.doc.content.size)
 }
 
 function setCaret(pos) {
@@ -450,6 +458,7 @@ function setCaret(pos) {
     const tr = _currentEditor.state.tr.setSelection(
       _tipTapModules.TextSelection.near(_currentEditor.state.doc.resolve(pos))
     )
+    tr.scrollIntoView()
     _currentEditor.view.dispatch(tr)
     _currentEditor.view.focus()
   } catch (e) {}
@@ -658,7 +667,6 @@ export async function renderDocument(documentId) {
       if (!_docId) return
       const full = serializeDocument()
       saveDocumentContent(_docId, full)
-      if (window.__autoSave) window.__autoSave()
       scheduleReflow()
     },
   })
@@ -727,7 +735,6 @@ export async function renderDocument(documentId) {
       computePageSizes(containerEl, size, zoom)
       refreshLayout()
       setDocumentPaperSize(doc.id, size)
-      if (window.__autoSave) window.__autoSave()
     })
   }
   if (zoomSelect && containerEl) {
@@ -737,7 +744,6 @@ export async function renderDocument(documentId) {
       doc.paperZoom = zoom
       computePageSizes(containerEl, size, zoom)
       refreshLayout()
-      if (window.__autoSave) window.__autoSave()
     })
   }
 

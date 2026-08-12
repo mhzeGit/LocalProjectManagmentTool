@@ -70,6 +70,13 @@
 
 <div class="save-notification" id="saveNotification"></div>
 
+<div class="save-mode-banner hidden" id="saveModeBanner">
+  <span class="save-mode-banner-text">Browser-only mode — nothing is written to your files.</span>
+  <button class="save-mode-banner-btn" onclick="window.openUserFile()">Open User File…</button>
+  <button class="save-mode-banner-btn save-mode-banner-btn-primary" onclick="window.setupUserDirectory()">Set Up User File…</button>
+  <button class="save-mode-banner-close" onclick="document.getElementById('saveModeBanner').classList.add('dismissed');document.getElementById('saveModeBanner').classList.add('hidden')" title="Dismiss">✕</button>
+</div>
+
 <div class="pref-overlay" id="preferences-overlay">
   <div class="pref-window">
     <div class="pref-header">

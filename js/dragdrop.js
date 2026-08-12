@@ -430,11 +430,9 @@ export function initDragDrop(renderFn) {
             }
           })
         }
-        if (window.__autoSave) window.__autoSave()
       } else {
         board.querySelectorAll('.card-placeholder').forEach(function(el) { el.remove() })
         if (_renderFn) _renderFn()
-        if (window.__autoSave) window.__autoSave()
       }
       return
     }
@@ -501,7 +499,6 @@ export function initDragDrop(renderFn) {
       _colOriginalIdx = -1
       _colCurrentPosKey = null
       _colDraggedId = null
-      if (window.__autoSave) window.__autoSave()
     }
   })
 

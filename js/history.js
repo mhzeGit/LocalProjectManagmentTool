@@ -10,7 +10,6 @@ export function pushCommand(cmd) {
   undoStack.push(cmd)
   if (undoStack.length > MAX_SIZE) undoStack.shift()
   redoStack = []
-  if (window.__autoSave) window.__autoSave()
 }
 
 function isCanvasActive() {
@@ -27,7 +26,6 @@ export function performUndo() {
   redoStack.push(cmd)
   isUndoRedoing = false
   render()
-  if (window.__autoSave) window.__autoSave()
 }
 
 export function performRedo() {
@@ -39,7 +37,6 @@ export function performRedo() {
   undoStack.push(cmd)
   isUndoRedoing = false
   render()
-  if (window.__autoSave) window.__autoSave()
 }
 
 export function clearHistory() {

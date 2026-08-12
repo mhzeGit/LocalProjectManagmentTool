@@ -50,7 +50,7 @@ initPersistence()
 initMenuBar()
 initNavigation()
 
-document.addEventListener('keydown', handleKeyDown)
+document.addEventListener('keydown', handleKeyDown, true)
 
 document.addEventListener('keydown', function(e) {
   if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.isContentEditable) return

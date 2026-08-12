@@ -51,7 +51,7 @@ function createHistoryManager() {
 }
 
 /* ─── Utility ─── */
-function markDirty() { if (window.__autoSave) window.__autoSave() }
+function markDirty() {}
 function escAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)) }
 

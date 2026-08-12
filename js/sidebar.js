@@ -111,7 +111,6 @@ export function render() {
     renderBoard()
     renderMemberBar()
     updateMenuBar()
-    if (window.__autoSave) window.__autoSave()
     return
   }
 
@@ -121,7 +120,6 @@ export function render() {
     renderBoard()
     renderMemberBar()
     updateMenuBar()
-    if (window.__autoSave) window.__autoSave()
     return
   }
 
@@ -201,7 +199,6 @@ export function render() {
   }
   renderMemberBar()
   updateMenuBar()
-  if (window.__autoSave) window.__autoSave()
 
   if (state.renamingFolderId) {
     const input = sidebar.querySelector('.sidebar-folder-rename-input')
@@ -769,7 +766,7 @@ function initSidebarReorder() {
 
   function doDrop(p, fn) {
     fn()
-    flipRender(function() { render(); if (window.__autoSave) window.__autoSave() })
+    flipRender(function() { render() })
   }
 
   function ensureKeysInOrder(p, keys) {

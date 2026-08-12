@@ -4,15 +4,12 @@ import { render } from './sidebar.js'
 const DB_NAME = 'kanboard-user-v3'
 const DB_VERSION = 1
 const STORE_NAME = 'handles'
-const SAVE_DELAY = 500
 const LS_FULL_CACHE = 'kanboard_full_cache'
 
 let _userFileHandle = null
 let _workspaceFileHandles = {}
 let _projectDirHandles = {}
 let _saveMode = 'memory'
-let _dirty = false
-let _saveTimer = null
 let _initialized = false
 let _storedUserFileHandle = null
 let _saveChain = Promise.resolve()
@@ -86,6 +83,9 @@ function writeFile(handle, name, obj) {
     return fileHandle.createWritable().then(function(writable) {
       return writable.write(new TextEncoder().encode(JSON.stringify(obj, null, 2))).then(function() {
         return writable.close()
+      }).catch(function(err) {
+        try { writable.abort() } catch (e) {}
+        throw err
       })
     })
   })
@@ -110,6 +110,9 @@ function writeToFileHandle(fileHandle, obj) {
   return fileHandle.createWritable().then(function(writable) {
     return writable.write(new TextEncoder().encode(JSON.stringify(obj, null, 2))).then(function() {
       return writable.close()
+    }).catch(function(err) {
+      try { writable.abort() } catch (e) {}
+      throw err
     })
   })
 }
@@ -459,6 +462,41 @@ function listPrefixedFiles(dirHandle, prefix) {
   }
 }
 
+function removeCrswapFiles(dirHandle) {
+  var files = []
+  try {
+    var iter = dirHandle.values()
+    function next() {
+      return iter.next().then(function(result) {
+        if (result.done) {
+          var removePromises = []
+          for (var fi = 0; fi < files.length; fi++) {
+            removePromises.push(dirHandle.removeEntry(files[fi]).catch(function() {}))
+          }
+          return Promise.all(removePromises)
+        }
+        var entry = result.value
+        if (entry.kind === 'file' && entry.name.endsWith('.crswap')) {
+          files.push(entry.name)
+        }
+        return next()
+      })
+    }
+    return next()
+  } catch (e) {
+    return Promise.resolve()
+  }
+}
+
+function sweepCrswapFromProjects() {
+  for (var id in _projectDirHandles) {
+    var dirHandle = _projectDirHandles[id]
+    if (dirHandle) {
+      removeCrswapFiles(dirHandle).catch(function() {})
+    }
+  }
+}
+
 function saveProjectToDir(project, dirHandle) {
   var promises = []
 
@@ -599,6 +637,8 @@ function saveProjectToDir(project, dirHandle) {
       return cleanupPrefix('document_')
     }).then(function() {
       return cleanupPrefix('canvas_')
+    }).then(function() {
+      return removeCrswapFiles(dirHandle)
     })
   })
 }
@@ -908,12 +948,29 @@ function loadAllFromUser() {
 
 /* ======== SAVE ALL ======== */
 
+function hasAnyHandle(map) {
+  for (var k in map) return true
+  return false
+}
+
+function updateSaveModeBanner() {
+  const banner = document.getElementById('saveModeBanner')
+  if (!banner) return
+  const connected = _saveMode === 'user' || !!_userFileHandle || hasAnyHandle(_workspaceFileHandles) || hasAnyHandle(_projectDirHandles)
+  if (connected) {
+    banner.classList.remove('dismissed')
+    banner.classList.add('hidden')
+  } else if (!banner.classList.contains('dismissed')) {
+    banner.classList.remove('hidden')
+  }
+}
+
 function saveAll(flushPending) {
   if (flushPending && window.__flushPendingEdits) window.__flushPendingEdits()
 
-  if (_saveMode !== 'user') {
+  if (!_userFileHandle && !hasAnyHandle(_workspaceFileHandles) && !hasAnyHandle(_projectDirHandles)) {
     cacheFullData()
-    return Promise.resolve()
+    return Promise.resolve(false)
   }
 
   var promises = []
@@ -938,14 +995,14 @@ function saveAll(flushPending) {
 
   if (promises.length === 0) {
     cacheFullData()
-    return Promise.resolve()
+    return Promise.resolve(false)
   }
 
   var result = _saveChain.then(function() {
     return Promise.all(promises)
   }).then(function() {
     cacheFullData()
-    showNotification('Auto-saved')
+    return true
   })
   _saveChain = result.catch(function() {})
   return result
@@ -1001,6 +1058,7 @@ export function setupUserDirectory() {
     state.selectedBoardId = null
     cacheFullData()
     render()
+    updateSaveModeBanner()
     showNotification('User file set up')
   }).catch(function(e) {
     if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
@@ -1037,11 +1095,13 @@ export function openUserFile() {
         return saveHandleToDB('user_file', _userFileHandle).then(function() {
           cacheFullData()
           render()
+          updateSaveModeBanner()
           showNotification('User file opened')
         })
       } else {
         _userFileHandle = null
         render()
+        updateSaveModeBanner()
         showNotification('Invalid user file: the selected file is not a valid user data file.', 4000)
         return null
       }
@@ -1085,6 +1145,7 @@ export function createWorkspaceInUser() {
       state.selectedProjectId = null
       state.selectedBoardId = null
       render()
+      updateSaveModeBanner()
       showNotification('Workspace created: ' + ws.name)
     })
   }).catch(function(e) {
@@ -1125,6 +1186,7 @@ export function addExistingWorkspace() {
             state.selectedWorkspaceId = null
             state.selectedProjectId = null
             render()
+            updateSaveModeBanner()
             showNotification('Workspace added: ' + loaded.name)
             return loaded
           })
@@ -1178,6 +1240,7 @@ export function locateWorkspaceFile(workspaceId) {
       state.selectedProjectId = null
       state.selectedBoardId = null
       render()
+      updateSaveModeBanner()
       showNotification('Workspace located')
     })
   }).catch(function(e) {
@@ -1223,6 +1286,7 @@ export function addProjectToWorkspace(workspaceId) {
       setTimeout(function() {
         if (window.startRenameProject) window.startRenameProject(project.id)
       }, 50)
+      updateSaveModeBanner()
       showNotification('Project added')
     })
   }).catch(function(e) {
@@ -1274,6 +1338,7 @@ export function locateExistingProjectInWorkspace(workspaceId) {
         return saveUserFile()
       }).then(function() {
         render()
+        updateSaveModeBanner()
         showNotification('Project loaded: ' + loaded.name)
       })
     })
@@ -1319,6 +1384,7 @@ export function locateProjectFolder(projectId) {
       return saveAll()
     }).then(function() {
       render()
+      updateSaveModeBanner()
       showNotification('Project located and loaded')
     })
   }).catch(function(e) {
@@ -1329,29 +1395,16 @@ export function locateProjectFolder(projectId) {
   })
 }
 
-export function markDirty() {
-  _dirty = true
-  if (_saveTimer) return
-  _saveTimer = setTimeout(function() {
-    _saveTimer = null
-    if (_dirty) {
-      _dirty = false
-      saveAll().catch(function(err) {
-        console.error('Auto-save error:', err)
-        showNotification('Auto-save failed: ' + (err && err.message ? err.message : 'unknown error'), 3000)
-      })
-    }
-  }, SAVE_DELAY)
-}
-
 export function saveNow() {
-  if (_saveTimer) {
-    clearTimeout(_saveTimer)
-    _saveTimer = null
-  }
-  _dirty = false
-  return saveAll(true).then(function() {
-    showNotification('Saved!')
+  console.log('[save] invoked, userFile:', !!_userFileHandle, 'workspaceHandles:', Object.keys(_workspaceFileHandles).length, 'projectHandles:', Object.keys(_projectDirHandles).length)
+  return saveAll(true).then(function(savedToDisk) {
+    console.log('[save] result: savedToDisk =', savedToDisk)
+    updateSaveModeBanner()
+    if (savedToDisk) {
+      showNotification('Saved to files!')
+    } else {
+      showNotification('Saved to browser only — no files connected', 3000)
+    }
   }).catch(function(err) {
     console.error('Save error:', err)
     showNotification('Save failed: ' + (err && err.message ? err.message : 'unknown error'), 3000)
@@ -1362,11 +1415,6 @@ export function closeUserDirectory() {
   _userFileHandle = null
   _workspaceFileHandles = {}
   _projectDirHandles = {}
-  _dirty = false
-  if (_saveTimer) {
-    clearTimeout(_saveTimer)
-    _saveTimer = null
-  }
   _saveMode = 'memory'
   clearCache()
   removeHandleFromDB('user_file').catch(function() {})
@@ -1389,6 +1437,7 @@ export function closeUserDirectory() {
   state.selfMemberId = null
 
   render()
+  updateSaveModeBanner()
   showNotification('User file closed')
 }
 
@@ -1449,7 +1498,12 @@ function scheduleHandleRetry() {
           )
         })(keys[i])
       }
-      return Promise.all(promises)
+      return Promise.all(promises).then(function() {
+        if (_userFileHandle || hasAnyHandle(_workspaceFileHandles) || hasAnyHandle(_projectDirHandles)) {
+          _saveMode = 'user'
+        }
+        updateSaveModeBanner()
+      })
     })
   }
   document.addEventListener('click', onGesture, true)
@@ -1459,13 +1513,6 @@ function scheduleHandleRetry() {
 export function initPersistence() {
   if (_initialized) return Promise.resolve()
   _initialized = true
-
-  window.addEventListener('pagehide', function() {
-    if (window.__flushPendingEdits) window.__flushPendingEdits()
-    if (_dirty || _saveMode === 'user') {
-      saveNow()
-    }
-  })
 
   function scheduleAutoReconnect() {
     var reconnecting = false
@@ -1496,6 +1543,7 @@ export function initPersistence() {
         render()
         scheduleAutoReconnect()
         scheduleHandleRetry()
+        updateSaveModeBanner()
       })
     }
     _storedUserFileHandle = handle
@@ -1504,10 +1552,12 @@ export function initPersistence() {
     data.workspaces.splice(0, data.workspaces.length)
     return verifyHandlePermission(handle).then(function(valid) {
       if (!valid) {
+        if (valid === false) _storedUserFileHandle = null
         restoreSelectedState()
         render()
         scheduleAutoReconnect()
         scheduleHandleRetry()
+        updateSaveModeBanner()
         return
       }
       _userFileHandle = handle
@@ -1523,8 +1573,10 @@ export function initPersistence() {
           cacheFullData()
           restoreSelectedState()
           render()
+          sweepCrswapFromProjects()
         }
         scheduleHandleRetry()
+        updateSaveModeBanner()
         return null
       })
     })
@@ -1550,12 +1602,14 @@ export function initPersistence() {
         scheduleHandleRetry()
       })
     }
+    updateSaveModeBanner()
   })
 }
 
 export function handleKeyDown(e) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+  if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyS' || (e.key && e.key.toLowerCase() === 's'))) {
     e.preventDefault()
+    e.stopPropagation()
     saveNow()
   }
 }
@@ -1591,12 +1645,14 @@ export function reconnectUserFile() {
             cacheFullData()
             restoreSelectedState()
             render()
+            updateSaveModeBanner()
             showNotification('User file connected')
             return true
           })
         }
         _userFileHandle = null
         render()
+        updateSaveModeBanner()
         showNotification('Invalid user file: the selected file is not a valid user data file.', 4000)
         return false
       })
@@ -1618,11 +1674,13 @@ export function reconnectUserFile() {
         cacheFullData()
         restoreSelectedState()
         render()
+        updateSaveModeBanner()
         showNotification('User file reconnected')
         return true
       }
       _userFileHandle = null
       render()
+      updateSaveModeBanner()
       return false
     })
   })
@@ -1733,7 +1791,7 @@ function restoreSelectedState() {
   } catch {}
 }
 
-window.__autoSave = markDirty
+window.__save = saveNow
 window.__getSaveMode = function() { return _saveMode }
 window.__hasStoredUserFile = hasStoredUserFile
 window.__reconnectUserFile = reconnectUserFile

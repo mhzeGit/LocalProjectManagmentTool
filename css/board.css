@@ -444,6 +444,16 @@
 .save-notification { position: fixed; bottom: 24px; right: 24px; padding: 10px 18px; border-radius: 6px; background: var(--bg-panel-alt); border: 1px solid var(--border-strong); color: var(--text-primary); font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity .25s ease, transform .25s ease; pointer-events: none; z-index: 1000; box-shadow: 0 4px 16px var(--shadow-md); }
 .save-notification.show { opacity: 1; transform: translateY(0); }
 
+.save-mode-banner { position: fixed; bottom: 24px; left: 24px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; background: #3a2f0f; border: 1px solid #b45309; color: #fde68a; font-size: 13px; z-index: 1001; box-shadow: 0 4px 16px var(--shadow-md); max-width: 640px; }
+.save-mode-banner.hidden { display: none; }
+.save-mode-banner-text { flex: 1; }
+.save-mode-banner-btn { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border-strong); background: var(--bg-surface-hover); color: var(--text-secondary); white-space: nowrap; }
+.save-mode-banner-btn:hover { background: var(--border-strong); color: var(--text-primary); }
+.save-mode-banner-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--text-white); }
+.save-mode-banner-btn-primary:hover { background: var(--accent-hover); color: var(--text-white); }
+.save-mode-banner-close { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+.save-mode-banner-close:hover { color: var(--text-primary); }
+
 .lv-wrapper { display: flex; flex-direction: column; height: 100%; }
 .lv-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px; gap: 12px; flex-shrink: 0; }
 .lv-count { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
