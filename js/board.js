@@ -121,7 +121,7 @@ export function renderBoard() {
     area.addEventListener('contextmenu', function(e) {
       var w = state.selectedWorkspaceId ? findWorkspace(state.selectedWorkspaceId) : null
       var p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
-      if (e.target.closest('.page-card, .card, .board-column, .column-header, .btn-add-card')) return
+      if (e.target.closest('.page-card, .card, .board-column, .column-header, .btn-add-card, .document-editor')) return
       e.preventDefault()
       document.querySelectorAll('.tl-ctx-menu').forEach(function(el) { el.remove() })
       var menu = document.createElement('div')

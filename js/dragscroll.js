@@ -16,10 +16,15 @@ function vEl() {
   return document.getElementById('boardArea')
 }
 
+function isEditorElement(el) {
+  return !!el && typeof el.closest === 'function' && !!el.closest('.document-editor')
+}
+
 document.addEventListener('mousedown', function(e) {
   if (e.button !== 2) return
   const board = document.getElementById('boardArea')
   if (!board || !board.contains(e.target)) return
+  if (isEditorElement(e.target)) return
   const h = hEl()
   _panX = e.clientX
   _panY = e.clientY
@@ -48,5 +53,5 @@ document.addEventListener('mouseup', function() {
 
 document.addEventListener('contextmenu', function(e) {
   const board = document.getElementById('boardArea')
-  if (board && board.contains(e.target)) e.preventDefault()
+  if (board && board.contains(e.target) && !isEditorElement(e.target)) e.preventDefault()
 })

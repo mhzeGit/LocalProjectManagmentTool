@@ -417,7 +417,7 @@ function captureCaretInDoc(doc) {
 }
 
 function restoreCaretInDoc(doc, caret) {
-  if (!caret || !_currentEditor) return
+  if (!caret || !_currentEditor) return false
   let pos = 1
   let global = 0
   for (let i = 0; i < doc.childCount; i++) {
@@ -430,8 +430,7 @@ function restoreCaretInDoc(doc, caret) {
           const contentStart = blockStart + 1
           const maxPos = contentStart + b.content.size
           const target = Math.min(Math.max(contentStart, contentStart + caret.offset), maxPos)
-          setCaret(target)
-          return
+          return setCaret(target)
         }
         blockStart += b.nodeSize
         global++
@@ -442,18 +441,17 @@ function restoreCaretInDoc(doc, caret) {
         const contentStart = pos + 1
         const maxPos = contentStart + child.content.size
         const target = Math.min(Math.max(contentStart, contentStart + caret.offset), maxPos)
-        setCaret(target)
-        return
+        return setCaret(target)
       }
       pos += child.nodeSize
       global++
     }
   }
-  setCaret(_currentEditor.state.doc.content.size)
+  return setCaret(_currentEditor.state.doc.content.size)
 }
 
 function setCaret(pos) {
-  if (!_currentEditor) return
+  if (!_currentEditor) return false
   try {
     const tr = _currentEditor.state.tr.setSelection(
       _tipTapModules.TextSelection.near(_currentEditor.state.doc.resolve(pos))
@@ -461,7 +459,33 @@ function setCaret(pos) {
     tr.scrollIntoView()
     _currentEditor.view.dispatch(tr)
     _currentEditor.view.focus()
-  } catch (e) {}
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+function caretViewportOffset() {
+  if (!_currentEditor || !_currentEditor.view) return null
+  const viewport = _currentEditor.view.dom.closest('.editor-content')
+  if (!viewport) return null
+  const rect = viewport.getBoundingClientRect()
+  const head = _currentEditor.state.selection.head
+  let coords
+  try { coords = _currentEditor.view.coordsAtPos(head) } catch (e) { return null }
+  if (!coords || !isFinite(coords.top)) return null
+  return { viewport: viewport, top: coords.top - rect.top }
+}
+
+function restoreCaretViewport(offset) {
+  if (!offset || !_currentEditor || !_currentEditor.view) return
+  const viewport = offset.viewport
+  const rect = viewport.getBoundingClientRect()
+  const head = _currentEditor.state.selection.head
+  let coords
+  try { coords = _currentEditor.view.coordsAtPos(head) } catch (e) { return }
+  if (!coords || !isFinite(coords.top)) return
+  viewport.scrollTop += (coords.top - rect.top) - offset.top
 }
 
 function fragFromNodes(schema, nodes) {
@@ -477,6 +501,7 @@ function reflow() {
     return
   }
   const caret = captureCaretInDoc(editor.state.doc)
+  const caretOffset = caret ? caretViewportOffset() : null
   const fullHtml = editor.getHTML()
   if (fullHtml === _lastFullHtml) return
   const blocksHtml = extractBlocksHtml(fullHtml)
@@ -523,7 +548,9 @@ function reflow() {
     return
   }
   _lastFullHtml = serializeDocument()
-  restoreCaretInDoc(editor.state.doc, caret)
+  if (restoreCaretInDoc(editor.state.doc, caret) && caretOffset) {
+    restoreCaretViewport(caretOffset)
+  }
 }
 
 function refreshLayout() {
