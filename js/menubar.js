@@ -107,7 +107,7 @@ function updateFilterToggleLabel() {
 }
 
 function buildMenuBar() {
-  const container = document.getElementById('menubar')
+  const container = document.getElementById('menubarMenus')
   if (!container) return
 
   container.innerHTML = ''
