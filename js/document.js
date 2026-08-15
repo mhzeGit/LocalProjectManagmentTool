@@ -566,15 +566,8 @@ export async function renderDocument(documentId) {
   const initialZoom = doc.paperZoom || 1.0
 
   let html = '<div class="document-editor">'
-  html += '  <div class="document-header">'
-  html += '    <h2 class="document-title" id="docTitle-' + doc.id + '" style="display:none" ondblclick="startRenameDocument(\'' + doc.id + '\')">' + doc.name + '</h2>'
-  html += '  </div>'
+  html += '  <h2 class="document-title" id="docTitle-' + doc.id + '" style="display:none" ondblclick="startRenameDocument(\'' + doc.id + '\')">' + doc.name + '</h2>'
   html += '  <div class="editor-toolbar" id="toolbar-' + doc.id + '">'
-  html += '    <div class="editor-toolbar-group">'
-  html += '      <button class="editor-btn" data-cmd="undo" title="Undo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>'
-  html += '      <button class="editor-btn" data-cmd="redo" title="Redo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>'
-  html += '    </div>'
-  html += '    <div class="editor-toolbar-sep"></div>'
   html += '    <div class="editor-toolbar-group">'
   html += '      <button class="editor-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>'
   html += '      <button class="editor-btn" data-cmd="italic" title="Italic"><em>I</em></button>'
@@ -681,8 +674,6 @@ export async function renderDocument(documentId) {
       const ed = _currentEditor
 
       const actions = {
-        undo: () => ed.chain().focus().undo().run(),
-        redo: () => ed.chain().focus().redo().run(),
         bold: () => ed.chain().focus().toggleBold().run(),
         italic: () => ed.chain().focus().toggleItalic().run(),
         underline: () => ed.chain().focus().toggleUnderline().run(),
