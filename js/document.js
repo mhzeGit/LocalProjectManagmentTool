@@ -9,6 +9,7 @@ let _pageSizes = { free: false, w: 0, h: 0 }
 let _reflowTimer = null
 let _resizeTimer = null
 let _lastFullHtml = null
+let _reflowing = false
 
 const TIPTAP_VERSION = '2.6.6'
 
@@ -20,7 +21,6 @@ export function preloadTipTap() {
   _tipTapPreloadPromise = (async function() {
     const modules = await Promise.all([
       import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION),
-      import('https://esm.sh/prosemirror-state@1.4.3'),
       import('https://esm.sh/@tiptap/starter-kit@' + TIPTAP_VERSION),
       import('https://esm.sh/@tiptap/extension-underline@' + TIPTAP_VERSION),
       import('https://esm.sh/@tiptap/extension-link@' + TIPTAP_VERSION),
@@ -35,13 +35,12 @@ export function preloadTipTap() {
       import('https://esm.sh/@tiptap/extension-table-cell@' + TIPTAP_VERSION),
       import('https://esm.sh/@tiptap/extension-table-header@' + TIPTAP_VERSION),
     ])
-    const [core, pmState, starterKitMod, underlineMod, linkMod, imageMod,
+    const [core, starterKitMod, underlineMod, linkMod, imageMod,
            taskListMod, taskItemMod, placeholderMod, textAlignMod, highlightMod,
            tableMod, tableRowMod, tableCellMod, tableHeaderMod] = modules
     _tipTapModules = {
       Editor: core.Editor,
       Extension: core.Extension,
-      TextSelection: pmState.TextSelection,
       Node: core.Node,
       mergeAttributes: core.mergeAttributes,
       StarterKit: starterKitMod.default,
@@ -84,7 +83,7 @@ const PAGE_PAD_X = 40
 const PAGE_PAD_Y = 32
 
 function createPageExtension(M) {
-  const { Node, mergeAttributes, TextSelection } = M
+  const { Node, mergeAttributes } = M
   return Node.create({
     name: 'page',
     group: 'block',
@@ -111,7 +110,7 @@ function createPageExtension(M) {
           const page = $cursor.node($cursor.depth - 1)
           if (!page || page.type.name !== 'page') return false
           if ($cursor.index($cursor.depth - 1) !== 0) return false
-          return joinBackwardAcrossPage(this.editor, M)
+          return joinBackwardAcrossPage(this.editor)
         },
         Delete: () => {
           const { state } = this.editor
@@ -122,7 +121,7 @@ function createPageExtension(M) {
           const page = $cursor.node($cursor.depth - 1)
           if (!page || page.type.name !== 'page') return false
           if ($cursor.index($cursor.depth - 1) !== page.childCount - 1) return false
-          return joinForwardAcrossPage(this.editor, M)
+          return joinForwardAcrossPage(this.editor)
         },
       }
     },
@@ -150,7 +149,7 @@ function findCutAfter($pos) {
   return null
 }
 
-function joinBackwardAcrossPage(editor, M) {
+function joinBackwardAcrossPage(editor) {
   const { state, view } = editor
   const $cursor = state.selection.$cursor
   if (!$cursor) return false
@@ -177,14 +176,15 @@ function joinBackwardAcrossPage(editor, M) {
     afterText = child
   }
   if (beforePos >= afterPos) return false
+  const TextSelection = state.selection.constructor
   const tr = state.tr.delete(beforePos, afterPos)
   if (!tr.steps.length) return false
-  tr.setSelection(M.TextSelection.near(tr.doc.resolve(Math.min(beforePos, tr.doc.content.size))))
+  tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(beforePos, tr.doc.content.size))))
   view.dispatch(tr)
   return true
 }
 
-function joinForwardAcrossPage(editor, M) {
+function joinForwardAcrossPage(editor) {
   const { state, view } = editor
   const $cursor = state.selection.$cursor
   if (!$cursor) return false
@@ -211,9 +211,10 @@ function joinForwardAcrossPage(editor, M) {
     beforeText = child
   }
   if (beforePos >= afterPos) return false
+  const TextSelection = state.selection.constructor
   const tr = state.tr.delete(beforePos, afterPos)
   if (!tr.steps.length) return false
-  tr.setSelection(M.TextSelection.near(tr.doc.resolve(Math.min(beforePos, tr.doc.content.size))))
+  tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(beforePos, tr.doc.content.size))))
   view.dispatch(tr)
   return true
 }
@@ -240,10 +241,11 @@ function getEditorExtensions(M) {
           }
           const from = $from.before($from.depth - 1)
           const to = $from.after($from.depth - 1)
+          const TextSelection = editor.state.selection.constructor
           const tr = editor.state.tr
           const emptyPara = editor.schema.nodes.paragraph.create()
           tr.replaceWith(from, to, emptyPara)
-          tr.setSelection(M.TextSelection.create(tr.doc, from + 1))
+          tr.setSelection(TextSelection.create(tr.doc, from + 1))
           editor.view.dispatch(tr)
           return true
         },
@@ -326,11 +328,20 @@ function extractBlocksHtml(html) {
   return blocks
 }
 
+function fillEmptyTextblocks(root) {
+  const empties = root.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, code')
+  for (let i = 0; i < empties.length; i++) {
+    const el = empties[i]
+    if (!el.firstChild) el.appendChild(document.createElement('br'))
+  }
+}
+
 function measureBlocks(blocks) {
   if (!_measureEl || !_currentEditor) return blocks.map(function() { return 0 })
   const prose = _measureEl.querySelector('.ProseMirror')
   _measureEl.style.width = (_pageSizes.w - PAGE_PAD_X * 2) + 'px'
   prose.innerHTML = blocks.join('')
+  fillEmptyTextblocks(prose)
   const items = prose.children
   const heights = []
   for (let i = 0; i < items.length; i++) {
@@ -366,13 +377,6 @@ function packBlocks(blocks) {
   return pages
 }
 
-function buildPagesHtml(pages) {
-  if (pages.length === 0) pages = [[]]
-  return pages.map(function(p) {
-    return '<div data-type="page" class="document-page">' + (p.length ? p.join('') : '<p></p>') + '</div>'
-  }).join('')
-}
-
 function serializeDocument() {
   return _currentEditor ? _currentEditor.getHTML() : ''
 }
@@ -385,7 +389,7 @@ function captureCaretInDoc(doc) {
   }
   const from = _currentEditor.state.selection.from
   if (from === 0 && doc.childCount > 0) return { block: 0, offset: 0 }
-  let pos = 1
+  let pos = 0
   let global = 0
   let lastContentSize = 0
   for (let i = 0; i < doc.childCount; i++) {
@@ -418,7 +422,7 @@ function captureCaretInDoc(doc) {
 
 function restoreCaretInDoc(doc, caret) {
   if (!caret || !_currentEditor) return false
-  let pos = 1
+  let pos = 0
   let global = 0
   for (let i = 0; i < doc.childCount; i++) {
     const child = doc.child(i)
@@ -453,43 +457,52 @@ function restoreCaretInDoc(doc, caret) {
 function setCaret(pos) {
   if (!_currentEditor) return false
   try {
-    const tr = _currentEditor.state.tr.setSelection(
-      _tipTapModules.TextSelection.near(_currentEditor.state.doc.resolve(pos))
-    )
-    tr.scrollIntoView()
-    _currentEditor.view.dispatch(tr)
-    _currentEditor.view.focus()
+    _currentEditor.commands.setTextSelection(pos)
+    if (!_currentEditor.view.hasFocus()) _currentEditor.view.focus()
     return true
   } catch (e) {
     return false
   }
 }
 
-function caretViewportOffset() {
-  if (!_currentEditor || !_currentEditor.view) return null
+function ensureCaretVisible() {
+  if (!_currentEditor || !_currentEditor.view) return
   const viewport = _currentEditor.view.dom.closest('.editor-content')
-  if (!viewport) return null
+  if (!viewport) return
   const rect = viewport.getBoundingClientRect()
-  const head = _currentEditor.state.selection.head
   let coords
-  try { coords = _currentEditor.view.coordsAtPos(head) } catch (e) { return null }
-  if (!coords || !isFinite(coords.top)) return null
-  return { viewport: viewport, top: coords.top - rect.top }
-}
-
-function restoreCaretViewport(offset) {
-  if (!offset || !_currentEditor || !_currentEditor.view) return
-  const viewport = offset.viewport
-  const rect = viewport.getBoundingClientRect()
-  const head = _currentEditor.state.selection.head
-  let coords
-  try { coords = _currentEditor.view.coordsAtPos(head) } catch (e) { return }
+  try { coords = _currentEditor.view.coordsAtPos(_currentEditor.state.selection.head) } catch (e) { return }
   if (!coords || !isFinite(coords.top)) return
-  viewport.scrollTop += (coords.top - rect.top) - offset.top
+  const margin = 24
+  if (coords.top < rect.top + margin) {
+    viewport.scrollTop -= (rect.top + margin) - coords.top
+  } else if (coords.bottom > rect.bottom - margin) {
+    viewport.scrollTop += coords.bottom - (rect.bottom - margin)
+  }
 }
 
 function fragFromNodes(schema, nodes) {
   return schema.topNodeType.create(null, nodes).content
+}
+
+function currentPageSignature(doc) {
+  const sig = []
+  doc.content.forEach(function(child) {
+    if (child.type.name === 'page') {
+      sig.push(child.childCount)
+    } else {
+      sig.push(-1)
+    }
+  })
+  return sig
+}
+
+function samePageSignature(a, b) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
 }
 
 function reflow() {
@@ -501,13 +514,12 @@ function reflow() {
     return
   }
   const caret = captureCaretInDoc(editor.state.doc)
-  const caretOffset = caret ? caretViewportOffset() : null
   const fullHtml = editor.getHTML()
   if (fullHtml === _lastFullHtml) return
   const blocksHtml = extractBlocksHtml(fullHtml)
   const pages = packBlocks(blocksHtml)
-  const newHtml = buildPagesHtml(pages)
-  if (newHtml === fullHtml) {
+  const targetSig = pages.map(function(p) { return Math.max(1, p.length) })
+  if (samePageSignature(currentPageSignature(editor.state.doc), targetSig)) {
     _lastFullHtml = fullHtml
     return
   }
@@ -539,6 +551,7 @@ function reflow() {
 
   const docFragment = fragFromNodes(schema, pageNodes)
   const tr = editor.state.tr
+  _reflowing = true
   try {
     tr.replaceWith(0, doc.content.size, docFragment)
     tr.setMeta('addToHistory', false)
@@ -546,10 +559,12 @@ function reflow() {
   } catch (e) {
     console.error('Document reflow error:', e)
     return
+  } finally {
+    _reflowing = false
   }
   _lastFullHtml = serializeDocument()
-  if (restoreCaretInDoc(editor.state.doc, caret) && caretOffset) {
-    restoreCaretViewport(caretOffset)
+  if (restoreCaretInDoc(editor.state.doc, caret)) {
+    ensureCaretVisible()
   }
 }
 
@@ -687,7 +702,7 @@ export async function renderDocument(documentId) {
       if (!_docId) return
       const full = serializeDocument()
       saveDocumentContent(_docId, full)
-      scheduleReflow()
+      if (!_reflowing) scheduleReflow()
     },
   })
 
@@ -828,6 +843,7 @@ export function destroyEditor() {
   _reflowTimer = null
   clearTimeout(_resizeTimer)
   _resizeTimer = null
+  _reflowing = false
   _docId = null
   _pageSizes = { free: false, w: 0, h: 0 }
   _lastFullHtml = null

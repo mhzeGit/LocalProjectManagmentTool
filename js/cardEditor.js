@@ -7,7 +7,6 @@ export async function initCardEditor(content) {
   if (!containerEl) return
 
   const { Editor, Extension } = await import('https://esm.sh/@tiptap/core@' + TIPTAP_VERSION)
-  const { TextSelection } = await import('https://esm.sh/prosemirror-state@1.4.3')
   const StarterKit = (await import('https://esm.sh/@tiptap/starter-kit@' + TIPTAP_VERSION)).default
   const Underline = (await import('https://esm.sh/@tiptap/extension-underline@' + TIPTAP_VERSION)).default
   const Link = (await import('https://esm.sh/@tiptap/extension-link@' + TIPTAP_VERSION)).default
@@ -38,6 +37,7 @@ export async function initCardEditor(content) {
 
           const from = $from.before($from.depth - 1)
           const to = $from.after($from.depth - 1)
+          const TextSelection = editor.state.selection.constructor
           const tr = editor.state.tr
           const emptyPara = editor.schema.nodes.paragraph.create()
           tr.replaceWith(from, to, emptyPara)
