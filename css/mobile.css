@@ -112,3 +112,9 @@
   /* hover-only delete buttons would be one stray tap away on a touch screen */
   .btn-del { display: none; }
 }
+
+/* the "browser-only mode" banner is about local files: meaningless with GitHub sync or on a phone */
+.pm-github .save-mode-banner { display: none; }
+@media (max-width: 760px) {
+  .save-mode-banner { display: none; }
+}
