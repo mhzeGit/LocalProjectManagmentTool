@@ -389,8 +389,7 @@ function connectEvents() {
     const st = ev.status || {}
     const el = document.getElementById('syncStatus')
     if (el && _status === 'live') {
-      el.title = 'Connected to the local server; changes save automatically.
-GitHub sync ' + (st.ok ? 'OK' : 'FAILED') + ' at ' + (st.at || '').replace('T', ' ') + ': ' + (st.message || '')
+      el.title = 'Connected to the local server; changes save automatically.\nGitHub sync ' + (st.ok ? 'OK' : 'FAILED') + ' at ' + (st.at || '').replace('T', ' ') + ': ' + (st.message || '')
     }
     if (st.ok === false && _notify) _notify('GitHub sync failed: ' + st.message, 5000)
   })
