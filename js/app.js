@@ -37,9 +37,13 @@ import { initNavigation } from './navigation.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
 import { performUndo, performRedo } from './history.js'
 import { isCanvasActive } from './canvas.js'
+import { showConnectModal } from './githubSync.js'
+window.__showGithubSync = showConnectModal
 window.__isCanvasActive = isCanvasActive
 
 import './dragscroll.js'
+import { initMobile } from './mobile.js'
+initMobile()
 
 initTheme()
 initGlowMultiplier()

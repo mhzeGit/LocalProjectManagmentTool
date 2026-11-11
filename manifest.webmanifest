@@ -1,0 +1,13 @@
+{
+  "name": "Task Board",
+  "short_name": "Planner",
+  "description": "Boards, plans and focus for your projects",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111118",
+  "theme_color": "#111118",
+  "icons": [
+    { "src": "favicon.png", "sizes": "256x256", "type": "image/png", "purpose": "any" }
+  ]
+}

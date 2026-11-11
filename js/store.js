@@ -406,6 +406,8 @@ export function createCard(columnId) {
   cardData.id = genId()
   cardData.description = cardData.description ?? ''
   cardData.completed = false
+  applyPlanFields(cardData, cardData._plan)
+  delete cardData._plan
   col.cards.push(cardData)
   closeModal()
   render()
@@ -434,12 +436,17 @@ export function saveCard(cardId) {
   c.members = newData.members
   c.checklists = newData.checklists
   c.color = newData.color
+  applyPlanFields(c, newData._plan)
+  moveCardFromForm(c, newData._plan && newData._plan._moveTo)
   closeModal()
   render()
   pushCommand({
     undo() {
       const card = findCard(cardId)
-      if (card) Object.assign(card, oldSnapshot)
+      if (card) {
+        for (const k of PLAN_FIELDS) if (!(k in oldSnapshot)) delete card[k]
+        Object.assign(card, oldSnapshot)
+      }
     },
     redo() {
       const card = findCard(cardId)
@@ -450,6 +457,7 @@ export function saveCard(cardId) {
         card.priority = newData.priority; card.tags = newData.tags
         card.members = newData.members; card.checklists = newData.checklists
         card.color = newData.color
+        applyPlanFields(card, newData._plan)
       }
     },
     description: 'Edit Card'
@@ -503,7 +511,54 @@ function collectCardForm() {
     checklists.push(...collectChildren(clContainer))
   }
 
-  return { title, description, startDate, endDate, priority, tags, members, checklists, color }
+  const _plan = {}
+  const msEl = document.getElementById('cd-milestone')
+  if (msEl) _plan.milestone = msEl.value || null
+  const estEl = document.getElementById('cd-estimate')
+  if (estEl) {
+    const v = parseFloat(estEl.value)
+    _plan.estimate = isNaN(v) ? null : Math.round(v * 100) / 100
+  }
+  const whyEl = document.getElementById('cd-why')
+  if (whyEl) _plan.why = whyEl.value.trim() || null
+  const colEl = document.getElementById('cd-column')
+  if (colEl) _plan._moveTo = colEl.value || null
+
+  return { title, description, startDate, endDate, priority, tags, members, checklists, color, _plan }
+}
+
+const PLAN_FIELDS = ['milestone', 'estimate', 'why']
+
+// The card editor's Column picker (the way to move cards on touch screens).
+function moveCardFromForm(card, targetColId) {
+  if (!targetColId) return
+  const from = findCardColumn(card.id)
+  const to = findColumn(targetColId)
+  if (!from || !to || from === to) return
+  from.cards.splice(from.cards.indexOf(card), 1)
+  const p = state.selectedProjectId ? findProject(state.selectedProjectId) : null
+  const plan = p && p.plan
+  const isDone = plan && plan.columns && plan.columns.done === to.id
+  if (isDone) {
+    to.cards.unshift(card)
+    if (!card.completed) {
+      card.completed = true
+      const d = new Date()
+      card.doneAt = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+  } else {
+    to.cards.push(card)
+  }
+}
+
+// Production-plan fields (shown only when the project has a plan).
+function applyPlanFields(card, planFields) {
+  if (!planFields) return
+  for (const k of PLAN_FIELDS) {
+    if (!(k in planFields)) continue
+    if (planFields[k] === null || planFields[k] === '') delete card[k]
+    else card[k] = planFields[k]
+  }
 }
 
 let _copiedCard = null

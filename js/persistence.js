@@ -1,5 +1,7 @@
 import { data, state, genId, setUid } from './data.js'
 import { render } from './sidebar.js'
+import { detectServer, initServerMode, isServerMode, flushNow, serverActions } from './serverSync.js'
+import { getGithubConfig, initGithubMode, isGithubMode, flushNow as flushGithub } from './githubSync.js'
 
 const DB_NAME = 'kanboard-user-v3'
 const DB_VERSION = 1
@@ -136,6 +138,37 @@ function verifyHandlePermission(handle) {
       return null
     })
   })
+}
+
+/* ======== EXTRA FIELDS (agents and newer versions add fields; keep them) ======== */
+/* Kept in sync with server/pmtool/store.py */
+
+var CARD_KNOWN = ['type','id','title','description','completed','startDate','endDate','priority','tags','members','checklists','color','archived','boardId','columnId']
+var COLUMN_KNOWN = ['type','id','name','boardId','archived','cards','color']
+var BOARD_KNOWN = ['type','id','name','projectId','columns','archivedCards','archivedColumns']
+
+function copyExtras(target, source, known) {
+  for (var k in source) {
+    if (!Object.prototype.hasOwnProperty.call(source, k)) continue
+    if (k.charAt(0) === '_' || known.indexOf(k) !== -1) continue
+    target[k] = source[k]
+  }
+  return target
+}
+
+function cardFromMeta(cdMeta) {
+  return copyExtras({
+    id: cdMeta.id, title: cdMeta.title,
+    description: cdMeta.description || '',
+    completed: cdMeta.completed || false,
+    startDate: cdMeta.startDate || null,
+    endDate: cdMeta.endDate || null,
+    priority: cdMeta.priority || '3',
+    tags: cdMeta.tags || [],
+    members: cdMeta.members || [],
+    checklists: cdMeta.checklists || [],
+    color: cdMeta.color || null
+  }, cdMeta, CARD_KNOWN)
 }
 
 /* ======== FULL DATA CACHE (localStorage, survives file:// refreshes) ======== */
@@ -507,7 +540,8 @@ function saveProjectToDir(project, dirHandle) {
     documents: (project.documents || []).map(function(d) { return d.id }),
     canvases: (project.canvasBoards || []).map(function(c) { return c.id }),
     folders: (project.folders || []).map(function(f) { return { id: f.id, name: f.name, itemOrder: f.itemOrder || [] } }),
-    sidebarOrder: project.sidebarOrder || []
+    sidebarOrder: project.sidebarOrder || [],
+    plan: project.plan !== undefined ? project.plan : undefined
   }))
 
   var allCols = []
@@ -550,23 +584,24 @@ function saveProjectToDir(project, dirHandle) {
   for (var bi2 = 0; bi2 < (project.boards || []).length; bi2++) {
     var b = project.boards[bi2]
     var boardFilename = boardFilenames[b.id]
-    promises.push(writeFile(dirHandle, boardFilename, {
+    promises.push(writeFile(dirHandle, boardFilename, copyExtras({
       type: 'board', id: b.id, name: b.name, projectId: project.id,
       columns: (b.columns || []).map(function(c) { return c.id }),
       archivedCards: (b.archivedCards || []).map(function(c) { return c.id }),
       archivedColumns: (b.archivedColumns || []).map(function(c) { return c.id })
-    }))
+    }, b, BOARD_KNOWN)))
   }
 
   for (var ci2 = 0; ci2 < allCols.length; ci2++) {
     var item = allCols[ci2]
     var col = item.col
     var filename = colFilenames[col.id]
-    promises.push(writeFile(dirHandle, filename, {
+    promises.push(writeFile(dirHandle, filename, copyExtras({
       type: 'column', id: col.id, name: col.name, boardId: item.boardId,
       archived: item.archived || undefined,
-      cards: (col.cards || []).map(function(cd) { return cd.id })
-    }))
+      cards: (col.cards || []).map(function(cd) { return cd.id }),
+      color: col.color || undefined
+    }, col, COLUMN_KNOWN)))
   }
 
   for (var ci3 = 0; ci3 < allCards.length; ci3++) {
@@ -581,6 +616,7 @@ function saveProjectToDir(project, dirHandle) {
       members: card.members || [], checklists: card.checklists || [],
       color: card.color || null
     }
+    copyExtras(cardData, card, CARD_KNOWN)
     if (item2.archived) {
       cardData.archived = true
       if (item2.boardId) cardData.boardId = item2.boardId
@@ -705,32 +741,22 @@ function reconstructProject(pMeta, allData) {
     folders: (pMeta.folders || []).map(function(f) { return { id: f.id, name: f.name, itemOrder: (f.itemOrder || []).slice() } }),
     sidebarOrder: (pMeta.sidebarOrder || []).slice()
   }
+  if (pMeta.plan !== undefined) project.plan = pMeta.plan
 
   for (var bi = 0; bi < (pMeta.boards || []).length; bi++) {
     var bMeta = allData.boards[pMeta.boards[bi]]
     if (!bMeta || bMeta.archived) continue
-    var newB = { id: bMeta.id, name: bMeta.name, columns: [] }
+    var newB = copyExtras({ id: bMeta.id, name: bMeta.name, columns: [] }, bMeta, BOARD_KNOWN.concat(['archived']))
 
     for (var ci = 0; ci < (bMeta.columns || []).length; ci++) {
       var cMeta = allData.columns[bMeta.columns[ci]]
       if (!cMeta || cMeta.archived) continue
-      var newC = { id: cMeta.id, name: cMeta.name, cards: [] }
+      var newC = copyExtras({ id: cMeta.id, name: cMeta.name, cards: [], color: cMeta.color || null }, cMeta, COLUMN_KNOWN)
 
       for (var cdi = 0; cdi < (cMeta.cards || []).length; cdi++) {
         var cdMeta = allData.cards[cMeta.cards[cdi]]
         if (!cdMeta) continue
-        newC.cards.push({
-          id: cdMeta.id, title: cdMeta.title,
-          description: cdMeta.description || '',
-          completed: cdMeta.completed || false,
-          startDate: cdMeta.startDate || null,
-          endDate: cdMeta.endDate || null,
-          priority: cdMeta.priority || '3',
-          tags: cdMeta.tags || [],
-          members: cdMeta.members || [],
-          checklists: cdMeta.checklists || [],
-          color: cdMeta.color || null
-        })
+        newC.cards.push(cardFromMeta(cdMeta))
       }
       newB.columns.push(newC)
     }
@@ -740,18 +766,7 @@ function reconstructProject(pMeta, allData) {
       for (var aci = 0; aci < bMeta.archivedCards.length; aci++) {
         var cdMeta = allData.cards[bMeta.archivedCards[aci]]
         if (!cdMeta) continue
-        newB.archivedCards.push({
-          id: cdMeta.id, title: cdMeta.title,
-          description: cdMeta.description || '',
-          completed: cdMeta.completed || false,
-          startDate: cdMeta.startDate || null,
-          endDate: cdMeta.endDate || null,
-          priority: cdMeta.priority || '3',
-          tags: cdMeta.tags || [],
-          members: cdMeta.members || [],
-          checklists: cdMeta.checklists || [],
-          color: cdMeta.color || null
-        })
+        newB.archivedCards.push(cardFromMeta(cdMeta))
       }
     }
     if ((bMeta.archivedColumns || []).length > 0) {
@@ -759,22 +774,11 @@ function reconstructProject(pMeta, allData) {
       for (var aci = 0; aci < bMeta.archivedColumns.length; aci++) {
         var acMeta = allData.columns[bMeta.archivedColumns[aci]]
         if (!acMeta) continue
-        var newCol = { id: acMeta.id, name: acMeta.name, cards: [], color: acMeta.color || null }
+        var newCol = copyExtras({ id: acMeta.id, name: acMeta.name, cards: [], color: acMeta.color || null }, acMeta, COLUMN_KNOWN)
         for (var acdi = 0; acdi < (acMeta.cards || []).length; acdi++) {
           var cdMeta = allData.cards[acMeta.cards[acdi]]
           if (!cdMeta) continue
-          newCol.cards.push({
-            id: cdMeta.id, title: cdMeta.title,
-            description: cdMeta.description || '',
-            completed: cdMeta.completed || false,
-            startDate: cdMeta.startDate || null,
-            endDate: cdMeta.endDate || null,
-            priority: cdMeta.priority || '3',
-            tags: cdMeta.tags || [],
-            members: cdMeta.members || [],
-            checklists: cdMeta.checklists || [],
-            color: cdMeta.color || null
-          })
+          newCol.cards.push(cardFromMeta(cdMeta))
         }
         newB.archivedColumns.push(newCol)
       }
@@ -956,7 +960,7 @@ function hasAnyHandle(map) {
 function updateSaveModeBanner() {
   const banner = document.getElementById('saveModeBanner')
   if (!banner) return
-  const connected = _saveMode === 'user' || !!_userFileHandle || hasAnyHandle(_workspaceFileHandles) || hasAnyHandle(_projectDirHandles)
+  const connected = isServerMode() || isGithubMode() || _saveMode === 'user' || !!_userFileHandle || hasAnyHandle(_workspaceFileHandles) || hasAnyHandle(_projectDirHandles)
   if (connected) {
     banner.classList.remove('dismissed')
     banner.classList.add('hidden')
@@ -967,6 +971,8 @@ function updateSaveModeBanner() {
 
 function saveAll(flushPending) {
   if (flushPending && window.__flushPendingEdits) window.__flushPendingEdits()
+  if (isServerMode()) return flushNow().then(function() { return true })
+  if (isGithubMode()) return flushGithub().then(function() { return true })
 
   if (!_userFileHandle && !hasAnyHandle(_workspaceFileHandles) && !hasAnyHandle(_projectDirHandles)) {
     cacheFullData()
@@ -1037,6 +1043,8 @@ function collectAllIds() {
 /* ======== PUBLIC API ======== */
 
 export function setupUserDirectory() {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) { showNotification('Your data is managed by the local server (pm). Use File > New Workspace.', 3500); return Promise.resolve() }
   if (!window.showSaveFilePicker) {
     showNotification('Your browser does not support the File System Access API. Use Chrome or Edge.', 4000)
     return Promise.resolve()
@@ -1069,6 +1077,8 @@ export function setupUserDirectory() {
 }
 
 export function openUserFile() {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) { showNotification('Your data is managed by the local server (pm).', 3000); return Promise.resolve() }
   if (!window.showOpenFilePicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
@@ -1115,6 +1125,8 @@ export function openUserFile() {
 }
 
 export function createWorkspaceInUser() {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) return serverActions.createWorkspace()
   if (!window.showSaveFilePicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
@@ -1157,6 +1169,8 @@ export function createWorkspaceInUser() {
 }
 
 export function addExistingWorkspace() {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) return serverActions.importWorkspace()
   if (!window.showOpenFilePicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
@@ -1202,6 +1216,8 @@ export function addExistingWorkspace() {
 }
 
 export function locateWorkspaceFile(workspaceId) {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) return serverActions.importWorkspace()
   if (!window.showOpenFilePicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
@@ -1252,6 +1268,8 @@ export function locateWorkspaceFile(workspaceId) {
 }
 
 export function addProjectToWorkspace(workspaceId) {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) return serverActions.addProject(workspaceId)
   if (!window.showDirectoryPicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
@@ -1298,6 +1316,8 @@ export function addProjectToWorkspace(workspaceId) {
 }
 
 export function locateExistingProjectInWorkspace(workspaceId) {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) return serverActions.locateExistingProject(workspaceId)
   if (!window.showDirectoryPicker) {
     showNotification('Your browser does not support the File System Access API.', 4000)
     return Promise.resolve()
@@ -1351,6 +1371,8 @@ export function locateExistingProjectInWorkspace(workspaceId) {
 }
 
 export function locateProjectFolder(projectId) {
+  if (isGithubMode()) { showNotification('Create and link projects on your PC (pm). They appear here after the next sync.', 4000); return Promise.resolve() }
+  if (isServerMode()) return serverActions.locateProjectFolder(projectId)
   var found = null
   for (var wi = 0; wi < data.workspaces.length; wi++) {
     var p = data.workspaces[wi].projects.find(function(pj) { return pj.id === projectId })
@@ -1397,6 +1419,12 @@ export function locateProjectFolder(projectId) {
 
 export function saveNow() {
   console.log('[save] invoked, userFile:', !!_userFileHandle, 'workspaceHandles:', Object.keys(_workspaceFileHandles).length, 'projectHandles:', Object.keys(_projectDirHandles).length)
+  if (isServerMode()) {
+    return flushNow().then(function() { showNotification('Saved') })
+  }
+  if (isGithubMode()) {
+    return flushGithub().then(function() { showNotification('Synced with GitHub') })
+  }
   return saveAll(true).then(function(savedToDisk) {
     console.log('[save] result: savedToDisk =', savedToDisk)
     updateSaveModeBanner()
@@ -1412,6 +1440,8 @@ export function saveNow() {
 }
 
 export function closeUserDirectory() {
+  if (isGithubMode()) { window.__showGithubSync && window.__showGithubSync(); return }
+  if (isServerMode()) { showNotification('Your data is managed by the local server (pm). Stop it with: pm stop', 3500); return }
   _userFileHandle = null
   _workspaceFileHandles = {}
   _projectDirHandles = {}
@@ -1513,6 +1543,40 @@ function scheduleHandleRetry() {
 export function initPersistence() {
   if (_initialized) return Promise.resolve()
   _initialized = true
+  function booted() { document.body.classList.remove('pm-booting') }
+  return detectServer().then(function(isServer) {
+    if (!isServer && getGithubConfig()) {
+      _saveMode = 'user'
+      return initGithubMode({
+        render: render,
+        restoreSelectedState: restoreSelectedState,
+        notify: showNotification
+      }).then(function(ok) {
+        booted()
+        if (ok) { updateSaveModeBanner(); return }
+        _saveMode = 'memory'
+        return initFilePersistence()
+      })
+    }
+    if (!isServer) { booted(); return initFilePersistence() }
+    _saveMode = 'user'
+    return initServerMode({
+      render: render,
+      restoreSelectedState: restoreSelectedState,
+      notify: showNotification,
+      preloadAvatars: preloadMemberAvatars
+    }).then(function() {
+      booted()
+      updateSaveModeBanner()
+    }).catch(function(err) {
+      console.error('Server mode failed, falling back to file mode:', err)
+      booted()
+      return initFilePersistence()
+    })
+  })
+}
+
+function initFilePersistence() {
 
   function scheduleAutoReconnect() {
     var reconnecting = false
@@ -1623,6 +1687,8 @@ export function hasStoredUserFile() {
 }
 
 export function reconnectUserFile() {
+  if (isGithubMode()) return Promise.resolve(true)
+  if (isServerMode()) return Promise.resolve(true)
   if (!_storedUserFileHandle) {
     if (!window.showOpenFilePicker) {
       showNotification('Your browser does not support the File System Access API.', 4000)
@@ -1687,6 +1753,7 @@ export function reconnectUserFile() {
 }
 
 export function hasProjectHandle(projectId) {
+  if (isServerMode() || isGithubMode()) { for (var wi = 0; wi < data.workspaces.length; wi++) { var pp = data.workspaces[wi].projects.find(function(x) { return x.id === projectId }); if (pp) return !pp._loadError } return false }
   return !!_projectDirHandles[projectId]
 }
 

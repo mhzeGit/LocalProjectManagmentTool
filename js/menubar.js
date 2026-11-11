@@ -3,6 +3,7 @@ import { setupUserDirectory, openUserFile, createWorkspaceInUser, addExistingWor
 import { openPreferences } from './preferences.js'
 import { exportBoardCSV, importBoardCSV } from './io.js'
 import { performUndo, performRedo } from './history.js'
+import { showConnectModal } from './githubSync.js'
 let openMenuIndex = -1
 let isMenuOpen = false
 
@@ -51,6 +52,7 @@ const menuDefs = [
       { label: 'Close User File', action: () => closeUserDirectory() },
       { separator: true },
       { label: 'Save', shortcut: 'Ctrl+S', action: () => saveNow() },
+      { label: 'GitHub Sync…', action: () => showConnectModal() },
       { separator: true },
       { label: 'Export Board as CSV\u2026', action: () => exportBoardCSV() },
       { label: 'Import Board from CSV\u2026', action: () => importBoardCSV() },

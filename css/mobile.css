@@ -1,0 +1,114 @@
+/* ─── Phone layout (and the GitHub Sync dialog) ─── */
+
+.mobile-nav-btn { display: none; }
+
+.onboarding-gh { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.btn-gh {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg-surface); color: var(--text-bright);
+  border: 1px solid var(--border-strong);
+}
+.btn-gh:hover { border-color: var(--accent); }
+.gh-help { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 12px; }
+.gh-help code { font-size: 11.5px; background: var(--bg-input); padding: 1px 5px; border-radius: 4px; }
+.gh-error {
+  font-size: 12.5px; color: var(--danger); background: var(--danger-bg);
+  border: 1px solid var(--danger-border); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.sync-status { cursor: pointer; }
+/* GitHub mode: projects are created and linked on the PC */
+.pm-github .page-header-actions { display: none; }
+
+@media (max-width: 760px) {
+  body { height: 100dvh; }
+  input, textarea, select, .ProseMirror { font-size: 16px !important; }   /* stops iOS zooming on focus */
+
+  /* top bars: menus on one row, breadcrumb and view controls on the next */
+  .menubar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: env(safe-area-inset-top) 4px 0 4px;
+    row-gap: 0;
+  }
+  .menubar-menus { flex: 1 1 auto; overflow-x: auto; scrollbar-width: none; }
+  .menubar-menus::-webkit-scrollbar { display: none; }
+  .menubar-label { padding: 7px 9px; font-size: 13px; }
+  .topbar {
+    flex: 1 1 100%;
+    height: 40px;
+    margin-left: 0;
+    padding: 0 6px;
+    border-left: none;
+    border-top: 1px solid var(--border-light);
+    gap: 8px;
+  }
+  .topbar-right { gap: 6px; }
+  .breadcrumb { font-size: 12px; }
+  #boardIO, #memberBar { display: none !important; }
+  .view-switcher .view-btn { padding: 4px 7px; font-size: 11.5px; }
+  .sync-status { margin-right: 0; padding: 2px 7px; }
+  .sync-status .sync-label { display: none; }
+
+  .mobile-nav-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 18px;
+  }
+  .mobile-nav-btn:active { background: var(--bg-surface-hover); }
+  body:has(.sidebar.hidden) .mobile-nav-btn { display: none; }
+
+  /* sidebar slides in from the left */
+  .sidebar {
+    position: fixed;
+    top: 0; bottom: 0; left: 0;
+    width: 82vw; max-width: 320px; min-width: 0;
+    z-index: 400;
+    padding-top: env(safe-area-inset-top);
+    transform: translateX(-102%);
+    transition: transform .22s ease;
+    box-shadow: 0 0 40px var(--shadow-lg);
+  }
+  body.nav-open .sidebar { transform: none; }
+  body.nav-open::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: var(--overlay);
+    z-index: 390;
+  }
+  .nav-child, .sidebar-folder-header { padding: 10px 12px; font-size: 15px; }
+  .sidebar-multi-toolbar { display: none; }
+
+  /* content */
+  .board-area { padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .board-columns { gap: 10px; }
+  .board-column { min-width: 86vw; max-width: 86vw; scroll-snap-align: start; }
+  #filterBar { overflow-x: auto; }
+
+  /* dialogs */
+  .modal { width: 94vw; max-width: 94vw; padding: 18px; }
+  .modal:has(.cd-two-col) {
+    width: 100vw; max-width: 100vw;
+    height: 100dvh; max-height: 100dvh;
+    border-radius: 0; border: none;
+    padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+  }
+  .cd-two-col { grid-template-columns: 1fr; gap: 16px; }
+
+  /* focus page */
+  .focus-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .focus-title { font-size: 22px; }
+  .focus-brief { padding: 14px 14px 14px 16px; }
+  .focus-task { padding: 14px 12px 12px 14px; }
+  .focus-mini-btn { opacity: 1; }
+  .focus-grid { gap: 16px; }
+}
+
+@media (hover: none) {
+  .focus-mini-btn { opacity: 1; }
+  /* hover-only delete buttons would be one stray tap away on a touch screen */
+  .btn-del { display: none; }
+}

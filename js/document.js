@@ -285,7 +285,10 @@ function computePageSizes(containerEl, size, zoom) {
   const cfg = PAPER_CONFIG[size]
   if (!cfg) return
   zoom = zoom || 1.0
-  const maxW = Math.min(containerEl.clientWidth, Math.floor(window.innerWidth * 0.5))
+  // Before layout (window still opening, hidden tab) clientWidth is 0: fall back so
+  // pagination never runs with an empty page, which would put every block on its own page.
+  const containerW = containerEl.clientWidth || Math.floor(window.innerWidth * 0.7) || 800
+  const maxW = Math.max(320, Math.min(containerW, Math.floor((window.innerWidth || 1600) * 0.5)))
   let w = maxW
   let h = Math.floor(w * cfg.ratioH / cfg.ratioW)
   w = Math.floor(w * zoom)
@@ -507,6 +510,11 @@ function samePageSignature(a, b) {
 
 function reflow() {
   if (!_docId || _pageSizes.free) return
+  // never paginate against a page that is not laid out yet
+  if (_pageSizes.h - PAGE_PAD_Y * 2 < 120 || !_measureEl || _measureEl.offsetParent === null && document.visibilityState !== 'visible') {
+    scheduleReflow()
+    return
+  }
   const editor = _currentEditor
   if (!editor) return
   if (editor.view.composing) {

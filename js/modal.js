@@ -1,4 +1,4 @@
-import { state, findCard, findWorkspace, getWorkspaceTags, getTagColor, PREDEFINED_COLORS } from './data.js'
+import { state, findCard, findCardColumn, findBoard, findWorkspace, findProject, getWorkspaceTags, getTagColor, PREDEFINED_COLORS } from './data.js'
 import { initCardEditor, destroyCardEditor, getCardEditorHTML } from './cardEditor.js'
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { getResolvedAvatar } from './persistence.js'
@@ -133,7 +133,7 @@ export async function openCardDetail(cardId) {
   body.innerHTML = buildCardForm(c, 'saveCard(\'' + cardId + '\')', true)
   overlay.classList.add('open')
   renderPriorityPicker()
-  body.querySelector('.cd-title-input')?.focus()
+  if (!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) body.querySelector('.cd-title-input')?.focus()
   window.__setPendingCommit && window.__setPendingCommit(function() {
     if (overlay.classList.contains('open') && window.saveCard) window.saveCard(cardId)
   })
@@ -220,6 +220,42 @@ function buildCardForm(c, saveAction) {
   html += '          <span class="cd-pp-label" id="cd-pp-label">' + initPriority + '</span>'
   html += '        </div>'
   html += '      </div>'
+
+  const curCol = c.id ? findCardColumn(c.id) : null
+  const curBoard = curCol && state.selectedProjectId ? (findProject(state.selectedProjectId)?.boards || []).find(b => b.columns.includes(curCol)) : null
+  if (curCol && curBoard) {
+    html += '      <div class="cd-field">'
+    html += '        <label>Column</label>'
+    html += '        <select id="cd-column" class="cd-select cd-ms-select">'
+    for (const col of curBoard.columns) {
+      html += '<option value="' + escapeHtml(col.id) + '"' + (col === curCol ? ' selected' : '') + '>' + escapeHtml(col.name) + '</option>'
+    }
+    html += '        </select>'
+    html += '      </div>'
+  }
+
+  const planProject = state.selectedProjectId ? findProject(state.selectedProjectId) : null
+  const plan = planProject && planProject.plan
+  if (plan) {
+    html += '      <div class="cd-date-row">'
+    html += '        <div class="cd-field">'
+    html += '          <label>Milestone</label>'
+    html += '          <select id="cd-milestone" class="cd-select cd-ms-select"><option value="">None</option>'
+    for (const m of plan.milestones || []) {
+      html += '<option value="' + escapeHtml(m.id) + '"' + (c.milestone === m.id ? ' selected' : '') + '>' + escapeHtml(m.name) + '</option>'
+    }
+    html += '          </select>'
+    html += '        </div>'
+    html += '        <div class="cd-field">'
+    html += '          <label>Estimate (hours)</label>'
+    html += '          <input type="number" min="0" step="0.5" id="cd-estimate" class="cd-date-input" value="' + (c.estimate !== undefined && c.estimate !== null ? c.estimate : '') + '" placeholder="e.g. 3">'
+    html += '        </div>'
+    html += '      </div>'
+    html += '      <div class="cd-field">'
+    html += '        <label>Why now</label>'
+    html += '        <input id="cd-why" class="cd-date-input" value="' + escapeHtml(c.why || '') + '" placeholder="One line: why this matters for the current goal">'
+    html += '      </div>'
+  }
 
   html += '      <div class="cd-field">'
   html += '        <label>Tags</label>'

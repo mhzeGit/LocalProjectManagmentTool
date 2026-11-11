@@ -128,7 +128,7 @@ export function render() {
   let html = '<div class="sidebar-project-name" id="projectTitle-' + p.id + '">' + p.name + '</div>'
   const dashActive = state.selectedDashboard ? ' active' : ''
   html += `<div class="nav-child${dashActive}" onclick="selectDashboard()">
-    <span class="name">Dashboard</span>
+    <span class="name">${p.plan && p.plan.columns ? '✦ Focus' : 'Dashboard'}</span>
   </div>`
   html += '<div class="section-title" style="margin-top:12px"><span>Items</span><span class="btn-add-board" onclick="toggleAddBoardMenu(event,\'' + p.id + '\')">+</span></div>'
 
