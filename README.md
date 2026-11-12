@@ -53,6 +53,16 @@ python server/pm.py status      # plan overview of the project linked under the 
 - **Agent commands.** Add, edit, move, split and finish cards; manage milestones; `pm schedule` dates the work from estimates and capacity and forecasts each milestone; `pm brief` posts the note on the Focus page; `pm doc` reads and writes documents as Markdown.
 - **Local only.** The server listens on 127.0.0.1:7420 and refuses requests from other sites. Python 3.9+, no packages.
 
+### Hand a card to an AI agent
+
+Open a card and press **✦ Start with AI**:
+
+- **Open in Claude** starts a new Claude Code session in the Claude desktop app, in the project's code folder, with the prompt filled in. Press Enter to send it.
+- **Copy prompt and open T3 Code** copies the prompt and brings T3 Code to the front. Paste it into a new thread.
+- **Copy prompt** works anywhere, including on the phone.
+
+The prompt names the card and asks the agent to use the **do-task** skill. With that skill, the agent reads the card, moves it to Doing with `pm begin`, does and checks the work, and ticks it off with `pm done` after you confirm. The skill comes from the Agentic Tools package (`planner` module). The code folder is the git repository that holds the plan folder; to use a different folder, run `pm settings --code-dir <path>`.
+
 ## Phone and other devices (GitHub sync)
 
 Your PC's server can mirror your projects into a **private** GitHub repository. Any browser (your iPhone included) opens the hosted app, connects to that repository with a token that can only reach it, and reads and writes your boards there. Free: a private repo plus GitHub Pages.

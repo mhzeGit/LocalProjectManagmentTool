@@ -3,6 +3,7 @@ import { initCardEditor, destroyCardEditor, getCardEditorHTML } from './cardEdit
 import { escapeHtml, getProgressColor, countChecklistItems, countCompletedChecklistItems } from './utils.js'
 import { getResolvedAvatar } from './persistence.js'
 import { startRenameChecklistItem } from './inlineEdit.js'
+import { aiTaskButtonHtml } from './aiTask.js'
 
 function getInitials(name) {
   return name.split(/\s+/).map(s => s[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -338,6 +339,7 @@ function buildCardForm(c, saveAction) {
 
   html += '<div class="cd-form-footer">'
   html += '  <button class="btn-discard" onclick="closeModal()">Discard</button>'
+  if (c.id) html += aiTaskButtonHtml(c.id)
   html += '  <button class="btn-confirm" onclick="' + saveAction + '">Confirm</button>'
   html += '</div>'
 

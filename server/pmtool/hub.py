@@ -199,7 +199,24 @@ class Hub:
         with self.lock:
             return {"rev": self.rev, "metaRev": self.meta_rev, "selfMemberId": self.self_member_id,
                     "workspaces": copy.deepcopy(self.workspaces), "projectRevs": dict(self.project_rev),
-                    "projectDirs": dict(self.library["projectDirs"])}
+                    "projectDirs": dict(self.library["projectDirs"]),
+                    "codeDirs": {pid: self._code_dir(pid) for pid in self.library["projectDirs"]}}
+
+    def _code_dir(self, pid):
+        """Where agents work on this project: plan.codeDir, else the git repository holding the plan folder."""
+        w, p = self.find_project(pid)
+        explicit = ((p or {}).get("plan") or {}).get("codeDir")
+        if explicit:
+            return explicit
+        here = os.path.abspath(self.library["projectDirs"].get(pid) or "")
+        while here and os.path.isdir(here):
+            if os.path.exists(os.path.join(here, ".git")):
+                return here.replace("\\", "/")
+            parent = os.path.dirname(here)
+            if parent == here:
+                break
+            here = parent
+        return None
 
     def get_project(self, pid):
         with self.lock:

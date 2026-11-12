@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import os
 
 from . import mdhtml
 from .util import (fmt_hours, new_id, now_iso, parse_date, parse_estimate, parse_priority, today)
@@ -148,6 +149,29 @@ def role_column(project, role, board=None):
             if col["id"] == cid:
                 return b, col
     return None, None
+
+
+# column names that mean "in progress" / "finished" on boards without plan roles (a sprint board, say)
+STATUS_NAMES = {
+    "now": ("doing", "in progress", "in-progress", "wip", "active", "now", "today", "working on"),
+    "done": ("done", "complete", "completed", "finished"),
+}
+
+
+def board_status_column(project, board, role):
+    """The column on this board that means `role` ('now' or 'done'): the plan's role column if it is on
+    this board, else the first column named like it ('Doing', 'Done this week')."""
+    if not board:
+        return None
+    cols = board.get("columns") or []
+    for col in cols:
+        if column_role(project, col["id"]) == role:
+            return col
+    for col in cols:
+        name = col["name"].strip().lower()
+        if any(name == w or name.startswith(w + " ") for w in STATUS_NAMES.get(role, ())):
+            return col
+    return None
 
 
 def find_column(project, ref, board_ref=None):
@@ -581,12 +605,31 @@ def op_done(project, args, ctx):
     if args.get("summary"):
         card["description"] = (card.get("description") or "") + mdhtml.md_to_html(
             "**Done %s:** %s" % (card["doneAt"], args["summary"]), tasks_as_html=False)
-    tb, done_col = role_column(project, "done")
+    # stay on the card's own board (its Done / "Done this week"); the plan's Done is the fallback
+    done_col = board_status_column(project, b, "done")
+    if done_col is None:
+        tb, done_col = role_column(project, "done")
+        b = tb or b
     if done_col and done_col is not col:
         _remove_card(col, card)
         done_col["cards"].insert(0, card)
         col = done_col
     return card_summary(project, card, b, col), lines
+
+
+def op_begin(project, args, ctx):
+    """Marks a card as being worked on: moves it to its own board's in-progress column."""
+    card, b, col, _ = find_card(project, args["card"])
+    if card.get("completed") or column_role(project, col["id"]) == "done":
+        raise OpError("'%s' is already done. Reopen it first (pm reopen)." % card["title"])
+    target = board_status_column(project, b, "now")
+    if target is None:
+        return dict(card_summary(project, card, b, col), warning=None),             ["started '%s' (left in %s: board %s has no Now/Doing column)" % (card["title"], col["name"], b["name"])]
+    if target is col:
+        return dict(card_summary(project, card, b, col), warning=None), ["'%s' is already in %s" % (card["title"], col["name"])]
+    _remove_card(col, card)
+    _place(target["cards"], card, "top")
+    return dict(card_summary(project, card, b, target), warning=_wip_warning(project, target)),         ["started '%s': %s -> %s" % (card["title"], col["name"], target["name"])]
 
 
 def op_reopen(project, args, ctx):
@@ -779,7 +822,15 @@ def op_settings(project, args, ctx):
     if args.get("wipLimit") is not None:
         plan["wipLimit"] = int(args["wipLimit"])
         lines.append("WIP limit %d" % plan["wipLimit"])
-    return {"capacity": cap, "wipLimit": plan.get("wipLimit", 3)}, lines
+    if args.get("codeDir") is not None:
+        d = str(args["codeDir"]).strip()
+        if d.lower() in ("", "none", "clear", "-"):
+            plan.pop("codeDir", None)
+            lines.append("code folder: automatic")
+        else:
+            plan["codeDir"] = os.path.abspath(os.path.expanduser(d)).replace("\\", "/")
+            lines.append("code folder " + plan["codeDir"])
+    return {"capacity": cap, "wipLimit": plan.get("wipLimit", 3), "codeDir": plan.get("codeDir")}, lines
 
 
 def op_brief(project, args, ctx):
@@ -1012,7 +1063,7 @@ def op_board_add(project, args, ctx):
 
 OPS = {
     "status": op_status, "list": op_list, "show": op_show,
-    "add": op_add, "edit": op_edit, "move": op_move, "done": op_done, "reopen": op_reopen,
+    "add": op_add, "edit": op_edit, "move": op_move, "begin": op_begin, "done": op_done, "reopen": op_reopen,
     "archive": op_archive, "split": op_split, "check": op_check, "sub": op_sub,
     "setup": op_setup, "settings": op_settings, "brief": op_brief, "milestone": op_milestone,
     "schedule": op_schedule, "rollover": op_rollover,

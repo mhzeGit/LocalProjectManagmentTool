@@ -318,6 +318,10 @@ def cmd_move(a):
     emit(a, run_op(a, "move", {"card": a.card, "column": a.column, "board": a.board, "position": a.position}))
 
 
+def cmd_begin(a):
+    emit(a, run_op(a, "begin", {"card": a.card}))
+
+
 def cmd_done(a):
     emit(a, run_op(a, "done", {"card": a.card, "summary": a.summary}))
 
@@ -355,9 +359,10 @@ def cmd_setup(a):
 
 
 def cmd_settings(a):
-    res = run_op(a, "settings", {"hoursPerDay": a.hours, "workDays": a.days, "wipLimit": a.wip})
-    emit(a, res, lambda r: print("Capacity %sh/day on days %s · WIP limit %s" % (
-        r["capacity"]["hoursPerDay"], r["capacity"]["workDays"], r["wipLimit"])))
+    res = run_op(a, "settings", {"hoursPerDay": a.hours, "workDays": a.days, "wipLimit": a.wip, "codeDir": a.code_dir})
+    emit(a, res, lambda r: print("Capacity %sh/day on days %s · WIP limit %s%s" % (
+        r["capacity"]["hoursPerDay"], r["capacity"]["workDays"], r["wipLimit"],
+        " · code folder " + r["codeDir"] if r.get("codeDir") else "")))
 
 
 def cmd_brief(a):
@@ -679,7 +684,9 @@ def build_parser():
     sp = add("move", cmd_move, "move a card to a column (now, week, backlog, parking, done or a name)", ["mv"])
     sp.add_argument("card"); sp.add_argument("column"); sp.add_argument("--board")
     sp.add_argument("--position", help="top, bottom or 1-based number")
-    sp = add("done", cmd_done, "finish a card (moves it to Done)")
+    sp = add("begin", cmd_begin, "mark a card as being worked on (moves it to its board's Now or Doing column)")
+    sp.add_argument("card")
+    sp = add("done", cmd_done, "finish a card (moves it to its board's Done column)")
     sp.add_argument("card"); sp.add_argument("-s", "--summary", help="what was done (appended to the card)")
     sp = add("reopen", cmd_reopen, "bring a done or archived card back")
     sp.add_argument("card"); sp.add_argument("--column", help="default: backlog")
@@ -699,6 +706,7 @@ def build_parser():
     sp.add_argument("--hours", type=float, help="focused hours per work day")
     sp.add_argument("--days", help="work days, e.g. mon-fri or mon,tue,thu")
     sp.add_argument("--wip", type=int, help="max open cards in Now")
+    sp.add_argument("--code-dir", help="folder agents work in for this project (default: the git repo holding the plan; 'none' resets)")
     sp = add("brief", cmd_brief, "post the director's note shown on top of the Focus page ('' clears, '-' stdin)")
     sp.add_argument("text")
     sp = add("milestone", cmd_milestone, "milestones: ls | add NAME --due D | edit REF ... | remove REF", ["ms"])

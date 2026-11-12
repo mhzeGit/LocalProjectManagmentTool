@@ -22,10 +22,13 @@ let _pendingMeta = false
 let _status = 'connecting'
 let _events = null
 let _projectDirs = {}
+let _codeDirs = {}
 const _listeners = new Set()
 
 export function isServerMode() { return _enabled }
 export function getProjectDir(projectId) { return _projectDirs[projectId] || '' }
+/** Folder agents work in for this project (plan.codeDir, else the git repo holding the plan). */
+export function getCodeDir(projectId) { return _codeDirs[projectId] || '' }
 export function getSyncStatus() { return _status }
 export function onSync(fn) { _listeners.add(fn); return () => _listeners.delete(fn) }
 function emit(type, detail) { for (const fn of _listeners) { try { fn(type, detail) } catch (e) { console.error(e) } } }
@@ -153,7 +156,7 @@ function loadState(st) {
   try { localStorage.setItem('kanboard_self_member', JSON.stringify(state.selfMemberId)) } catch {}
   _revs = Object.assign({}, st.projectRevs)
   _metaRev = st.metaRev
-  _projectDirs = st.projectDirs || {}
+  _projectDirs = st.projectDirs || {}; _codeDirs = st.codeDirs || {}
   _synced = {}
   for (const w of data.workspaces) for (const p of w.projects) if (!p._loadError) _synced[p.id] = projectPayload(p)
   _syncedMeta = metaPayload()
@@ -212,7 +215,7 @@ async function checkDirty(force) {
       _syncedMeta = meta
       // new projects created by the server need their folders: refresh revs
       const st = await api('GET', '/api/state')
-      _projectDirs = st.projectDirs || {}
+      _projectDirs = st.projectDirs || {}; _codeDirs = st.codeDirs || {}
       for (const w of st.workspaces) for (const p of w.projects) {
         const local = findProject(p.id)
         if (local && !(p.id in _synced) && !p._loadError) {
@@ -313,7 +316,7 @@ async function pullProject(pid) {
 async function pullMeta() {
   if (metaPayload() !== _syncedMeta) { await checkDirty(true); return }
   const st = await api('GET', '/api/state')
-  _projectDirs = st.projectDirs || {}
+  _projectDirs = st.projectDirs || {}; _codeDirs = st.codeDirs || {}
   _metaRev = st.metaRev
   const byId = {}
   for (const w of data.workspaces) for (const p of w.projects) byId[p.id] = p

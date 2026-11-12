@@ -43,6 +43,7 @@ A good card:
     pm add "Title" [-c backlog] [-m M1] [-P 4] [-e 3h] [--due fri] [--why "..."] [-d "markdown"] [--step "..."]
     pm edit CARD [--title] [-P] [-e] [--start] [--due] [-m] [--why] [-d | --append] [--tag | --untag] [--pin]
     pm move CARD now|week|backlog|parking|done [--position top|N]
+    pm begin CARD                            (to its own board's Now / Doing column)
     pm done CARD [-s "what was done"]        pm reopen CARD        pm archive CARD
     pm split CARD "Part A::2h" "Part B::3h" [--keep]
     pm step CARD "text" ...                   pm check CARD 2[.1] [--undo]
